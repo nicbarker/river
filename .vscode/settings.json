@@ -1,0 +1,4 @@
+{
+    "typescript.experimental.useSeparateSyntaxServer": true,
+    "typescript.tsdk": "./frontend/node_modules/typescript/lib"
+}

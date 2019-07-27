@@ -1,0 +1,18 @@
+{
+    "extends": "../tsconfig.json",
+    "include": [
+      "application-web.tsx",
+      "./**/*.ts"
+    ],
+    "compilerOptions": {
+      "module": "commonjs",
+      "baseUrl": "../",
+      "paths": {
+        "*" : [
+            "./common/*",
+            "./desktop-web/*",
+            "./mobile-web/*",
+        ],
+      },
+    },
+  }

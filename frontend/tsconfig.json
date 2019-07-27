@@ -1,0 +1,23 @@
+{
+    "compilerOptions": {
+      "noImplicitAny": true,
+      "module": "esnext",
+      "lib": ["es6", "dom", "es2017"],
+      "target": "es5",
+      "jsx": "react",
+      "allowJs": true,
+      "sourceMap": true,
+      "noEmit": true,
+      "moduleResolution": "node",
+    },
+    "exclude": [
+      "node-modules",
+      "webpack-build",
+      "webpack-config",
+      "static",
+      "images",
+    ],
+    "files": [
+      "common/lib/svg.d.ts"
+    ]
+}
