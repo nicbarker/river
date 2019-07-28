@@ -1,29 +1,58 @@
 import { StyleObjects } from "lib/stylesheet-helper"
 import { ReduxAction } from "actions/application-actions"
-import { RiverNodes, nodeReducer } from 'reducers/node-reducer'
-import { uuid } from "lib/uuid";
+import { uuid } from "lib/uuid"
 
-export type ApplicationState = {
-    styles: StyleObjects[];
-    nodes: RiverNodes,
-    selectedNodeId: string,
+export type RiverNode = {
+    id: string,
+    nextNodeId?: string
+    entryPoint?: boolean
 }
 
-const secondNodeId = uuid()
+export type ApplicationState = {
+    styles: StyleObjects[]
+    nodes: { [id: string]: RiverNode },
+    orderedNodes: RiverNode[],
+    selectedNodeId?: string,
+}
 
-const firstNode = {
-    entrypoint: true,
+const secondNode = {
+    id: uuid()
+}
+
+const firstNode: RiverNode = {
+    entryPoint: true,
     id: uuid(),
-    nextNode: secondNodeId
+    nextNodeId: secondNode.id
 }
 
 const initialState: ApplicationState = {
     styles: [],
     nodes: {
         [firstNode.id]: firstNode,
-        [secondNodeId]: { id: secondNodeId }
+        [secondNode.id]: secondNode
     },
+    orderedNodes: [
+        firstNode,
+        secondNode
+    ],
     selectedNodeId: firstNode.id
+}
+
+// Create a cache array of nodes ordered by the execution map
+const createOrderedNodes = (nodes: { [id: string]: RiverNode }) => {
+    let orderedNodes: RiverNode[] = []
+    const followNodeTree = (node: RiverNode) => {
+        orderedNodes.push(node)
+        if (node.nextNodeId) {
+            followNodeTree(nodes[node.nextNodeId])
+        }
+    }
+
+    const entryPoint = Object.values(nodes).find(n => n.entryPoint)
+    if (entryPoint) {
+        followNodeTree(entryPoint)
+    }
+    return orderedNodes
 }
 
 export const applicationReducer = (state = initialState, action: ReduxAction) => {
@@ -41,27 +70,61 @@ export const applicationReducer = (state = initialState, action: ReduxAction) =>
         newState.selectedNodeId = action.payload.nodeId
     }
     // --------------------------------------------------
-    // Sets the currently selected node in the editor
+    // Inserts a new empty node in the program after the node
+    // with previousNodeId, updating the nextNode reference
     // --------------------------------------------------
-    else if (action.type === 'DELETE_NODE') {
-        if (newState.nodes[action.payload.nodeId]) {
-            const currentNodeIndex = Object.keys(newState.nodes).indexOf(action.payload.nodeId)
-            newState.nodes = JSON.parse(JSON.stringify(newState.nodes))
-            delete newState.nodes[action.payload.nodeId]
-            // Select the next closest node
-            if (Object.values(newState.nodes).length > 0) {
-                newState.selectedNodeId = Object.values(newState.nodes)[Math.max(currentNodeIndex - 1, 0)].id
+    else if (action.type === 'INSERT_NODE') {
+        newState.nodes = JSON.parse(JSON.stringify(newState.nodes))
+        const previousNode = newState.nodes[action.payload.previousNodeId]
+        if (previousNode || !action.payload.previousNodeId) {
+            const newId = uuid()
+            newState.nodes[newId] = {
+                id: newId,
+                nextNodeId: previousNode ? previousNode.nextNodeId : undefined
             }
+            // If there's only one node, make it the entrypoint
+            if (Object.values(newState.nodes).length === 1) {
+                newState.nodes[newId].entryPoint = true
+            }
+            if (previousNode) {
+                previousNode.nextNodeId = newId
+            }
+            newState.selectedNodeId = newId
+            newState.orderedNodes = createOrderedNodes(newState.nodes)
+        } else {
+            throw Error('Error in INSERT_NODE, node with id ' + action.payload.previousNodeId + ' was not found')
         }
     }
     // --------------------------------------------------
-    // Pass any uncaught actions to sub reducers
+    // Deletes a node from the program
     // --------------------------------------------------
-    else {
-        newState.nodes = nodeReducer(newState.nodes, action);
+    else if (action.type === 'DELETE_NODE') {
+        const node = newState.nodes[action.payload.nodeId]
+        if (node) {
+            newState.nodes = JSON.parse(JSON.stringify(newState.nodes))
+            const previousNode = Object.values(newState.nodes).find(n => n.nextNodeId === action.payload.nodeId)
+            // Select the next, or previous node
+            if (node.nextNodeId) {
+                newState.selectedNodeId = node.nextNodeId
+            } else if (previousNode) {
+                newState.selectedNodeId = previousNode.id
+            } else {
+                newState.selectedNodeId = undefined
+            }
+            // If something was pointing to the deleted node, point it to the next node instead
+            if (previousNode) {
+                previousNode.nextNodeId = node.nextNodeId
+            }
+            // If the deleted node was the entrypoint, make the next node the entrypoint instead
+            if (node.entryPoint && node.nextNodeId) {
+                newState.nodes[node.nextNodeId].entryPoint = true
+            }
+            delete newState.nodes[action.payload.nodeId]
+            newState.orderedNodes = createOrderedNodes(newState.nodes)
+        } else {
+            throw Error('Error in DELETE_NODE, node with id ' + action.payload.nodeId + ' was not found')
+        }
     }
 
     return newState
 }
-
-applicationReducer

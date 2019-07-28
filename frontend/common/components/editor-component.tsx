@@ -8,6 +8,7 @@ import { registerKeyListener, deregisterKeyListener } from 'lib/global-keyboard-
 export const Editor = (props: {
     reduxState: ApplicationState,
     setSelectedNode: (id: string) => void,
+    insertNode: (previousNodeId: string) => void,
     deleteNode: (id: string) => void
 }) => {
     const { createStylesheet } = React.useContext(StylesheetContext)
@@ -16,31 +17,30 @@ export const Editor = (props: {
     // Register keyboard shortcuts
     React.useEffect(() => {
         const upKeyId = registerKeyListener(38, () => {
-            const currentNodeIndex = Object.keys(props.reduxState.nodes).indexOf(props.reduxState.selectedNodeId)
-            if (currentNodeIndex > 0) {
-                const previousNode = props.reduxState.nodes[Object.keys(props.reduxState.nodes)[currentNodeIndex - 1]]
+            const previousNode = Object.values(props.reduxState.nodes).find(n => n.nextNodeId === props.reduxState.selectedNodeId)
+            if (previousNode) {
                 props.setSelectedNode(previousNode.id)
             }
         })
 
         const downKeyId = registerKeyListener(40, () => {
-            const currentNodeIndex = Object.keys(props.reduxState.nodes).indexOf(props.reduxState.selectedNodeId)
-            if (currentNodeIndex < Object.keys(props.reduxState.nodes).length - 1) {
-                const nextNode = props.reduxState.nodes[Object.keys(props.reduxState.nodes)[currentNodeIndex + 1]]
-                props.setSelectedNode(nextNode.id)
+            if (props.reduxState.nodes[props.reduxState.selectedNodeId].nextNodeId) {
+                props.setSelectedNode(props.reduxState.nodes[props.reduxState.selectedNodeId].nextNodeId)
             }
         })
 
-        const deleteKeyId = registerKeyListener(8, () => props.deleteNode(props.reduxState.selectedNodeId))
+        const enterKeyId = registerKeyListener(13, () => props.insertNode(props.reduxState.selectedNodeId))
+        const backspaceKeyId = registerKeyListener(8, () => props.deleteNode(props.reduxState.selectedNodeId))
 
         return () => {
             deregisterKeyListener(upKeyId)
             deregisterKeyListener(downKeyId)
-            deregisterKeyListener(deleteKeyId)
+            deregisterKeyListener(enterKeyId)
+            deregisterKeyListener(backspaceKeyId)
         }
     })
 
-    const nodes = Object.values(props.reduxState.nodes).map(node => (
+    const renderedNodes = Object.values(props.reduxState.orderedNodes).map(node => (
         <RiverNode
             key={node.id}
             node={node}
@@ -51,7 +51,7 @@ export const Editor = (props: {
 
     return (
         <div className={styles.editorOuter}>
-            {nodes}
+            {renderedNodes}
         </div>
     )
 }

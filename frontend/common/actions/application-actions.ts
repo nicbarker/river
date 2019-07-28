@@ -25,6 +25,13 @@ export const setSelectedNode = (nodeId: string) => {
     }
 }
 
+export const insertNode = (previousNodeId: string) => {
+    return {
+        type: 'INSERT_NODE',
+        payload: { previousNodeId }
+    }
+}
+
 export const deleteNode = (nodeId: string) => {
     return {
         type: 'DELETE_NODE',

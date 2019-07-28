@@ -14,6 +14,8 @@ import { applicationReducer } from 'reducers/application-reducer'
 
 const store = createStore(applicationReducer)
 
+window.store = store
+
 const stylesheetHelper = { createStylesheet: createStylesheetHelper(store) }
 
 // Load sentry if an error occurs
