@@ -2,7 +2,8 @@
     "extends": "../tsconfig.json",
     "include": [
       "application-web.tsx",
-      "./**/*.ts"
+      "./**/*.ts",
+      "./**/*.tsx"
     ],
     "compilerOptions": {
       "module": "commonjs",

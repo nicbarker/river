@@ -3,7 +3,7 @@
 // to registered listeners.
 // -------------------------------------------------------------
 
-import uuid from 'lib/uuid'
+import { uuid } from 'lib/uuid'
 
 const keyListeners = {}
 const blockedKeys = {}

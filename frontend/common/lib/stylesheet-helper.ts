@@ -1,5 +1,6 @@
 import * as React from 'react'
 import { addStyleObjects } from 'actions/application-actions'
+import { Store } from 'redux';
 
 const noUnits = {
     'flex': true,
@@ -41,17 +42,25 @@ export const extendStylesheet = function (...objects) {
     return extended
 }
 
-export const createStylesheetHelper = (store) => {
-    const classMapCache = []
+export type ClassMap = {
+    [key: string]: string
+}
+
+export type StyleObjects = {
+    [key: string]: string
+}
+
+export const createStylesheetHelper = (store: Store) => {
+    const classMapCache: Array<any> = []
     let classMapIndex = 0
 
-    return (styleObject) => {
+    return (styleObject: any): ClassMap => {
         const cachedMap = classMapCache.find((cached) => cached.styleObject === styleObject)
         if (cachedMap) {
             return cachedMap.classMap
         }
-        const styleObjects = {}
-        const classMap = {}
+        const styleObjects: StyleObjects = {}
+        const classMap: ClassMap = {}
 
         const classNames = Object.keys(styleObject)
         for (let i = 0; i < classNames.length; i++) {
@@ -82,4 +91,4 @@ export const createStylesheetHelper = (store) => {
     }
 }
 
-export const StylesheetContext = React.createContext({ createStylesheet: createStylesheetHelper({}) });
+export const StylesheetContext = React.createContext({ createStylesheet: createStylesheetHelper({} as Store) });

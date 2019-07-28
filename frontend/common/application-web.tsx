@@ -12,7 +12,7 @@ import { StylesheetContext, createStylesheetHelper } from 'lib/stylesheet-helper
 import { createStore } from 'redux'
 import { applicationReducer } from 'reducers/application-reducer'
 
-const store = createStore(applicationReducer, {})
+const store = createStore(applicationReducer)
 
 const stylesheetHelper = { createStylesheet: createStylesheetHelper(store) }
 
