@@ -50,17 +50,23 @@ export type StyleObjects = {
     [key: string]: string
 }
 
+export type StyleObject = {
+    [key: string]: {
+        [key: string]: string | number
+    }
+}
+
 export const createStylesheetHelper = (store: Store) => {
     const classMapCache: Array<any> = []
     let classMapIndex = 0
 
-    return (styleObject: any): ClassMap => {
+    return <T extends StyleObject, K extends keyof T>(styleObject: T): { [U in keyof T]?: string } => {
         const cachedMap = classMapCache.find((cached) => cached.styleObject === styleObject)
         if (cachedMap) {
             return cachedMap.classMap
         }
         const styleObjects: StyleObjects = {}
-        const classMap: ClassMap = {}
+        const classMap: { [k in keyof T]?: string } = {}
 
         const classNames = Object.keys(styleObject)
         for (let i = 0; i < classNames.length; i++) {
@@ -75,7 +81,7 @@ export const createStylesheetHelper = (store: Store) => {
             }
 
             styleObjects[classNameHash] = ''
-            classMap[className] = classNameHash
+            classMap[className as K] = classNameHash
 
             for (const attribute of Object.keys(styleObject[className])) {
                 const value = styleObject[className][attribute]

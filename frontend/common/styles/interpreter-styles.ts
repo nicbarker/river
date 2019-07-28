@@ -9,6 +9,7 @@ export const interpreterStyles = {
         alignItems: 'stretch',
         zIndex: 1,
         boxShadow: '-6px 0px 8px 0px rgba(120,120,120, 0.15)',
+        oveflowY: 'scroll'
     },
 
     button: {
@@ -35,10 +36,23 @@ export const interpreterStyles = {
     },
 
     output: {
-        flexDirection: 'column'
+        flexDirection: 'column',
+        marginBottom: 15,
     },
 
     outputLine: {
+        flexDirection: 'row',
+        alignItems: 'center',
         marginBottom: 5
-    }
+    },
+
+    logTime: {
+        fontSize: 12,
+        color: '#ccc',
+        marginRight: 10
+    },
+
+    logMessage: {
+        color: '#333'
+    },
 }
