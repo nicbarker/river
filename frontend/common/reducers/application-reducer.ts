@@ -1,12 +1,7 @@
 import { StyleObjects } from "lib/stylesheet-helper"
 import { ReduxAction } from "actions/application-actions"
 import { uuid } from "lib/uuid"
-
-export type RiverNode = {
-    id: string,
-    nextNodeId?: string
-    entryPoint?: boolean
-}
+import { RiverNode } from "lib/interpreter";
 
 export type ApplicationState = {
     styles: StyleObjects[]

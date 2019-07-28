@@ -1,8 +1,8 @@
 import * as React from 'react';
-import { RiverNode } from '../reducers/node-reducer';
 import { StylesheetContext } from 'lib/stylesheet-helper';
 import { nodeStyles } from 'styles/node-styles';
 import classNames from 'classnames'
+import { RiverNode } from 'lib/interpreter';
 
 export const RiverNodeComponent = (props: {
     node: RiverNode,
@@ -14,7 +14,7 @@ export const RiverNodeComponent = (props: {
 
     return (
         <div className={classNames(styles.node, { [styles.selected] : props.selected })} onClick={props.onClick}>
-            Node: {props.node.id}
+            Node: {props.node.id.substr(0, 8)}
         </div>
     )
 }

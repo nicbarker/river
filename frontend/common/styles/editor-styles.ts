@@ -1,11 +1,11 @@
 export const editorStyles = {
     editorOuter: {
-        width: '100%',
-        height: '100%',
+        flexGrow: 1,
         display: 'flex',
         padding: 15,
         flexDirection: 'column',
         alignItems: 'flex-start',
-        background: '#E4F1F4'
+        background: '#E4F1F4',
+        borderRight: '1px solid #eee'
     }
 }
