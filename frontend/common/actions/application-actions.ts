@@ -24,3 +24,10 @@ export const setSelectedNode = (nodeId: string) => {
         payload: { nodeId }
     }
 }
+
+export const deleteNode = (nodeId: string) => {
+    return {
+        type: 'DELETE_NODE',
+        payload: { nodeId }
+    }
+}

@@ -41,6 +41,20 @@ export const applicationReducer = (state = initialState, action: ReduxAction) =>
         newState.selectedNodeId = action.payload.nodeId
     }
     // --------------------------------------------------
+    // Sets the currently selected node in the editor
+    // --------------------------------------------------
+    else if (action.type === 'DELETE_NODE') {
+        if (newState.nodes[action.payload.nodeId]) {
+            const currentNodeIndex = Object.keys(newState.nodes).indexOf(action.payload.nodeId)
+            newState.nodes = JSON.parse(JSON.stringify(newState.nodes))
+            delete newState.nodes[action.payload.nodeId]
+            // Select the next closest node
+            if (Object.values(newState.nodes).length > 0) {
+                newState.selectedNodeId = Object.values(newState.nodes)[Math.max(currentNodeIndex - 1, 0)].id
+            }
+        }
+    }
+    // --------------------------------------------------
     // Pass any uncaught actions to sub reducers
     // --------------------------------------------------
     else {
