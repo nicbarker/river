@@ -49,9 +49,12 @@ export const Editor = (props: {
         />
     ))
 
+    const pressEnterMessage = renderedNodes.length === 0 ? <div className={styles.pressEnterMessage}>Press Enter to create a new Node</div> : null
+
     return (
         <div className={styles.editorOuter}>
             {renderedNodes}
+            {pressEnterMessage}
         </div>
     )
 }

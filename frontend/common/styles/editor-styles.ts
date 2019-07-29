@@ -8,5 +8,11 @@ export const editorStyles = {
         background: '#E4F1F4',
         borderRight: '1px solid #eee',
         overflowY: 'scroll'
+    },
+
+    pressEnterMessage: {
+        fontSize: 20,
+        fontWeight: 200,
+        color: '#ccc'
     }
 }
