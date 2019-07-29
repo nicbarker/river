@@ -13,6 +13,27 @@ export const editorStyles = {
         padding: 15,
     },
 
+    headerButton: {
+        marginRight: 15,
+        fontWeight: 600,
+        cursor: 'pointer',
+        color: '#aaa'
+    },
+
+    'headerButton:hover': {
+        color: '#999'
+    },
+
+    headerButtonActive: {
+        color: '#3B8686',
+        textDecoration: 'underline',
+        cursor: 'default'
+    },
+
+    'headerButtonActive:hover': {
+        color: '#3B8686',
+    },
+
     nodes: {
         flexDirection: 'column',
         alignItems: 'flex-start',

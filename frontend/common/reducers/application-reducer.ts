@@ -3,18 +3,22 @@ import { ReduxAction } from "actions/application-actions"
 import { uuid } from "lib/uuid"
 import { RiverNode } from "lib/interpreter";
 
+export type Layer = 'editor' | 'docs' | 'logs'
+
 export type ApplicationState = {
     styles: StyleObjects[]
     nodes: { [id: string]: RiverNode },
     orderedNodes: RiverNode[],
     selectedNodeId?: string,
+    activeLayer: Layer
 }
 
 const initialState: ApplicationState = {
     styles: [],
     nodes: {},
     orderedNodes: [],
-    selectedNodeId: null
+    selectedNodeId: null,
+    activeLayer: 'editor'
 }
 
 // Create a cache array of nodes ordered by the execution map
@@ -41,6 +45,12 @@ export const applicationReducer = (state = initialState, action: ReduxAction) =>
     // --------------------------------------------------
     if (action.type === 'ADD_STYLE_OBJECTS') {
         newState.styles = Object.assign({}, newState.styles, action.payload.styleObjects)
+    }
+    // --------------------------------------------------
+    // Sets the active layer in the editor
+    // --------------------------------------------------
+    else if (action.type === 'SET_ACTIVE_LAYER') {
+        newState.activeLayer = action.payload.activeLayer
     }
     // --------------------------------------------------
     // Sets the currently selected node in the editor

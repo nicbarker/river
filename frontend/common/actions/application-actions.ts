@@ -1,4 +1,5 @@
 import { StyleObjects } from "lib/stylesheet-helper";
+import { Layer } from "reducers/application-reducer";
 
 // -------------------------------------------------------------
 // Redux actions for interacting with the global application state.
@@ -15,6 +16,13 @@ export const addStyleObjects = (styleObjects: StyleObjects) => {
     return {
         type: 'ADD_STYLE_OBJECTS',
         payload: { styleObjects }
+    }
+}
+
+export const setActiveLayer = (activeLayer: Layer) => {
+    return {
+        type: 'SET_ACTIVE_LAYER',
+        payload: { activeLayer }
     }
 }
 

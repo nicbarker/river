@@ -1,12 +1,14 @@
 import * as React from 'react'
 import { StylesheetContext } from 'lib/stylesheet-helper'
 import { editorStyles } from 'styles/editor-styles'
-import { ApplicationState } from 'reducers/application-reducer'
+import { ApplicationState, Layer } from 'reducers/application-reducer'
 import { RiverNodeComponent as RiverNode } from 'components/node-component'
 import { registerKeyListener, deregisterKeyListener } from 'lib/global-keyboard-listener';
+import classNames = require('classnames');
 
 export const Editor = (props: {
     reduxState: ApplicationState,
+    setActiveLayer: (activeLayer: Layer) => void,
     setSelectedNode: (id: string) => void,
     insertNode: (previousNodeId: string) => void,
     deleteNode: (id: string) => void
@@ -53,7 +55,11 @@ export const Editor = (props: {
 
     return (
         <div className={styles.editorOuter}>
-            <div className={styles.editorHeader}>Editor Header</div>
+            <div className={styles.editorHeader}>
+                <div className={classNames(styles.headerButton, { [styles.headerButtonActive]: props.reduxState.activeLayer === 'editor'})} onClick={() => props.setActiveLayer('editor')}>Editor</div>
+                <div className={classNames(styles.headerButton, { [styles.headerButtonActive]: props.reduxState.activeLayer === 'docs'})} onClick={() => props.setActiveLayer('docs')}>Docs</div>
+                <div className={classNames(styles.headerButton, { [styles.headerButtonActive]: props.reduxState.activeLayer === 'logs'})} onClick={() => props.setActiveLayer('logs')}>Logs</div>
+            </div>
             <div className={styles.nodes}>
                 {renderedNodes}
                 {pressEnterMessage}
