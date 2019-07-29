@@ -10,11 +10,11 @@ export const editorStyles = {
     },
 
     editorHeader: {
-        padding: 15,
+        padding: 16,
     },
 
     headerButton: {
-        marginRight: 15,
+        marginRight: 16,
         fontWeight: 600,
         cursor: 'pointer',
         color: '#aaa'
@@ -37,7 +37,7 @@ export const editorStyles = {
     nodes: {
         flexDirection: 'column',
         alignItems: 'flex-start',
-        padding: 15
+        padding: 16
     },
 
     pressEnterMessage: {

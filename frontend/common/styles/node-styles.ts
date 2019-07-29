@@ -1,10 +1,24 @@
 import * as Color from 'color'
 
 export const nodeStyles = {
+    nodeOuter: {
+        position: 'relative'
+    },
+
+    logCursor: {
+        position: 'absolute',
+        bottom: -1,
+        left: 50,
+        width: '100%',
+        height: 2,
+        background: "#0B486B"
+    },
+
     node: {
-        marginBottom: 15,
+        marginTop: 8,
+        marginBottom: 8,
         cursor: 'pointer',
-        padding: 15,
+        padding: 16,
         background: '#B9CFD2',
         borderRadius: 5,
         transition: 'transform 0.2s ease',

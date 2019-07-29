@@ -3,8 +3,8 @@ import { StylesheetContext } from 'lib/stylesheet-helper'
 import { editorStyles } from 'styles/editor-styles'
 import { ApplicationState, Layer } from 'reducers/application-reducer'
 import { RiverNodeComponent as RiverNode } from 'components/node-component'
-import { registerKeyListener, deregisterKeyListener } from 'lib/global-keyboard-listener';
-import classNames = require('classnames');
+import { registerKeyListener, deregisterKeyListeners } from 'lib/global-keyboard-listener'
+import classNames = require('classnames')
 
 export const Editor = (props: {
     reduxState: ApplicationState,
@@ -14,7 +14,7 @@ export const Editor = (props: {
     deleteNode: (id: string) => void
 }) => {
     const { createStylesheet } = React.useContext(StylesheetContext)
-    const styles = createStylesheet(editorStyles);
+    const styles = createStylesheet(editorStyles)
 
     // Register keyboard shortcuts
     React.useEffect(() => {
@@ -33,20 +33,22 @@ export const Editor = (props: {
 
         const enterKeyId = registerKeyListener(13, () => props.insertNode(props.reduxState.selectedNodeId))
         const backspaceKeyId = registerKeyListener(8, () => props.deleteNode(props.reduxState.selectedNodeId))
+        // E, D and L key sets active layer
+        const eKeyId = registerKeyListener(69, () => props.setActiveLayer('editor'))
+        const dKeyId = registerKeyListener(68, () => props.setActiveLayer('docs'))
+        const lKeyId = registerKeyListener(76, () => props.setActiveLayer('logs'))
 
         return () => {
-            deregisterKeyListener(upKeyId)
-            deregisterKeyListener(downKeyId)
-            deregisterKeyListener(enterKeyId)
-            deregisterKeyListener(backspaceKeyId)
+            deregisterKeyListeners(upKeyId, downKeyId, enterKeyId, backspaceKeyId, eKeyId, dKeyId, lKeyId)
         }
-    })
+    }, [props.reduxState.selectedNodeId])
 
     const renderedNodes = Object.values(props.reduxState.orderedNodes).map(node => (
         <RiverNode
             key={node.id}
             node={node}
             selected={props.reduxState.selectedNodeId === node.id}
+            activeLayer={props.reduxState.activeLayer}
             onClick={() => props.setSelectedNode(node.id)}
         />
     ))

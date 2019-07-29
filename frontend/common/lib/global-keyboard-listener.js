@@ -28,8 +28,10 @@ export const registerKeyListener = (key, listener) => {
     return listenerId
 }
 
-export const deregisterKeyListener = (listenerId, key, listener) => {
-    delete keyListeners[listenerId]
+export const deregisterKeyListeners = (...listenerIds) => {
+    for (const listenerId of listenerIds) {
+        delete keyListeners[listenerId]
+    }
 }
 
 // Blocks all key events from occuring on a specific key
