@@ -10,27 +10,11 @@ export type ApplicationState = {
     selectedNodeId?: string,
 }
 
-const secondNode = {
-    id: uuid()
-}
-
-const firstNode: RiverNode = {
-    entryPoint: true,
-    id: uuid(),
-    nextNodeId: secondNode.id
-}
-
 const initialState: ApplicationState = {
     styles: [],
-    nodes: {
-        [firstNode.id]: firstNode,
-        [secondNode.id]: secondNode
-    },
-    orderedNodes: [
-        firstNode,
-        secondNode
-    ],
-    selectedNodeId: firstNode.id
+    nodes: {},
+    orderedNodes: [],
+    selectedNodeId: null
 }
 
 // Create a cache array of nodes ordered by the execution map
