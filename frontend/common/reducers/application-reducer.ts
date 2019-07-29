@@ -100,7 +100,7 @@ export const applicationReducer = (state = initialState, action: ReduxAction) =>
             }
             delete newState.nodes[action.payload.nodeId]
             newState.orderedNodes = createOrderedNodes(newState.nodes)
-        } else {
+        } else if (action.payload.nodeId) { // If the node id was defined but no node was found, we're in trouble
             throw Error('Error in DELETE_NODE, node with id ' + action.payload.nodeId + ' was not found')
         }
     }

@@ -53,8 +53,11 @@ export const Editor = (props: {
 
     return (
         <div className={styles.editorOuter}>
-            {renderedNodes}
-            {pressEnterMessage}
+            <div className={styles.editorHeader}>Editor Header</div>
+            <div className={styles.nodes}>
+                {renderedNodes}
+                {pressEnterMessage}
+            </div>
         </div>
     )
 }

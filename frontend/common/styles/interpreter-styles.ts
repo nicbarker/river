@@ -9,7 +9,7 @@ export const interpreterStyles = {
         alignItems: 'stretch',
         zIndex: 1,
         boxShadow: '-6px 0px 8px 0px rgba(120,120,120, 0.15)',
-        oveflowY: 'scroll'
+        overflowY: 'scroll'
     },
 
     button: {
