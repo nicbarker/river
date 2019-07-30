@@ -1,46 +1,21 @@
 import * as Color from 'color'
 
 export const nodeStyles = {
-    nodeOuter: {
-        position: 'relative'
-    },
-
-    logCursor: {
-        position: 'absolute',
-        bottom: -1,
-        left: -5,
-        width: 200,
-        height: 2,
-        background: '#0B486B'
-    },
-
-    logCursorCenterCircle: {
-        position: 'absolute',
-        width: 16,
-        height: 16,
-        borderRadius: 16,
-        left: 88,
-        top: -7,
-        background: '#E4F1F4',
-        borderWidth: 2,
-        borderColor: '#0B486B',
-        borderStyle: 'solid'
-    },
-
     node: {
         marginTop: 8,
         marginBottom: 8,
         cursor: 'pointer',
-        padding: 16,
         background: '#B9CFD2',
         borderRadius: 5,
         transition: 'transform 0.2s ease',
-        transform: 'translate(0px)'
+        transform: 'translate(0px)',
+        flexDirection: 'column',
+        alignItems: 'stretch',
+        outline: 'none'
     },
 
-    selected: {
-        transform: 'translate(5px)',
-        background: Color('#B9CFD2').darken(0.1).hex()
+    nodeOuter: {
+        outline: 'none'
     },
 
     'node:hover': {
@@ -51,9 +26,49 @@ export const nodeStyles = {
         background: Color('#B9CFD2').darken(0.1).hex()
     },
 
+    selected: {
+        transform: 'translate(5px)',
+        background: Color('#B9CFD2').darken(0.1).hex()
+    },
+
+    'selected:hover': {
+        background: Color('#B9CFD2').darken(0.1).hex()
+    },
+
+    'selected:active': {
+        background: Color('#B9CFD2').darken(0.1).hex()
+    },
+
+    nodeInner: {
+        padding: 16
+    },
+
+    autoCompleteVisible: {
+        borderBottomRightRadius: 0,
+        borderBottomLeftRadius: 0,
+        zIndex: 1,
+    },
+
     nodeTypeInput: {
         fontSize: 16,
         fontFamily: 'Open Sans',
-        fontWeight: 400
+        fontWeight: 400,
+        padding: 16
+    },
+
+    autoCompleteSuggestions: {
+        position: 'absolute',
+        flexDirection: 'column',
+        alignItems: 'stretch',
+        borderTop: '1px solid ' + Color('#B9CFD2').darken(0.2).hex(),
+        top: '100%',
+        width: '100%',
+        background: Color('#B9CFD2').darken(0.1).hex(),
+        borderBottomRightRadius: 5,
+        borderBottomLeftRadius: 5,
+    },
+
+    suggestion: {
+        padding: 16
     }
 }

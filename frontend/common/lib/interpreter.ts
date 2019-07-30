@@ -2,13 +2,14 @@
 // Run a .rvr program
 // --------------------------------------------------
 
-export const nodeTypes = ['log']
+export type NodeType = 'log'
+export const nodeTypes: NodeType[] = ['log']
 
 export type RiverNode = {
     id: string
     nextNodeId?: string
     entryPoint?: boolean
-    type?: string
+    type?: NodeType
 }
 
 export type LogNode = RiverNode & {

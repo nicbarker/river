@@ -1,37 +1,43 @@
 import * as React from 'react'
 import { StylesheetContext } from 'lib/stylesheet-helper'
 import { editorStyles } from 'styles/editor-styles'
-import { ApplicationState, Layer } from 'reducers/application-reducer'
-import { RiverNodeComponent as RiverNode } from 'components/node-component'
+import { Layer } from 'reducers/application-reducer'
 import classNames = require('classnames')
+import { NodeType, RiverNode } from 'lib/interpreter';
+import { NodeOuter } from 'containers/node-outer-container';
 
-export const Editor = (props: {
-    reduxState: ApplicationState,
+export type EditorProps = {
+    nodes: { [id: string]: RiverNode },
+    orderedNodes: RiverNode[],
+    activeLayer: Layer,
+    selectedNodeId: string,
+
     setActiveLayer: (activeLayer: Layer) => void,
-    setSelectedNode: (id: string) => void,
+    setSelectedNode: (nodeId: string) => void,
     insertNode: (previousNodeId: string) => void,
-    deleteNode: (id: string) => void
-}) => {
+    setNodeType: (nodeId: string, type: NodeType) => void,
+}
+
+export const Editor = (props: EditorProps) => {
     const { createStylesheet } = React.useContext(StylesheetContext)
     const styles = createStylesheet(editorStyles)
     const editorRef = React.useRef<HTMLDivElement>()
-    React.useEffect(() => editorRef.current && editorRef.current.focus(), [])
+    const focusEditor = () => editorRef.current && editorRef.current.focus()
+    React.useEffect(() => focusEditor, [])
 
     // Register keyboard shortcuts
     const handleKeyPress = (event: React.KeyboardEvent<HTMLDivElement>) => {
         if (event.key === 'Enter') {
-            props.insertNode(props.reduxState.selectedNodeId)
+            props.insertNode(props.selectedNodeId)
         } else if (event.key === 'ArrowUp') {
-            const previousNode = Object.values(props.reduxState.nodes).find(n => n.nextNodeId === props.reduxState.selectedNodeId)
+            const previousNode = Object.values(props.nodes).find(n => n.nextNodeId === props.selectedNodeId)
             if (previousNode) {
                 props.setSelectedNode(previousNode.id)
             }
         } else if (event.key === 'ArrowDown') {
-            if (props.reduxState.nodes[props.reduxState.selectedNodeId].nextNodeId) {
-                props.setSelectedNode(props.reduxState.nodes[props.reduxState.selectedNodeId].nextNodeId)
+            if (props.nodes[props.selectedNodeId].nextNodeId) {
+                props.setSelectedNode(props.nodes[props.selectedNodeId].nextNodeId)
             }
-        } else if (event.key === 'Backspace') {
-            props.deleteNode(props.reduxState.selectedNodeId)
         } else if (event.key === 'e') {
             props.setActiveLayer('editor')
         } else if (event.key === 'd') {
@@ -41,24 +47,16 @@ export const Editor = (props: {
         }
     }
 
-    const renderedNodes = Object.values(props.reduxState.orderedNodes).map(node => (
-        <RiverNode
-            key={node.id}
-            node={node}
-            selected={props.reduxState.selectedNodeId === node.id}
-            activeLayer={props.reduxState.activeLayer}
-            onClick={() => props.setSelectedNode(node.id)}
-        />
-    ))
+    const renderedNodes = Object.values(props.orderedNodes).map(node => <NodeOuter key={node.id} nodeId={node.id} focusParent={focusEditor} />)
 
     const pressEnterMessage = renderedNodes.length === 0 ? <div className={styles.pressEnterMessage}>Press Enter to create a new Node</div> : null
 
     return (
         <div className={styles.editorOuter} onKeyDown={handleKeyPress} ref={editorRef} tabIndex={1}>
             <div className={styles.editorHeader}>
-                <div className={classNames(styles.headerButton, { [styles.headerButtonActive]: props.reduxState.activeLayer === 'editor'})} onClick={() => props.setActiveLayer('editor')}>Editor</div>
-                <div className={classNames(styles.headerButton, { [styles.headerButtonActive]: props.reduxState.activeLayer === 'docs'})} onClick={() => props.setActiveLayer('docs')}>Docs</div>
-                <div className={classNames(styles.headerButton, { [styles.headerButtonActive]: props.reduxState.activeLayer === 'logs'})} onClick={() => props.setActiveLayer('logs')}>Logs</div>
+                <div className={classNames(styles.headerButton, { [styles.headerButtonActive]: props.activeLayer === 'editor'})} onClick={() => props.setActiveLayer('editor')}>Editor</div>
+                <div className={classNames(styles.headerButton, { [styles.headerButtonActive]: props.activeLayer === 'docs'})} onClick={() => props.setActiveLayer('docs')}>Docs</div>
+                <div className={classNames(styles.headerButton, { [styles.headerButtonActive]: props.activeLayer === 'logs'})} onClick={() => props.setActiveLayer('logs')}>Logs</div>
             </div>
             <div className={styles.nodes}>
                 {renderedNodes}

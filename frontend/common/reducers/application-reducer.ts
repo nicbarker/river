@@ -114,6 +114,18 @@ export const applicationReducer = (state = initialState, action: ReduxAction) =>
             throw Error('Error in DELETE_NODE, node with id ' + action.payload.nodeId + ' was not found')
         }
     }
+    // --------------------------------------------------
+    // Sets the type of a node
+    // --------------------------------------------------
+    else if (action.type === 'SET_NODE_TYPE') {
+        const node = newState.nodes[action.payload.nodeId]
+        if (node) {
+            newState.nodes[action.payload.nodeId] = {...JSON.parse(JSON.stringify(node)), ...{type: action.payload.type}}
+            newState.orderedNodes = createOrderedNodes(newState.nodes)
+        } else if (action.payload.nodeId) { // If the node id was defined but no node was found, we're in trouble
+            throw Error('Error in SET_NODE_TYPE, node with id ' + action.payload.nodeId + ' was not found')
+        }
+    }
 
     return newState
 }
