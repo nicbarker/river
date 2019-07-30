@@ -13,17 +13,22 @@ export const RiverNodeComponent = (props: {
 }) => {
     const { createStylesheet } = React.useContext(StylesheetContext)
     const styles = createStylesheet(nodeStyles);
+    const inputRef = React.useRef<HTMLInputElement>()
 
-    let cursor
-    if (props.activeLayer === 'logs' && props.selected) {
-        cursor = <div className={styles.logCursor} />
-    }
+    React.useEffect(() => {
+        if (props.selected && inputRef.current) {
+            inputRef.current.focus()
+        }
+    }, [props.selected])
+
+    const nodeClasses = classNames(styles.node, {
+        [styles.selected]: props.selected
+    })
 
     return (
         <div className={styles.nodeOuter}>
-            {cursor}
-            <div className={classNames(styles.node, { [styles.selected] : props.selected && props.activeLayer === 'editor' })} onClick={props.onClick}>
-                Node: {props.node.id.substr(0, 8)}
+            <div className={nodeClasses} onClick={props.onClick}>
+                <input className={styles.nodeTypeInput} type='text' ref={inputRef} onKeyDown={(event: React.KeyboardEvent<HTMLDivElement>) => event.stopPropagation()} />
             </div>
         </div>
     )

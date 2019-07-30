@@ -8,10 +8,23 @@ export const nodeStyles = {
     logCursor: {
         position: 'absolute',
         bottom: -1,
-        left: 50,
-        width: '100%',
+        left: -5,
+        width: 200,
         height: 2,
-        background: "#0B486B"
+        background: '#0B486B'
+    },
+
+    logCursorCenterCircle: {
+        position: 'absolute',
+        width: 16,
+        height: 16,
+        borderRadius: 16,
+        left: 88,
+        top: -7,
+        background: '#E4F1F4',
+        borderWidth: 2,
+        borderColor: '#0B486B',
+        borderStyle: 'solid'
     },
 
     node: {
@@ -36,5 +49,11 @@ export const nodeStyles = {
 
     'node:active': {
         background: Color('#B9CFD2').darken(0.1).hex()
+    },
+
+    nodeTypeInput: {
+        fontSize: 16,
+        fontFamily: 'Open Sans',
+        fontWeight: 400
     }
 }

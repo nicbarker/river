@@ -1,8 +1,9 @@
 import * as React from 'react'
-import { addStyleObjects } from 'actions/application-actions'
-import { Store } from 'redux';
+import { addStyleObjects, ReduxAction } from 'actions/application-actions'
+import { Store, createStore } from 'redux';
+import { ApplicationState, applicationReducer } from 'reducers/application-reducer';
 
-const noUnits = {
+const noUnits: { [key: string]: boolean} = {
     'flex': true,
     'flexGrow': true,
     'flexShrink': true,
@@ -11,25 +12,19 @@ const noUnits = {
     'opacity': true
 }
 
-const isVendorPrefix = (attribute) => {
+const isVendorPrefix = (attribute: string) => {
     return attribute.match(/\-webkit/)
 }
 
-export const extendStylesheet = function (...objects) {
+export const extendStylesheet = function (...objects: StyleObject[]) {
     // Variables
-    const extended = {}
+    const extended: StyleObject = {}
 
     // Merge the object into the extended object
-    var merge = function (obj) {
+    var merge = function (obj: StyleObject) {
         for (var prop in obj) {
             if (obj.hasOwnProperty(prop)) {
-                if (Object.prototype.toString.call(obj[prop]) === '[object Object]') {
-                    // If we're doing a deep merge and the property is an object
-                    extended[prop] = extendStylesheet(true, extended[prop], obj[prop])
-                } else {
-                    // Otherwise, do a regular merge
-                    extended[prop] = obj[prop]
-                }
+                extended[prop] = obj[prop]
             }
         }
     }
@@ -56,7 +51,7 @@ export type StyleObject = {
     }
 }
 
-export const createStylesheetHelper = (store: Store) => {
+export const createStylesheetHelper = (store: Store<ApplicationState, ReduxAction>) => {
     const classMapCache: Array<any> = []
     let classMapIndex = 0
 
@@ -97,4 +92,4 @@ export const createStylesheetHelper = (store: Store) => {
     }
 }
 
-export const StylesheetContext = React.createContext({ createStylesheet: createStylesheetHelper({} as Store) });
+export const StylesheetContext = React.createContext({ createStylesheet: createStylesheetHelper(createStore(applicationReducer)) });

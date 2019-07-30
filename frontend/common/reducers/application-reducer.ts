@@ -13,7 +13,7 @@ export type ApplicationState = {
     activeLayer: Layer
 }
 
-const initialState: ApplicationState = {
+export const initialState: ApplicationState = {
     styles: [],
     nodes: {},
     orderedNodes: [],

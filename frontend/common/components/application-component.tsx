@@ -1,6 +1,5 @@
 import * as React from 'react'
 import { Route, Switch } from 'react-router-dom'
-import { initialize } from 'lib/global-keyboard-listener'
 import { Editor } from 'containers/editor-container';
 import { Interpreter } from 'containers/interpreter-container';
 import { ApplicationState } from 'reducers/application-reducer';
@@ -9,7 +8,6 @@ import { applicationStyles } from 'styles/application-styles';
 // Application components
 
 export const Application = (props: { reduxState: ApplicationState }) => {
-    React.useEffect(initialize, [])
     const { createStylesheet } = React.useContext(StylesheetContext)
     const styles = createStylesheet(applicationStyles);
     return (

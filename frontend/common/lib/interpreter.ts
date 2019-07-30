@@ -2,19 +2,29 @@
 // Run a .rvr program
 // --------------------------------------------------
 
+export const nodeTypes = ['log']
+
 export type RiverNode = {
-    id: string,
+    id: string
     nextNodeId?: string
     entryPoint?: boolean
     type?: string
 }
 
-export type LogMessage = {
+export type LogNode = RiverNode & {
+    type: 'log'
+    outputType: 'internal' | 'stdout' | 'stderr'
+    properties: {
+        message: string
+    }
+}
+
+export type RuntimeLogMessage = {
     timestamp: number,
     message: string
 }
 
-const createLogMessage = (message: string): LogMessage => {
+const createLogMessage = (message: string): RuntimeLogMessage => {
     return {
         timestamp: Date.now(),
         message
@@ -22,7 +32,7 @@ const createLogMessage = (message: string): LogMessage => {
 }
 
 export const run = (program: { nodes: { [key: string]: RiverNode} }) => {
-    const output: LogMessage[] = []
+    const output: RuntimeLogMessage[] = []
     const entryPoint = Object.values(program.nodes).find(n => n.entryPoint)
     output.push(createLogMessage('starting river program'))
     const executeNode = (node: RiverNode) => {

@@ -2,14 +2,14 @@ import * as React from 'react'
 import { interpreterStyles } from 'styles/interpreter-styles';
 import { StylesheetContext } from 'lib/stylesheet-helper';
 import { ApplicationState } from 'reducers/application-reducer';
-import { run, LogMessage } from 'lib/interpreter';
+import { run, RuntimeLogMessage } from 'lib/interpreter';
 
 export const Interpreter = (props: {
     reduxState: ApplicationState
 }) => {
     const { createStylesheet } = React.useContext(StylesheetContext)
     const styles = createStylesheet(interpreterStyles);
-    const [programOutput, setProgramOutput] = React.useState<LogMessage[]>([])
+    const [programOutput, setProgramOutput] = React.useState<RuntimeLogMessage[]>([])
 
     const outputRendered = programOutput.map((line, index) => (
         <div key={index} className={styles.outputLine}>
