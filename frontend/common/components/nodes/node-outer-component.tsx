@@ -11,7 +11,8 @@ export type NodeOuterProps = {
     selectNode: () => void,
     deleteNode: () => void,
     setNodeType: (type: NodeType) => void,
-    focusParent: () => void
+    focusParent: () => void,
+    setLogMessage: (message: string) => void,
 }
 
 export const NodeOuter = (props: NodeOuterProps) => {
@@ -30,11 +31,11 @@ export const NodeOuter = (props: NodeOuterProps) => {
     // On unmount, return focus to the parent
     React.useEffect(() => {
         // On the first mount of an empty node, focus the auto complete input
-        if (!props.node.type && innerRef.current) {
+        if ((!props.node.type || props.node.type === 'log') && innerRef.current) {
             innerRef.current.focus()
         }
         return props.focusParent
-    }, [])
+    }, [props.node.type])
 
     const onOuterKeyDown = React.useCallback((event: React.KeyboardEvent<HTMLDivElement>) => {
         if (event.key === 'Backspace') {
@@ -60,7 +61,13 @@ export const NodeOuter = (props: NodeOuterProps) => {
             innerRef={innerRef}
         />
     } else if (props.node.type === 'log') {
-        innerNode = <LogNode key={props.node.id} selected={props.selected}></LogNode>
+        innerNode = <LogNode
+            key={props.node.id}
+            selected={props.selected}
+            focusParent={props.focusParent}
+            innerRef={innerRef}
+            setLogMessage={props.setLogMessage}
+        />
     }
 
     return (

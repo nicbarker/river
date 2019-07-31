@@ -126,6 +126,18 @@ export const applicationReducer = (state = initialState, action: ReduxAction) =>
             throw Error('Error in SET_NODE_TYPE, node with id ' + action.payload.nodeId + ' was not found')
         }
     }
+    // --------------------------------------------------
+    // Sets the message of a log node
+    // --------------------------------------------------
+    else if (action.type === 'SET_LOG_MESSAGE') {
+        const node = newState.nodes[action.payload.nodeId]
+        if (node && node.type === 'log') {
+            newState.nodes[action.payload.nodeId] = {...JSON.parse(JSON.stringify(node)), ...{message: action.payload.message}}
+            newState.orderedNodes = createOrderedNodes(newState.nodes)
+        } else if (action.payload.nodeId) { // If the node id was defined but no node was found, we're in trouble
+            throw Error('Error in SET_LOG_MESSAGE, node with id ' + action.payload.nodeId + ' was not found or was not a log node')
+        }
+    }
 
     return newState
 }

@@ -54,3 +54,10 @@ export const setNodeType = (nodeId: string, type: NodeType) => {
         payload: { nodeId, type }
     }
 }
+
+export const setLogMessage = (nodeId: string, message: string) => {
+    return {
+        type: 'SET_LOG_MESSAGE',
+        payload: { nodeId, message }
+    }
+}

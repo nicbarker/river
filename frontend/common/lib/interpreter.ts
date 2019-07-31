@@ -14,10 +14,7 @@ export type RiverNode = {
 
 export type LogNode = RiverNode & {
     type: 'log'
-    outputType: 'internal' | 'stdout' | 'stderr'
-    properties: {
-        message: string
-    }
+    message: string
 }
 
 export type RuntimeLogMessage = {
@@ -39,7 +36,10 @@ export const run = (program: { nodes: { [key: string]: RiverNode} }) => {
     const entryPoint = Object.values(program.nodes).find(n => n.entryPoint)
     output.push(createLogMessage('starting river program'))
     const executeNode = (node: RiverNode) => {
-        output.push(createLogMessage('executing ' + (node.type || 'empty') + ' node ' + node.id.substr(0, 8), node.id))
+        // output.push(createLogMessage('executing ' + (node.type || 'empty') + ' node ' + node.id.substr(0, 8), node.id))
+        if (node.type === 'log') {
+            output.push(createLogMessage(node.message, node.id))
+        }
         if (node.nextNodeId) {
             executeNode(program.nodes[node.nextNodeId])
         }

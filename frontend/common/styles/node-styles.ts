@@ -9,8 +9,8 @@ export const nodeStyles = {
         borderRadius: 5,
         transition: 'transform 0.2s ease',
         transform: 'translate(0px)',
-        flexDirection: 'column',
-        alignItems: 'stretch',
+        flexDirection: 'row',
+        alignItems: 'center',
         outline: 'none'
     },
 
@@ -41,6 +41,11 @@ export const nodeStyles = {
 
     nodeInner: {
         padding: 16
+    },
+
+    nodeLabel: {
+        marginLeft: 16,
+        color: '#888',
     },
 
     autoCompleteVisible: {
