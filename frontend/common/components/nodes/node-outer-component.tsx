@@ -6,32 +6,37 @@ import { PrecursorNode } from './precursor-node-component';
 import { LogNode } from './log-node-component';
 
 export type NodeOuterProps = {
-    node: RiverNode,
-    selected?: boolean,
-    selectNode: () => void,
-    deleteNode: () => void,
-    setNodeType: (type: NodeType) => void,
-    focusParent: () => void,
-    setLogMessage: (message: string) => void,
+    node: RiverNode
+    selected?: boolean
+    selectNode: () => void
+    deleteNode: () => void
+    setNodeType: (type: NodeType) => void
+    focusParent: () => void
+    setLogMessage: (message: string) => void
+    parentOwnedRef?: React.RefObject<HTMLDivElement>
 }
 
 export const NodeOuter = (props: NodeOuterProps) => {
     const { createStylesheet } = React.useContext(StylesheetContext)
     const styles = createStylesheet(nodeStyles)
-    const outerRef = React.useRef<HTMLDivElement>()
+    const nodeRef = React.useRef<HTMLDivElement>()
     const innerRef = React.useRef<any>()
-
+    // Preferentially use the ref passed in by the parent (it's passed in if this is selected to allow for focus)
+    const containerRef = props.parentOwnedRef || nodeRef
     // On selection, focus the outer node to listen for keyboard events
     React.useEffect(() => {
-        if (props.selected && outerRef.current) {
-            outerRef.current.focus()
+        if (props.selected && containerRef.current) {
+            // Don't focus this outer node if the inner content (such as text input) has been focused directly by mouse click
+            if (document.activeElement !== innerRef.current) {
+                containerRef.current.focus()
+            }
         }
     }, [props.selected])
 
     // On unmount, return focus to the parent
     React.useEffect(() => {
         // On the first mount of an empty node, focus the auto complete input
-        if ((!props.node.type || props.node.type === 'log') && innerRef.current) {
+        if ((props.node.type === 'empty' || props.node.type === 'log') && innerRef.current) {
             innerRef.current.focus()
         }
         return props.focusParent
@@ -47,10 +52,10 @@ export const NodeOuter = (props: NodeOuterProps) => {
         }
     }, [])
 
-    const focusParent = () => outerRef.current && outerRef.current.focus()
+    const focusParent = () => containerRef.current && containerRef.current.focus()
 
     let innerNode
-    if (!props.node.type) {
+    if (props.node.type === 'empty') {
         innerNode = <PrecursorNode
             key={props.node.id}
             node={props.node}
@@ -59,19 +64,22 @@ export const NodeOuter = (props: NodeOuterProps) => {
             deleteNode={props.deleteNode}
             focusParent={focusParent}
             innerRef={innerRef}
+            selectNode={props.selectNode}
         />
     } else if (props.node.type === 'log') {
         innerNode = <LogNode
+            node={props.node}
             key={props.node.id}
             selected={props.selected}
-            focusParent={props.focusParent}
+            focusParent={focusParent}
             innerRef={innerRef}
             setLogMessage={props.setLogMessage}
+            selectNode={props.selectNode}
         />
     }
 
     return (
-        <div className={styles.nodeOuter} tabIndex={1} ref={outerRef} onKeyDown={onOuterKeyDown} onClick={props.selectNode}>
+        <div className={styles.nodeOuter} tabIndex={1} ref={containerRef} onKeyDown={onOuterKeyDown} onClick={props.selectNode} onFocus={(event: React.FocusEvent) => event.stopPropagation()}>
             {innerNode}
         </div>
     )

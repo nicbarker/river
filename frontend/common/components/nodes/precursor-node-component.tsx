@@ -11,6 +11,7 @@ export const PrecursorNode = (props: {
     setNodeType: (type: NodeType) => void
     focusParent: () => void
     innerRef: React.RefObject<any>
+    selectNode: () => void
 }) => {
     const { createStylesheet } = React.useContext(StylesheetContext)
     const styles = createStylesheet(nodeStyles)
@@ -47,7 +48,12 @@ export const PrecursorNode = (props: {
 
     const onInputBlur = () => {
         setInputHasFocus(false)
-        props.focusParent()
+    }
+
+    const onInputFocus = (event: React.FocusEvent) => {
+        // Don't fire multiple focus events up the tree
+        event.stopPropagation()
+        setInputHasFocus(true)
     }
 
     const autoCompleteSuggestionsRendered = autoCompleteSuggestions.map((suggestion) => {
@@ -57,7 +63,7 @@ export const PrecursorNode = (props: {
     })
 
     let autoCompleteMenu
-    if (inputHasFocus) {
+    if (inputHasFocus && autoCompleteSuggestions.length > 0) {
         autoCompleteMenu = (
             <div className={styles.autoCompleteSuggestions}>
                 {autoCompleteSuggestionsRendered}
@@ -67,7 +73,7 @@ export const PrecursorNode = (props: {
 
     const nodeClasses = classNames(styles.node, {
         [styles.selected]: props.selected,
-        [styles.autoCompleteVisible]: inputHasFocus
+        [styles.autoCompleteVisible]: inputHasFocus && autoCompleteSuggestions.length > 0
     })
 
     return (
@@ -77,7 +83,7 @@ export const PrecursorNode = (props: {
                 type='text'
                 ref={props.innerRef}
                 onKeyDown={onKeyDown}
-                onFocus={() => setInputHasFocus(true)}
+                onFocus={onInputFocus}
                 onBlur={onInputBlur}
                 value={inputValue}
                 onChange={(event: React.ChangeEvent<HTMLInputElement>) => setInputValue(event.target.value)}

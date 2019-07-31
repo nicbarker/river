@@ -69,7 +69,8 @@ export const applicationReducer = (state = initialState, action: ReduxAction) =>
             const newId = uuid()
             newState.nodes[newId] = {
                 id: newId,
-                nextNodeId: previousNode ? previousNode.nextNodeId : undefined
+                nextNodeId: previousNode ? previousNode.nextNodeId : undefined,
+                type: 'empty'
             }
             // If there's only one node, make it the entrypoint
             if (Object.values(newState.nodes).length === 1) {

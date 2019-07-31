@@ -7,8 +7,7 @@ export const nodeStyles = {
         cursor: 'pointer',
         background: '#B9CFD2',
         borderRadius: 5,
-        transition: 'transform 0.2s ease',
-        transform: 'translate(0px)',
+        position: 'relative',
         flexDirection: 'row',
         alignItems: 'center',
         outline: 'none'
@@ -27,7 +26,6 @@ export const nodeStyles = {
     },
 
     selected: {
-        transform: 'translate(5px)',
         background: Color('#B9CFD2').darken(0.1).hex()
     },
 
@@ -45,6 +43,7 @@ export const nodeStyles = {
 
     nodeLabel: {
         marginLeft: 16,
+        marginRight: 8,
         color: '#888',
     },
 
@@ -58,7 +57,13 @@ export const nodeStyles = {
         fontSize: 16,
         fontFamily: 'Open Sans',
         fontWeight: 400,
-        padding: 16
+        padding: 10,
+        margin: 6
+    },
+
+    'nodeTypeInput:focus': {
+        background: Color('#B9CFD2').hex(),
+        borderRadius: 3
     },
 
     autoCompleteSuggestions: {

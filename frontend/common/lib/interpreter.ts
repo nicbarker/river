@@ -2,20 +2,25 @@
 // Run a .rvr program
 // --------------------------------------------------
 
-export type NodeType = 'log'
+export type NodeType = 'log' | 'empty'
 export const nodeTypes: NodeType[] = ['log']
 
-export type RiverNode = {
+type BaseNodeProps = {
     id: string
     nextNodeId?: string
     entryPoint?: boolean
-    type?: NodeType
 }
 
-export type LogNode = RiverNode & {
+export type EmptyNode = BaseNodeProps & {
+    type: 'empty'
+}
+
+export type LogNode = BaseNodeProps & {
     type: 'log'
     message: string
 }
+
+export type RiverNode = EmptyNode | LogNode;
 
 export type RuntimeLogMessage = {
     timestamp: number,

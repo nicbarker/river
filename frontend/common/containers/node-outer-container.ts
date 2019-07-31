@@ -10,7 +10,7 @@ import { ReduxAction, deleteNode, setNodeType, setSelectedNode, setLogMessage } 
 import { NodeType } from 'lib/interpreter';
 import { NodeOuterProps } from 'components/nodes/node-outer-component';
 
-const mapStateToProps = (state: ApplicationState, ownProps: { nodeId: string, focusParent: () => void }) => {
+const mapStateToProps = (state: ApplicationState, ownProps: { nodeId: string, focusParent: () => void, innerRef?: React.RefObject<HTMLDivElement> }) => {
     const node = state.nodes[ownProps.nodeId]
     const props: Partial<NodeOuterProps> = {
         node,
@@ -19,7 +19,7 @@ const mapStateToProps = (state: ApplicationState, ownProps: { nodeId: string, fo
     return props
 }
 
-const mapDispatchToProps = (dispatch: Dispatch<ReduxAction>, ownProps: { nodeId: string, focusParent: () => void }) => {
+const mapDispatchToProps = (dispatch: Dispatch<ReduxAction>, ownProps: { nodeId: string, focusParent: () => void, innerRef?: React.RefObject<HTMLDivElement> }) => {
     const props: Partial<NodeOuterProps> = {
         selectNode: () => dispatch(setSelectedNode(ownProps.nodeId)),
         deleteNode: () => dispatch(deleteNode(ownProps.nodeId)),
