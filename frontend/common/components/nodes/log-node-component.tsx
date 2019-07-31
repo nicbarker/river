@@ -26,6 +26,7 @@ export const LogNode = (props: {
             props.setLogMessage(inputValue)
             props.focusParent()
         } else if (event.key === 'Escape') {
+            setInputValue(props.node.message || '')
             props.focusParent()
         }
 
@@ -41,7 +42,7 @@ export const LogNode = (props: {
 
     return (
         <div className={nodeClasses}>
-            <div className={styles.nodeLabel}>Write Message: </div>
+            <div className={styles.nodeLabel}>Log: </div>
             <input
                 className={styles.nodeTypeInput}
                 type='text'

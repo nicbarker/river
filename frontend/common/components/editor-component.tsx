@@ -41,10 +41,6 @@ export const Editor = (props: EditorProps) => {
             }
         } else if (event.key === 'e') {
             props.setActiveLayer('editor')
-        } else if (event.key === 'd') {
-            props.setActiveLayer('docs')
-        } else if (event.key === 'l') {
-            props.setActiveLayer('logs')
         }
     }
 
@@ -58,8 +54,6 @@ export const Editor = (props: EditorProps) => {
         <div className={styles.editorOuter} onKeyDown={handleKeyPress} ref={editorRef} tabIndex={1} onFocus={() => selectedNodeRef.current && selectedNodeRef.current.focus()}>
             <div className={styles.editorHeader}>
                 <div className={classNames(styles.headerButton, { [styles.headerButtonActive]: props.activeLayer === 'editor'})} onClick={() => props.setActiveLayer('editor')}>Editor</div>
-                <div className={classNames(styles.headerButton, { [styles.headerButtonActive]: props.activeLayer === 'docs'})} onClick={() => props.setActiveLayer('docs')}>Docs</div>
-                <div className={classNames(styles.headerButton, { [styles.headerButtonActive]: props.activeLayer === 'logs'})} onClick={() => props.setActiveLayer('logs')}>Logs</div>
             </div>
             <div className={styles.nodes}>
                 {renderedNodes}
