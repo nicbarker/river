@@ -43,7 +43,12 @@ export const interpreterStyles = {
     outputLine: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: 5
+        marginBottom: 5,
+        cursor: 'pointer'
+    },
+
+    'outputLine:hover': {
+        fontWeight: 600
     },
 
     logTime: {

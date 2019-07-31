@@ -15,7 +15,7 @@ export const PrecursorNode = (props: {
     const { createStylesheet } = React.useContext(StylesheetContext)
     const styles = createStylesheet(nodeStyles)
     const [inputValue, setInputValue] = React.useState('')
-    const [inputHasFocus, setInputHasFocus] = React.useState(false)
+    const [inputHasFocus, setInputHasFocus] = React.useState(true)
 
     // On unmount, return focus to parent
     React.useEffect(() => {
