@@ -24,7 +24,7 @@ export const Editor = (props: EditorProps) => {
     const editorRef = React.useRef<HTMLDivElement>()
     const selectedNodeRef = React.useRef<HTMLDivElement>()
     const focusEditor = () => editorRef.current && editorRef.current.focus()
-    React.useEffect(() => focusEditor, [])
+    React.useEffect(() => focusEditor(), [])
 
     // Register keyboard shortcuts
     const handleKeyPress = (event: React.KeyboardEvent<HTMLDivElement>) => {
