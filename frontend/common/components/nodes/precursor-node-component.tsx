@@ -39,6 +39,7 @@ export const PrecursorNode = (props: {
             props.setNodeType(autoCompleteSuggestions[0])
         } else if (event.key === 'Escape' && props.innerRef.current) {
             props.innerRef.current.blur()
+            props.focusParent()
         }
 
         if (inputHasFocus) {

@@ -79,7 +79,7 @@ export const NodeOuter = (props: NodeOuterProps) => {
     }
 
     return (
-        <div className={styles.nodeOuter} tabIndex={1} ref={containerRef} onKeyDown={onOuterKeyDown} onClick={props.selectNode} onFocus={(event: React.FocusEvent) => event.stopPropagation()}>
+        <div className={styles.nodeOuter} tabIndex={1} ref={containerRef} onKeyDown={onOuterKeyDown} onClick={props.selectNode} onFocus={(event: React.FocusEvent) => { console.log('fosu3'); event.stopPropagation() }}>
             {innerNode}
         </div>
     )

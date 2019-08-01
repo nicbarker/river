@@ -35,7 +35,6 @@ export const LogNode = (props: {
         }
     }, [inputValue])
 
-
     const nodeClasses = classNames(styles.node, {
         [styles.selected]: props.selected
     })
@@ -48,6 +47,7 @@ export const LogNode = (props: {
                 type='text'
                 ref={props.innerRef}
                 onKeyDown={onKeyDown}
+                onBlur={() => props.node.message !== inputValue && props.setLogMessage(inputValue)}
                 value={inputValue}
                 onChange={(event: React.ChangeEvent<HTMLInputElement>) => setInputValue(event.target.value)}
                 placeholder={'Log Message'}
