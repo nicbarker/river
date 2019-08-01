@@ -7,8 +7,8 @@
   "license": "MIT",
   "scripts": {
     "start-webpack": "node_modules/.bin/webpack-dev-server --config webpack-config/common/webpack.common.dev.js",
-    "dist": "NODE_ENV=production node_modules/.bin/parallel-webpack --config webpack-config/common/webpack.common.production.js",
-    "dist-analyze": "NODE_ENV=production node_modules/.bin/parallel-webpack --config webpack-config/common/webpack.common.analyze.js"
+    "dist": "NODE_ENV=production node_modules/.bin/webpack --config webpack-config/common/webpack.common.production.js",
+    "dist-analyze": "NODE_ENV=production node_modules/.bin/webpack --config webpack-config/common/webpack.common.analyze.js"
   },
   "dependencies": {
     "@babel/polyfill": "^7.0.0",
