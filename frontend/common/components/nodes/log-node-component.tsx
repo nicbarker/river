@@ -33,7 +33,7 @@ export const LogNode = (props: {
         if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') {
             event.stopPropagation()
         }
-    }, [inputValue])
+    }, [inputValue, props.node.message])
 
     const nodeClasses = classNames(styles.node, {
         [styles.selected]: props.selected
