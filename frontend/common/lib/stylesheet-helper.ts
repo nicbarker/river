@@ -16,7 +16,7 @@ const isVendorPrefix = (attribute: string) => {
     return attribute.match(/\-webkit/)
 }
 
-export const extendStylesheet = function (...objects: StyleObject[]) {
+export const extendStylesheet = (...objects: StyleObject[]) => {
     // Variables
     const extended: StyleObject = {}
 
@@ -24,7 +24,7 @@ export const extendStylesheet = function (...objects: StyleObject[]) {
     var merge = function (obj: StyleObject) {
         for (var prop in obj) {
             if (obj.hasOwnProperty(prop)) {
-                extended[prop] = obj[prop]
+                extended[prop] = Object.assign({}, extended[prop], obj[prop])
             }
         }
     }
@@ -81,7 +81,7 @@ export const createStylesheetHelper = (store: Store<ApplicationState, ReduxActio
             for (const attribute of Object.keys(styleObject[className])) {
                 const value = styleObject[className][attribute]
                 // Converts javascript styles -> real css styles. Camel case to kebab case, no units to px
-                const convertedValue = `${!isVendorPrefix(attribute) ? attribute.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase() : attribute}:${value}${!isNaN(value) && !noUnits[attribute] ? 'px' : '' };`
+                const convertedValue = `${!isVendorPrefix(attribute) ? attribute.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase() : attribute}:${value}${!isNaN(value as number) && !noUnits[attribute] ? 'px' : '' };`
                 styleObjects[classNameHash] += convertedValue
             }
         }

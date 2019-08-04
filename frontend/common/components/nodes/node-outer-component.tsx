@@ -1,9 +1,11 @@
 import * as React from 'react'
-import { RiverNode, NodeType } from 'lib/interpreter';
+import { RiverNode, NodeType, ValueType } from 'lib/interpreter';
 import { StylesheetContext } from 'lib/stylesheet-helper';
 import { nodeStyles } from 'styles/node-styles';
 import { PrecursorNode } from './precursor-node-component';
 import { LogNode } from './log-node-component';
+import { StorageCreateNode } from './storage-create-node-component';
+import classNames = require('classnames');
 
 export type NodeOuterProps = {
     node: RiverNode
@@ -13,7 +15,11 @@ export type NodeOuterProps = {
     setNodeType: (type: NodeType) => void
     focusParent: () => void
     setLogMessage: (message: string) => void
+    setStorageCreateLabel: (label: string) => void
+    setStorageCreateValueType: (valueType: ValueType) => void
+    setStorageCreateValue: (value: string) => void
     parentOwnedRef?: React.RefObject<HTMLDivElement>
+    orderedNodes: RiverNode[]
 }
 
 export const NodeOuter = (props: NodeOuterProps) => {
@@ -34,13 +40,7 @@ export const NodeOuter = (props: NodeOuterProps) => {
     }, [props.selected])
 
     // On unmount, return focus to the parent
-    React.useEffect(() => {
-        // On the first mount of an empty node, focus the auto complete input
-        if ((props.node.type === 'empty' || props.node.type === 'log') && innerRef.current) {
-            innerRef.current.focus()
-        }
-        return props.focusParent
-    }, [props.node.type])
+    React.useEffect(() => props.focusParent, [])
 
     const onOuterKeyDown = React.useCallback((event: React.KeyboardEvent<HTMLDivElement>) => {
         if (event.key === 'Backspace') {
@@ -54,10 +54,13 @@ export const NodeOuter = (props: NodeOuterProps) => {
 
     const focusParent = () => containerRef.current && containerRef.current.focus()
 
+    const nodeOuterStyles = classNames(styles.nodeOuter, {
+        [styles.selected]: props.selected
+    })
+
     let innerNode
-    if (props.node.type === 'empty') {
+    if (props.node.nodeType === 'empty') {
         innerNode = <PrecursorNode
-            key={props.node.id}
             node={props.node}
             selected={props.selected}
             setNodeType={props.setNodeType}
@@ -66,20 +69,31 @@ export const NodeOuter = (props: NodeOuterProps) => {
             innerRef={innerRef}
             selectNode={props.selectNode}
         />
-    } else if (props.node.type === 'log') {
+    } else if (props.node.nodeType === 'log') {
         innerNode = <LogNode
             node={props.node}
-            key={props.node.id}
             selected={props.selected}
             focusParent={focusParent}
             innerRef={innerRef}
             setLogMessage={props.setLogMessage}
             selectNode={props.selectNode}
+            orderedNodes={props.orderedNodes}
+        />
+    } else if (props.node.nodeType === 'storage_create') {
+        innerNode = <StorageCreateNode
+            node={props.node}
+            selected={props.selected}
+            focusParent={focusParent}
+            innerRef={innerRef}
+            selectNode={props.selectNode}
+            setStorageCreateLabel={props.setStorageCreateLabel}
+            setStorageCreateValueType={props.setStorageCreateValueType}
+            setStorageCreateValue={props.setStorageCreateValue}
         />
     }
 
     return (
-        <div className={styles.nodeOuter} tabIndex={1} ref={containerRef} onKeyDown={onOuterKeyDown} onClick={props.selectNode} onFocus={(event: React.FocusEvent) => { event.stopPropagation() }}>
+        <div className={nodeOuterStyles} tabIndex={1} ref={containerRef} onKeyDown={onOuterKeyDown} onMouseDown={props.selectNode} onFocus={(event: React.FocusEvent) => { event.stopPropagation() }}>
             {innerNode}
         </div>
     )

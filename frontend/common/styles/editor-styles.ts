@@ -9,10 +9,10 @@ export const editorStyles = {
         flexDirection: 'column',
         alignItems: 'stretch',
         background: Color(colours.darkGreySlate).darken(0.02).hex(),
-        overflowY: 'scroll',
         outline: 'none',
         borderTopLeftRadius: 5,
         borderBottomLeftRadius: 5,
+        width: 0
     },
 
     editorHeader: {
@@ -36,14 +36,21 @@ export const editorStyles = {
     },
 
     nodes: {
+        flexGrow: 1,
         flexDirection: 'column',
-        alignItems: 'flex-start',
-        padding: 18
+        alignItems: 'stretch',
+        paddingTop: 18,
+        paddingBottom: 18
+    },
+
+    nodesScrollContainer: {
+        overflow: 'auto',
+        height: '100%'
     },
 
     pressEnterMessage: {
         marginTop: 18,
-        marginLeft: 9,
+        marginLeft: 18  ,
         fontSize: 20,
         fontWeight: 200,
         color: '#ccc'

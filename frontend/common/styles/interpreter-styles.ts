@@ -12,6 +12,7 @@ export const interpreterStyles = {
         overflowY: 'scroll',
         borderTopRightRadius: 5,
         borderBottomRightRadius: 5,
+        flexShrink: 0
     },
 
     interpreterHeader: {

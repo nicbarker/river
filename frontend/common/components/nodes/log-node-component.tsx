@@ -1,7 +1,6 @@
 import * as React from 'react'
 import { StylesheetContext } from 'lib/stylesheet-helper';
 import { nodeStyles } from 'styles/node-styles';
-import classNames = require('classnames');
 import { LogNode as LogNodeType } from 'lib/interpreter';
 
 export const LogNode = (props: {
@@ -15,11 +14,6 @@ export const LogNode = (props: {
     const { createStylesheet } = React.useContext(StylesheetContext)
     const styles = createStylesheet(nodeStyles)
     const [inputValue, setInputValue] = React.useState(props.node.message || '')
-
-    // On unmount, return focus to parent
-    React.useEffect(() => {
-        return props.focusParent
-    }, [])
 
     const onKeyDown = React.useCallback((event: React.KeyboardEvent<HTMLDivElement>) => {
         if (event.key === 'Enter') {
@@ -35,23 +29,21 @@ export const LogNode = (props: {
         }
     }, [inputValue, props.node.message])
 
-    const nodeClasses = classNames(styles.node, {
-        [styles.selected]: props.selected
-    })
-
     return (
-        <div className={nodeClasses}>
+        <div className={styles.node}>
             <div className={styles.nodeLabel}>Log</div>
-            <input
-                className={styles.nodeTypeInput}
-                type='text'
-                ref={props.innerRef}
-                onKeyDown={onKeyDown}
-                onBlur={() => props.node.message !== inputValue && props.setLogMessage(inputValue)}
-                value={inputValue}
-                onChange={(event: React.ChangeEvent<HTMLInputElement>) => setInputValue(event.target.value)}
-                placeholder={'Log Message'}
-            />
+            <div className={styles.autoCompleteOuter}>
+                <input
+                    className={styles.nodeTypeInput}
+                    type='text'
+                    ref={props.innerRef}
+                    onKeyDown={onKeyDown}
+                    value={inputValue}
+                    autoFocus={true}
+                    onChange={(event: React.ChangeEvent<HTMLInputElement>) => setInputValue(event.target.value)}
+                    placeholder={'Log Message'}
+                />
+            </div>
         </div>
     )
 }

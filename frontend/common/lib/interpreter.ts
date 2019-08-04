@@ -2,29 +2,48 @@
 // Run a .rvr program
 // --------------------------------------------------
 
-export type NodeType = 'log' | 'empty'
-export const nodeTypes: NodeType[] = ['log']
+export type NodeType = 'log' | 'empty' | 'storage_create'
+export const searchableNodeTypes: { label: string, nodeType: NodeType }[] = [
+    { label: 'Log', nodeType: 'log' },
+    { label: 'Create variable', nodeType: 'storage_create' }
+]
+
+export type ValueType = 'text'
+export const searchableValueTypes: { label: string, valueType: ValueType }[] = [
+    { label: 'Text', valueType: 'text' }
+]
 
 type BaseNodeProps = {
     id: string
     nextNodeId?: string
     entryPoint?: boolean
+    nodeType: NodeType
 }
 
 export type EmptyNode = BaseNodeProps & {
-    type: 'empty'
+    nodeType: 'empty'
 }
 
 export type LogNode = BaseNodeProps & {
-    type: 'log'
+    nodeType: 'log'
     message: string
 }
 
-export type RiverNode = EmptyNode | LogNode;
+export namespace StorageNodes {
+    export type Create = BaseNodeProps & {
+        nodeType: 'storage_create'
+        label: string,
+        valueType: 'text'
+        value: string
+    }
+}
+
+
+export type RiverNode = EmptyNode | LogNode | StorageNodes.Create;
 
 export type RuntimeLogMessage = {
-    timestamp: number,
-    message: string,
+    timestamp: number
+    message: string
     nodeId?: string // Id of the node that this log message originated from
 }
 
@@ -41,8 +60,7 @@ export const run = (program: { nodes: { [key: string]: RiverNode} }) => {
     const entryPoint = Object.values(program.nodes).find(n => n.entryPoint)
     output.push(createLogMessage('starting river program'))
     const executeNode = (node: RiverNode) => {
-        // output.push(createLogMessage('executing ' + (node.type || 'empty') + ' node ' + node.id.substr(0, 8), node.id))
-        if (node.type === 'log') {
+        if (node.nodeType === 'log') {
             output.push(createLogMessage(node.message, node.id))
         }
         if (node.nextNodeId) {

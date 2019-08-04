@@ -4,8 +4,6 @@ import { rowHeight } from 'lib/constants';
 
 export const nodeStyles = {
     node: {
-        marginTop: 8,
-        marginBottom: 8,
         cursor: 'pointer',
         background: colours.lightPurple,
         borderRadius: 3,
@@ -17,11 +15,15 @@ export const nodeStyles = {
     },
 
     nodeOuter: {
+        paddingTop: 8,
+        paddingBottom: 8,
+        paddingLeft: 18,
+        paddingRight: 18,
         outline: 'none'
     },
 
     selected: {
-        background: Color(colours.lightPurple).lighten(0.1).hex()
+        background: Color(colours.darkGreySlate).lighten(0.07).hex()
     },
 
     nodeLabel: {
@@ -29,7 +31,7 @@ export const nodeStyles = {
         paddingRight: 16,
         alignItems: 'center',
         color: '#111',
-        background: Color(colours.lightPurple).darken(0.05).hex()
+        background: Color(colours.lightPurple).darken(0.1).hex()
     },
 
     labelIcon: {
@@ -44,15 +46,16 @@ export const nodeStyles = {
 
     nodeTypeInput: {
         fontSize: 16,
-        fontFamily: 'Open Sans',
+        fontFamily: 'Noto Sans HK',
         fontWeight: 400,
         padding: 10,
-        margin: 6
+        margin: 6,
+        borderRadius: 3,
+        background: Color(colours.lightPurple).lighten(0.1).hex(),
     },
 
     'nodeTypeInput:focus': {
         background: Color(colours.lightPurple).lighten(0.2).hex(),
-        borderRadius: 3
     },
 
     autoCompleteOuter: {
@@ -65,12 +68,13 @@ export const nodeStyles = {
         alignItems: 'stretch',
         top: '100%',
         width: '100%',
-        background: Color(colours.lightPurple).lighten(0.05).hex(),
+        background: colours.lightPurple,
         borderBottomRightRadius: 3,
         borderBottomLeftRadius: 3,
     },
 
     suggestion: {
-        padding: 16
+        padding: 16,
+        alignItems: 'center'
     }
 }

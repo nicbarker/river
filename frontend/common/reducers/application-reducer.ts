@@ -1,7 +1,7 @@
 import { StyleObjects } from "lib/stylesheet-helper"
 import { ReduxAction } from "actions/application-actions"
 import { uuid } from "lib/uuid"
-import { RiverNode } from "lib/interpreter";
+import { RiverNode, LogNode, StorageNodes } from "lib/interpreter";
 
 export type Layer = 'editor' | 'docs' | 'logs'
 
@@ -70,7 +70,7 @@ export const applicationReducer = (state = initialState, action: ReduxAction) =>
             newState.nodes[newId] = {
                 id: newId,
                 nextNodeId: previousNode ? previousNode.nextNodeId : undefined,
-                type: 'empty'
+                nodeType: 'empty'
             }
             // If there's only one node, make it the entrypoint
             if (Object.values(newState.nodes).length === 1) {
@@ -121,7 +121,9 @@ export const applicationReducer = (state = initialState, action: ReduxAction) =>
     else if (action.type === 'SET_NODE_TYPE') {
         const node = newState.nodes[action.payload.nodeId]
         if (node) {
-            newState.nodes[action.payload.nodeId] = {...JSON.parse(JSON.stringify(node)), ...{type: action.payload.type}}
+            const newNode = JSON.parse(JSON.stringify(node))
+            newNode.nodeType = action.payload.type
+            newState.nodes[action.payload.nodeId] = newNode
             newState.orderedNodes = createOrderedNodes(newState.nodes)
         } else if (action.payload.nodeId) { // If the node id was defined but no node was found, we're in trouble
             throw Error('Error in SET_NODE_TYPE, node with id ' + action.payload.nodeId + ' was not found')
@@ -132,13 +134,58 @@ export const applicationReducer = (state = initialState, action: ReduxAction) =>
     // --------------------------------------------------
     else if (action.type === 'SET_LOG_MESSAGE') {
         const node = newState.nodes[action.payload.nodeId]
-        if (node && node.type === 'log') {
-            newState.nodes[action.payload.nodeId] = {...JSON.parse(JSON.stringify(node)), ...{message: action.payload.message}}
+        if (node && node.nodeType === 'log') {
+            const newNode = JSON.parse(JSON.stringify(node)) as LogNode
+            newNode.message = action.payload.message
+            newState.nodes[action.payload.nodeId] = newNode
             newState.orderedNodes = createOrderedNodes(newState.nodes)
         } else if (action.payload.nodeId) { // If the node id was defined but no node was found, we're in trouble
             throw Error('Error in SET_LOG_MESSAGE, node with id ' + action.payload.nodeId + ' was not found or was not a log node')
         }
     }
+    // --------------------------------------------------
+    // Sets the label of a Storage: Create node
+    // --------------------------------------------------
+    else if (action.type === 'SET_STORAGE_CREATE_LABEL') {
+        const node = newState.nodes[action.payload.nodeId]
+        if (node && node.nodeType === 'storage_create') {
+            const newNode = JSON.parse(JSON.stringify(node)) as StorageNodes.Create
+            newNode.label = action.payload.label
+            newState.nodes[action.payload.nodeId] = newNode
+            newState.orderedNodes = createOrderedNodes(newState.nodes)
+        } else if (action.payload.nodeId) { // If the node id was defined but no node was found, we're in trouble
+            throw Error('Error in SET_STORAGE_CREATE_LABEL, node with id ' + action.payload.nodeId + ' was not found or was not a log node')
+        }
+    }
+    // --------------------------------------------------
+    // Sets the value type of a Storage: Create node
+    // --------------------------------------------------
+    else if (action.type === 'SET_STORAGE_CREATE_VALUE_TYPE') {
+        const node = newState.nodes[action.payload.nodeId]
+        if (node && node.nodeType === 'storage_create') {
+            const newNode = JSON.parse(JSON.stringify(node)) as StorageNodes.Create
+            newNode.valueType = action.payload.valueType
+            newState.nodes[action.payload.nodeId] = newNode
+            newState.orderedNodes = createOrderedNodes(newState.nodes)
+        } else if (action.payload.nodeId) { // If the node id was defined but no node was found, we're in trouble
+            throw Error('Error in SET_STORAGE_CREATE_VALUE_TYPE, node with id ' + action.payload.nodeId + ' was not found or was not a log node')
+        }
+    }
+    // --------------------------------------------------
+    // Sets the value of a Storage: Create node
+    // --------------------------------------------------
+    else if (action.type === 'SET_STORAGE_CREATE_VALUE') {
+        const node = newState.nodes[action.payload.nodeId]
+        if (node && node.nodeType === 'storage_create') {
+            const newNode = JSON.parse(JSON.stringify(node)) as StorageNodes.Create
+            newNode.value = action.payload.value
+            newState.nodes[action.payload.nodeId] = newNode
+            newState.orderedNodes = createOrderedNodes(newState.nodes)
+        } else if (action.payload.nodeId) { // If the node id was defined but no node was found, we're in trouble
+            throw Error('Error in SET_STORAGE_CREATE_VALUE, node with id ' + action.payload.nodeId + ' was not found or was not a log node')
+        }
+    }
+
 
     return newState
 }

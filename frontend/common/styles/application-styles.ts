@@ -4,6 +4,7 @@ export const applicationStyles = {
         height: '100%',
         display: 'flex',
         padding: 12,
-        background: '#222'
+        background: '#222',
+        overflow: 'hidden'
     }
 }

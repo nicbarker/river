@@ -55,9 +55,11 @@ export const Editor = (props: EditorProps) => {
             <div className={styles.editorHeader}>
                 <div className={classNames(styles.headerButton, { [styles.headerButtonActive]: props.activeLayer === 'editor'})} onClick={() => props.setActiveLayer('editor')}>Editor</div>
             </div>
-            <div className={styles.nodes}>
-                {renderedNodes}
-                {pressEnterMessage}
+            <div className={styles.nodesScrollContainer}>
+                <div className={styles.nodes}>
+                    {renderedNodes}
+                    {pressEnterMessage}
+                </div>
             </div>
         </div>
     )
