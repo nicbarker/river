@@ -1,10 +1,8 @@
-export default [
-    '#000000', // Black, used to offset index
-    '#E8DDCB', // Tan
-    '#CDB380', // Light brown
-    '#036564', // Dark green
-    '#033649', // Dark blue
-    '#031634', // Almost black
-    '#A7DBD8', // Light blue
-    '#C44D58', // Red
-]
+export const colours = {
+    darkGreySlate: '#424D4F',
+    darkPurple: '#49254B',
+    lightPurple: '#7D7BA3',
+    bruisedPink: '#AA797D',
+    pinkTan: '#E2BA96',
+    lightBlue: '#B8CFE1'
+}

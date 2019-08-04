@@ -41,7 +41,7 @@ export const LogNode = (props: {
 
     return (
         <div className={nodeClasses}>
-            <div className={styles.nodeLabel}>Log: </div>
+            <div className={styles.nodeLabel}>Log</div>
             <input
                 className={styles.nodeTypeInput}
                 type='text'

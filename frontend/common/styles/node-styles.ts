@@ -1,50 +1,39 @@
 import * as Color from 'color'
+import { colours } from 'lib/colours';
+import { rowHeight } from 'lib/constants';
 
 export const nodeStyles = {
     node: {
         marginTop: 8,
         marginBottom: 8,
         cursor: 'pointer',
-        background: '#B9CFD2',
-        borderRadius: 5,
+        background: colours.lightPurple,
+        borderRadius: 3,
         position: 'relative',
         flexDirection: 'row',
-        alignItems: 'center',
-        outline: 'none'
+        alignItems: 'stretch',
+        outline: 'none',
+        height: rowHeight,
     },
 
     nodeOuter: {
         outline: 'none'
     },
 
-    'node:hover': {
-        background: Color('#B9CFD2').darken(0.05).hex()
-    },
-
-    'node:active': {
-        background: Color('#B9CFD2').darken(0.1).hex()
-    },
-
     selected: {
-        background: Color('#B9CFD2').darken(0.1).hex()
-    },
-
-    'selected:hover': {
-        background: Color('#B9CFD2').darken(0.1).hex()
-    },
-
-    'selected:active': {
-        background: Color('#B9CFD2').darken(0.1).hex()
-    },
-
-    nodeInner: {
-        padding: 16
+        background: Color(colours.lightPurple).lighten(0.1).hex()
     },
 
     nodeLabel: {
-        marginLeft: 16,
-        marginRight: 8,
-        color: '#888',
+        paddingLeft: 16,
+        paddingRight: 16,
+        alignItems: 'center',
+        color: '#111',
+        background: Color(colours.lightPurple).darken(0.05).hex()
+    },
+
+    labelIcon: {
+        width: 26,
     },
 
     autoCompleteVisible: {
@@ -62,20 +51,23 @@ export const nodeStyles = {
     },
 
     'nodeTypeInput:focus': {
-        background: Color('#B9CFD2').hex(),
+        background: Color(colours.lightPurple).lighten(0.2).hex(),
         borderRadius: 3
+    },
+
+    autoCompleteOuter: {
+        position: 'relative'
     },
 
     autoCompleteSuggestions: {
         position: 'absolute',
         flexDirection: 'column',
         alignItems: 'stretch',
-        borderTop: '1px solid ' + Color('#B9CFD2').darken(0.2).hex(),
         top: '100%',
         width: '100%',
-        background: Color('#B9CFD2').darken(0.1).hex(),
-        borderBottomRightRadius: 5,
-        borderBottomLeftRadius: 5,
+        background: Color(colours.lightPurple).lighten(0.05).hex(),
+        borderBottomRightRadius: 3,
+        borderBottomLeftRadius: 3,
     },
 
     suggestion: {

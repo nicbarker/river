@@ -3,6 +3,7 @@ import { StylesheetContext } from 'lib/stylesheet-helper'
 import { nodeStyles } from 'styles/node-styles'
 import classNames from 'classnames'
 import { RiverNode, nodeTypes, NodeType } from 'lib/interpreter'
+import MoreIcon from 'ionicons/dist/ionicons/svg/ios-more.svg'
 
 export const PrecursorNode = (props: {
     node: RiverNode
@@ -33,9 +34,7 @@ export const PrecursorNode = (props: {
     }
 
     const onKeyDown = React.useCallback((event: React.KeyboardEvent<HTMLDivElement>) => {
-        if (event.key === 'Backspace' && inputValue === '') {
-            props.deleteNode()
-        } else if (event.key === 'Enter' && autoCompleteSuggestions.length > 0) {
+        if (event.key === 'Enter' && autoCompleteSuggestions.length > 0) {
             props.setNodeType(autoCompleteSuggestions[0])
         } else if (event.key === 'Escape' && props.innerRef.current) {
             props.innerRef.current.blur()
@@ -59,7 +58,7 @@ export const PrecursorNode = (props: {
 
     const autoCompleteSuggestionsRendered = autoCompleteSuggestions.map((suggestion) => {
         return (
-            <div key={suggestion} className={styles.suggestion}>{suggestion}</div>
+            <div key={suggestion} className={styles.suggestion} onMouseDown={() => props.setNodeType(suggestion)}>{suggestion}</div>
         )
     })
 
@@ -79,18 +78,21 @@ export const PrecursorNode = (props: {
 
     return (
         <div className={nodeClasses}>
-            <input
-                className={styles.nodeTypeInput}
-                type='text'
-                ref={props.innerRef}
-                onKeyDown={onKeyDown}
-                onFocus={onInputFocus}
-                onBlur={onInputBlur}
-                value={inputValue}
-                onChange={(event: React.ChangeEvent<HTMLInputElement>) => setInputValue(event.target.value)}
-                placeholder={inputHasFocus ? autoCompleteSuggestions[0] : 'Empty Node'}
-            />
-            {autoCompleteMenu}
+            <div className={styles.nodeLabel}><MoreIcon className={styles.labelIcon} style={{ fill: '#000' }} /></div>
+            <div className={styles.autoCompleteOuter}>
+                <input
+                    className={styles.nodeTypeInput}
+                    type='text'
+                    ref={props.innerRef}
+                    onKeyDown={onKeyDown}
+                    onFocus={onInputFocus}
+                    onBlur={onInputBlur}
+                    value={inputValue}
+                    onChange={(event: React.ChangeEvent<HTMLInputElement>) => setInputValue(event.target.value)}
+                    placeholder={inputHasFocus ? autoCompleteSuggestions[0] : 'Empty Node'}
+                />
+                {autoCompleteMenu}
+            </div>
         </div>
     )
 }

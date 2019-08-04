@@ -1,46 +1,49 @@
+import { colours } from 'lib/colours'
+import * as Color from 'color'
+import { rowHeight } from 'lib/constants';
+
 export const editorStyles = {
     editorOuter: {
         flexGrow: 1,
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'stretch',
-        background: '#E4F1F4',
-        borderRight: '1px solid #eee',
-        overflowY: 'scroll'
+        background: Color(colours.darkGreySlate).darken(0.02).hex(),
+        overflowY: 'scroll',
+        outline: 'none',
+        borderTopLeftRadius: 5,
+        borderBottomLeftRadius: 5,
     },
 
     editorHeader: {
-        padding: 16,
+        height: rowHeight,
+        background: Color(colours.darkGreySlate).darken(0.4).hex(),
     },
 
     headerButton: {
-        marginRight: 16,
+        padding: 18,
+        marginRight: 18,
         fontWeight: 600,
         cursor: 'pointer',
-        color: '#aaa'
-    },
-
-    'headerButton:hover': {
-        color: '#999'
+        color: '#eee',
+        background: Color(colours.darkGreySlate).darken(0.3).hex(),
     },
 
     headerButtonActive: {
-        color: '#3B8686',
-        textDecoration: 'underline',
-        cursor: 'default'
-    },
-
-    'headerButtonActive:hover': {
-        color: '#3B8686',
+        cursor: 'default',
+        color: '#fff',
+        background: Color(colours.darkGreySlate).darken(0.02).hex(),
     },
 
     nodes: {
         flexDirection: 'column',
         alignItems: 'flex-start',
-        padding: 16
+        padding: 18
     },
 
     pressEnterMessage: {
+        marginTop: 18,
+        marginLeft: 9,
         fontSize: 20,
         fontWeight: 200,
         color: '#ccc'

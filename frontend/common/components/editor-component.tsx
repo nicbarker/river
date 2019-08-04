@@ -48,7 +48,7 @@ export const Editor = (props: EditorProps) => {
         <NodeOuter key={node.id} nodeId={node.id} focusParent={focusEditor} parentOwnedRef={node.id === props.selectedNodeId ? selectedNodeRef : undefined} />
     ))
 
-    const pressEnterMessage = renderedNodes.length === 0 ? <div className={styles.pressEnterMessage}>Press Enter to create a new Node</div> : null
+    const pressEnterMessage = renderedNodes.length === 0 ? <div className={styles.pressEnterMessage}>Press Enter to create a new Node.</div> : null
 
     return (
         <div className={styles.editorOuter} onKeyDown={handleKeyPress} ref={editorRef} tabIndex={1} onFocus={() => { selectedNodeRef.current && selectedNodeRef.current.focus() }}>
