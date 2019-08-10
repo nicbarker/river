@@ -1,6 +1,6 @@
 import { StyleObjects } from "lib/stylesheet-helper";
 import { Layer } from "reducers/application-reducer";
-import { NodeType, ValueType } from "lib/interpreter";
+import { NodeType, ValueType, TextChain } from "lib/interpreter";
 
 // -------------------------------------------------------------
 // Redux actions for interacting with the global application state.
@@ -55,7 +55,7 @@ export const setNodeType = (nodeId: string, type: NodeType) => {
     }
 }
 
-export const setLogMessage = (nodeId: string, message: string) => {
+export const setLogMessage = (nodeId: string, message: TextChain) => {
     return {
         type: 'SET_LOG_MESSAGE',
         payload: { nodeId, message }
@@ -76,7 +76,7 @@ export const setStorageCreateValueType = (nodeId: string, valueType: ValueType) 
     }
 }
 
-export const setStorageCreateValue = (nodeId: string, value: string) => {
+export const setStorageCreateValue = (nodeId: string, value: TextChain) => {
     return {
         type: 'SET_STORAGE_CREATE_VALUE',
         payload: { nodeId, value }

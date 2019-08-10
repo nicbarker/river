@@ -13,6 +13,27 @@ export const searchableValueTypes: { label: string, valueType: ValueType }[] = [
     { label: 'Text', valueType: 'text' }
 ]
 
+export type TextBlockType = 'raw' | 'variableReference'
+
+export type TextBlock = {
+    id: string
+    type: TextBlockType
+}
+
+export type RawTextBlock = TextBlock & {
+    type: 'raw',
+    value: string
+}
+
+export type VariableReferenceTextBlock = TextBlock & {
+    type: 'variableReference'
+    nodeId: string
+}
+
+export type TextBlockObjectType = VariableReferenceTextBlock | RawTextBlock
+
+export type TextChain = (TextBlockObjectType)[]
+
 type BaseNodeProps = {
     id: string
     nextNodeId?: string
@@ -26,7 +47,7 @@ export type EmptyNode = BaseNodeProps & {
 
 export type LogNode = BaseNodeProps & {
     nodeType: 'log'
-    message: string
+    message: TextChain
 }
 
 export namespace StorageNodes {
@@ -34,7 +55,8 @@ export namespace StorageNodes {
         nodeType: 'storage_create'
         label: string,
         valueType: 'text'
-        value: string
+        value: TextChain,
+        runtimeValue: string
     }
 }
 
@@ -45,6 +67,21 @@ export type RuntimeLogMessage = {
     timestamp: number
     message: string
     nodeId?: string // Id of the node that this log message originated from
+}
+
+export const renderTextChain = (nodes: { [key: string]: RiverNode }, textChain: TextChain) => {
+    let currentString = ''
+    for (const block of textChain) {
+        if (block.type === 'raw') {
+            currentString += block.value
+        } else if (block.type === 'variableReference') {
+            const relatedNode = nodes[block.nodeId]
+            if (relatedNode.nodeType === 'storage_create') {
+                currentString += relatedNode.runtimeValue
+            }
+        }
+    }
+    return currentString
 }
 
 const createLogMessage = (message: string, nodeId?: string): RuntimeLogMessage => {
@@ -61,8 +98,11 @@ export const run = (program: { nodes: { [key: string]: RiverNode} }) => {
     output.push(createLogMessage('starting river program'))
     const executeNode = (node: RiverNode) => {
         if (node.nodeType === 'log') {
-            output.push(createLogMessage(node.message, node.id))
+            output.push(createLogMessage(renderTextChain(program.nodes, node.message), node.id))
+        } else if (node.nodeType === 'storage_create') {
+            node.runtimeValue = renderTextChain(program.nodes, node.value)
         }
+
         if (node.nextNodeId) {
             executeNode(program.nodes[node.nextNodeId])
         }

@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { RiverNode, NodeType, ValueType } from 'lib/interpreter';
+import { RiverNode, NodeType, ValueType, TextChain } from 'lib/interpreter';
 import { StylesheetContext } from 'lib/stylesheet-helper';
 import { nodeStyles } from 'styles/node-styles';
 import { PrecursorNode } from './precursor-node-component';
@@ -14,12 +14,12 @@ export type NodeOuterProps = {
     deleteNode: () => void
     setNodeType: (type: NodeType) => void
     focusParent: () => void
-    setLogMessage: (message: string) => void
+    setLogMessage: (message: TextChain) => void
     setStorageCreateLabel: (label: string) => void
     setStorageCreateValueType: (valueType: ValueType) => void
-    setStorageCreateValue: (value: string) => void
+    setStorageCreateValue: (value: TextChain) => void
     parentOwnedRef?: React.RefObject<HTMLDivElement>
-    orderedNodes: RiverNode[]
+    nodes: { [key: string]: RiverNode }
 }
 
 export const NodeOuter = (props: NodeOuterProps) => {
@@ -77,7 +77,7 @@ export const NodeOuter = (props: NodeOuterProps) => {
             innerRef={innerRef}
             setLogMessage={props.setLogMessage}
             selectNode={props.selectNode}
-            orderedNodes={props.orderedNodes}
+            nodes={props.nodes}
         />
     } else if (props.node.nodeType === 'storage_create') {
         innerNode = <StorageCreateNode

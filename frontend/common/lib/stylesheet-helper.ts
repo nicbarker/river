@@ -16,23 +16,21 @@ const isVendorPrefix = (attribute: string) => {
     return attribute.match(/\-webkit/)
 }
 
-export const extendStylesheet = (...objects: StyleObject[]) => {
+export const extendStylesheet = <A extends StyleObject, B extends StyleObject>(baseStyles: A, extendedStyles: B): A & B => {
     // Variables
-    const extended: StyleObject = {}
+    const extended: A & B  = {} as A & B
 
     // Merge the object into the extended object
-    var merge = function (obj: StyleObject) {
-        for (var prop in obj) {
+    var merge = function (obj: A | B) {
+        for (const prop in obj) {
             if (obj.hasOwnProperty(prop)) {
-                extended[prop] = Object.assign({}, extended[prop], obj[prop])
+                extended[prop] = {...extended[prop], ...obj[prop]}
             }
         }
     }
 
-    // Loop through each object and conduct a merge
-    for (let i = 0; i < objects.length; i++) {
-        merge(objects[i])
-    }
+    merge(baseStyles)
+    merge(extendedStyles)
 
     return extended
 }
@@ -56,7 +54,7 @@ export const createStylesheetHelper = (store: Store<ApplicationState, ReduxActio
     let classMapIndex = 0
 
     return <T extends StyleObject, K extends keyof T>(styleObject: T): { [U in keyof T]?: string } => {
-        const cachedMap = classMapCache.find((cached) => cached.styleObject === styleObject)
+        const cachedMap = classMapCache.find((cached) => JSON.stringify(cached.styleObject) === JSON.stringify(styleObject))
         if (cachedMap) {
             return cachedMap.classMap
         }

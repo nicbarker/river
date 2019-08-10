@@ -3,9 +3,16 @@ import { colours } from 'lib/colours';
 import { rowHeight } from 'lib/constants';
 
 export const nodeStyles = {
+    nodeOuter: {
+        paddingTop: 8,
+        paddingBottom: 8,
+        paddingLeft: 18,
+        paddingRight: 18,
+        outline: 'none'
+    },
+
     node: {
         cursor: 'pointer',
-        background: colours.lightPurple,
         borderRadius: 3,
         position: 'relative',
         flexDirection: 'row',
@@ -14,12 +21,9 @@ export const nodeStyles = {
         height: rowHeight,
     },
 
-    nodeOuter: {
-        paddingTop: 8,
-        paddingBottom: 8,
-        paddingLeft: 18,
-        paddingRight: 18,
-        outline: 'none'
+    nodeInner: {
+        alignItems: 'stretch',
+        padding: 6
     },
 
     selected: {
@@ -31,50 +35,19 @@ export const nodeStyles = {
         paddingRight: 16,
         alignItems: 'center',
         color: '#111',
-        background: Color(colours.lightPurple).darken(0.1).hex()
     },
 
     labelIcon: {
         width: 26,
     },
 
-    autoCompleteVisible: {
-        borderBottomRightRadius: 0,
-        borderBottomLeftRadius: 0,
-        zIndex: 1,
-    },
-
-    nodeTypeInput: {
+    genericInput: {
         fontSize: 16,
         fontFamily: 'Noto Sans HK',
         fontWeight: 400,
-        padding: 10,
-        margin: 6,
+        paddingLeft: 10,
+        paddingRight: 10,
+        alignItems: 'center',
         borderRadius: 3,
-        background: Color(colours.lightPurple).lighten(0.1).hex(),
-    },
-
-    'nodeTypeInput:focus': {
-        background: Color(colours.lightPurple).lighten(0.2).hex(),
-    },
-
-    autoCompleteOuter: {
-        position: 'relative'
-    },
-
-    autoCompleteSuggestions: {
-        position: 'absolute',
-        flexDirection: 'column',
-        alignItems: 'stretch',
-        top: '100%',
-        width: '100%',
-        background: colours.lightPurple,
-        borderBottomRightRadius: 3,
-        borderBottomLeftRadius: 3,
-    },
-
-    suggestion: {
-        padding: 16,
-        alignItems: 'center'
     }
 }

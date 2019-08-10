@@ -121,8 +121,11 @@ export const applicationReducer = (state = initialState, action: ReduxAction) =>
     else if (action.type === 'SET_NODE_TYPE') {
         const node = newState.nodes[action.payload.nodeId]
         if (node) {
-            const newNode = JSON.parse(JSON.stringify(node))
+            const newNode = JSON.parse(JSON.stringify(node)) as RiverNode
             newNode.nodeType = action.payload.type
+            if (newNode.nodeType === 'log') {
+                newNode.message = [{ id: uuid(), type: 'raw', value: '' }]
+            }
             newState.nodes[action.payload.nodeId] = newNode
             newState.orderedNodes = createOrderedNodes(newState.nodes)
         } else if (action.payload.nodeId) { // If the node id was defined but no node was found, we're in trouble
@@ -165,6 +168,7 @@ export const applicationReducer = (state = initialState, action: ReduxAction) =>
         if (node && node.nodeType === 'storage_create') {
             const newNode = JSON.parse(JSON.stringify(node)) as StorageNodes.Create
             newNode.valueType = action.payload.valueType
+            newNode.value = [{ id: uuid(), type: 'raw', value: '' }]
             newState.nodes[action.payload.nodeId] = newNode
             newState.orderedNodes = createOrderedNodes(newState.nodes)
         } else if (action.payload.nodeId) { // If the node id was defined but no node was found, we're in trouble
