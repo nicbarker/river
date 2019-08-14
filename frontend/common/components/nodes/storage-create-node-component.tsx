@@ -39,48 +39,10 @@ export const StorageCreateNode = (props: {
         props.focusParent()
     }
 
-    let typeSelector
-    if (props.node.label) {
-        const items = searchableValueTypes.map(type => {
-            return {
-                value: type.valueType,
-                label: type.label,
-                icon: TextIcon
-            }
-        })
-        typeSelector = (
-            <div className={styles.segmentOuter}>
-                <InlineSelector
-                    currentSelection={props.node.valueType ? items.find(t => t.value === props.node.valueType) : undefined}
-                    items={items}
-                    setValue={(type: ValueType) => props.setStorageCreateValueType(type)}
-                    focusParent={() => props.innerRef.current.focus()}
-                    innerRef={typeInputRef}
-                    colour={colours.bruisedPink}
-                />
-            </div>
-        );
-    }
-
-    let valueInputContainer
+    let labelInput
     if (props.node.valueType) {
-        valueInputContainer = (
+        labelInput = (
             <div className={styles.segmentOuter}>
-                <TextChainInput
-                    focusParent={props.focusParent}
-                    textChain={props.node.value}
-                    setTextChain={props.setStorageCreateValue}
-                    innerRef={valueInputRef}
-                    colour={colours.bruisedPink}
-                />
-            </div>
-        )
-    }
-
-    return (
-        <div className={styles.node}>
-            <div className={styles.nodeLabel}>Variable</div>
-            <div className={styles.nodeInner}>
                 <input
                     className={styles.genericInput}
                     type='text'
@@ -92,7 +54,52 @@ export const StorageCreateNode = (props: {
                     onChange={(event: React.ChangeEvent<HTMLInputElement>) => setLabelInputContents(event.target.value)}
                     placeholder={'Label'}
                 />
+            </div>
+        )
+    }
+
+    let valueInputContainer
+    if (props.node.label) {
+        valueInputContainer = (
+            <div className={styles.segmentOuter}>
+                <TextChainInput
+                    nodeId={props.node.id}
+                    focusParent={props.focusParent}
+                    textChain={props.node.value}
+                    setTextChain={props.setStorageCreateValue}
+                    innerRef={valueInputRef}
+                    colour={colours.bruisedPink}
+                />
+            </div>
+        )
+    }
+
+    const items = searchableValueTypes.map(type => {
+        return {
+            value: type.valueType,
+            label: type.label,
+            icon: TextIcon
+        }
+    })
+
+    const typeSelector = (
+        <InlineSelector
+            currentSelection={props.node.valueType ? items.find(t => t.value === props.node.valueType) : undefined}
+            items={items}
+            setValue={(type: ValueType) => props.setStorageCreateValueType(type)}
+            focusParent={() => props.innerRef.current.focus()}
+            innerRef={typeInputRef}
+            colour={colours.bruisedPink}
+            width={120}
+        />
+    );
+
+    return (
+        <div className={styles.node}>
+            <div className={styles.nodeLabel}>Variable</div>
+            <div className={styles.nodeInner}>
                 {typeSelector}
+                {labelInput}
                 {valueInputContainer}
             </div>
         </div>

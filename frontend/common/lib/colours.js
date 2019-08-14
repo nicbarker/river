@@ -4,5 +4,6 @@ export const colours = {
     lightPurple: '#7D7BA3',
     bruisedPink: '#AA797D',
     pinkTan: '#E2BA96',
-    lightBlue: '#B8CFE1'
+    lightBlue: '#B8CFE1',
+    errorRed: '#b74e5b'
 }

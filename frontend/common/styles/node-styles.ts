@@ -30,6 +30,14 @@ export const nodeStyles = {
         background: Color(colours.darkGreySlate).lighten(0.07).hex()
     },
 
+    error: {
+        background: Color(colours.errorRed).fade(0.8).rgb().toString()
+    },
+
+    errorSelected: {
+        background: Color(colours.errorRed).fade(0.6).rgb().toString()
+    },
+
     nodeLabel: {
         paddingLeft: 16,
         paddingRight: 16,

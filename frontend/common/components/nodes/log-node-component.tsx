@@ -25,6 +25,7 @@ export const LogNode = (props: {
             <div className={styles.nodeLabel} ref={props.innerRef}>Log</div>
             <div className={styles.nodeInner}>
                 <TextChainInput
+                    nodeId={props.node.id}
                     focusParent={props.focusParent}
                     textChain={props.node.message}
                     setTextChain={props.setLogMessage}

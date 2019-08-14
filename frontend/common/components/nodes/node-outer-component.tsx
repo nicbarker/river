@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { RiverNode, NodeType, ValueType, TextChain } from 'lib/interpreter';
+import { RiverNode, NodeType, ValueType, TextChain, textChainHasErrors } from 'lib/interpreter';
 import { StylesheetContext } from 'lib/stylesheet-helper';
 import { nodeStyles } from 'styles/node-styles';
 import { PrecursorNode } from './precursor-node-component';
@@ -54,9 +54,7 @@ export const NodeOuter = (props: NodeOuterProps) => {
 
     const focusParent = () => containerRef.current && containerRef.current.focus()
 
-    const nodeOuterStyles = classNames(styles.nodeOuter, {
-        [styles.selected]: props.selected
-    })
+    let nodeHasErrors = false
 
     let innerNode
     if (props.node.nodeType === 'empty') {
@@ -70,6 +68,7 @@ export const NodeOuter = (props: NodeOuterProps) => {
             selectNode={props.selectNode}
         />
     } else if (props.node.nodeType === 'log') {
+        nodeHasErrors = textChainHasErrors(props.nodes, props.node.message)
         innerNode = <LogNode
             node={props.node}
             selected={props.selected}
@@ -91,6 +90,12 @@ export const NodeOuter = (props: NodeOuterProps) => {
             setStorageCreateValue={props.setStorageCreateValue}
         />
     }
+
+    const nodeOuterStyles = classNames(styles.nodeOuter, {
+        [styles.selected]: props.selected,
+        [styles.error]: nodeHasErrors,
+        [styles.errorSelected]: nodeHasErrors && props.selected
+    })
 
     return (
         <div className={nodeOuterStyles} tabIndex={1} ref={containerRef} onKeyDown={onOuterKeyDown} onMouseDown={props.selectNode} onFocus={(event: React.FocusEvent) => { event.stopPropagation() }}>

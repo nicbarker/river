@@ -1,4 +1,3 @@
-import { colours } from 'lib/colours'
 import * as Color from 'color'
 import { rowHeight } from 'lib/constants';
 
@@ -36,9 +35,14 @@ export const typeSelectorStyles = (colour: string) => ({
         alignItems: 'center'
     },
 
+    noMatches: {
+        color: Color(colour).darken(0.5).hex()
+    },
+
     itemIcon: {
         marginRight: 8,
-        width: 20
+        width: 20,
+        fill: Color(colour).darken(0.5).hex()
     },
 
     typeInput: {

@@ -67,6 +67,7 @@ export type RuntimeLogMessage = {
     timestamp: number
     message: string
     nodeId?: string // Id of the node that this log message originated from
+    type: 'message' | 'error'
 }
 
 export const renderTextChain = (nodes: { [key: string]: RiverNode }, textChain: TextChain) => {
@@ -84,10 +85,29 @@ export const renderTextChain = (nodes: { [key: string]: RiverNode }, textChain: 
     return currentString
 }
 
+export const textChainHasErrors = (nodes: { [key: string]: RiverNode }, textChain: TextChain) => {
+    for (const block of textChain) {
+        if (block.type === 'variableReference' && !nodes[block.nodeId]) {
+            return true
+        }
+    }
+    return false
+}
+
 const createLogMessage = (message: string, nodeId?: string): RuntimeLogMessage => {
     return {
         timestamp: Date.now(),
         message,
+        type: 'message',
+        nodeId
+    }
+}
+
+const createLogError = (message: string, nodeId?: string): RuntimeLogMessage => {
+    return {
+        timestamp: Date.now(),
+        message,
+        type: 'error',
         nodeId
     }
 }
@@ -98,7 +118,11 @@ export const run = (program: { nodes: { [key: string]: RiverNode} }) => {
     output.push(createLogMessage('starting river program'))
     const executeNode = (node: RiverNode) => {
         if (node.nodeType === 'log') {
-            output.push(createLogMessage(renderTextChain(program.nodes, node.message), node.id))
+            if (textChainHasErrors(program.nodes, node.message)) {
+                output.push(createLogError(`Log failed because its message contains a variable that has been deleted.`, node.id))
+            } else {
+                output.push(createLogMessage(renderTextChain(program.nodes, node.message), node.id))
+            }
         } else if (node.nodeType === 'storage_create') {
             node.runtimeValue = renderTextChain(program.nodes, node.value)
         }

@@ -24,32 +24,32 @@ export const InlineSelector = <T, >(props: SelectorProps<T>) => {
     const { createStylesheet } = React.useContext(StylesheetContext)
     const styles = createStylesheet(stylesWithColour)
 
-    const [typeInputContents, setTypeInputContents] = React.useState(props.currentSelection && props.currentSelection.label as string || '')
-    const [typeInputHasFocus, setTypeInputHasFocus] = React.useState(false)
+    const [inputValue, setInputValue] = React.useState(props.currentSelection && props.currentSelection.label as string || '')
+    const [inputHasFocus, setInputHasFocus] = React.useState(false)
 
     let autoCompleteSuggestions = props.items
-    if (typeInputContents.length > 0) {
+    if (inputValue.length > 0) {
         // If the user has typed in the box, put exact match auto complete at the top, followed by partial match
-        const matches = props.items.filter(t => t.label.toLowerCase().substr(0, typeInputContents.length) === typeInputContents.toLowerCase())
-            .concat(props.items.filter(t => t.label.toLowerCase().match(typeInputContents.toLowerCase())))
+        const matches = props.items.filter(t => t.label.toLowerCase().substr(0, inputValue.length) === inputValue.toLowerCase())
+            .concat(props.items.filter(t => t.label.toLowerCase().includes(inputValue.toLowerCase())))
         // Deduplicate results by creating a set
         autoCompleteSuggestions = Array.from(new Set(matches))
     }
 
     const onTypeInputBlur = () => {
-        setTypeInputHasFocus(false)
+        setInputHasFocus(false)
     }
 
     const onTypeInputFocus = (event: React.FocusEvent) => {
         // Don't fire multiple focus events up the tree
         event.stopPropagation()
-        setTypeInputHasFocus(true)
+        setInputHasFocus(true)
     }
 
     const autoCompleteSuggestionsRendered = autoCompleteSuggestions.map((suggestion) => {
         let icon
         if (suggestion.icon) {
-            icon = <suggestion.icon className={styles.itemIcon} style={{ fill: '#000' }} />
+            icon = <suggestion.icon className={styles.itemIcon} />
         }
         return (
             <div key={suggestion.label} className={styles.suggestion} onMouseDown={() => props.setValue(suggestion.value)}>
@@ -59,11 +59,11 @@ export const InlineSelector = <T, >(props: SelectorProps<T>) => {
     })
 
     if (autoCompleteSuggestionsRendered.length === 0) {
-        autoCompleteSuggestionsRendered.push(<div key={'none'} className={styles.suggestion}>No matching results.</div>)
+        autoCompleteSuggestionsRendered.push(<div key={'none'} className={classNames(styles.suggestion, styles.noMatches)}>No matches.</div>)
     }
 
     let autoCompleteMenu
-    if (typeInputHasFocus) {
+    if (inputHasFocus) {
         autoCompleteMenu = (
             <div className={styles.autoCompleteSuggestions}>
                 {autoCompleteSuggestionsRendered}
@@ -73,9 +73,8 @@ export const InlineSelector = <T, >(props: SelectorProps<T>) => {
 
     const onTypeInputKeyDown = React.useCallback((event: React.KeyboardEvent<HTMLDivElement>) => {
         if (event.key === 'Enter') {
-            setTypeInputContents(autoCompleteSuggestions[0].label)
+            setInputValue(autoCompleteSuggestions[0].label)
             props.setValue(autoCompleteSuggestions[0].value)
-            props.focusParent()
         } else if (event.key === 'Escape') {
             props.focusParent()
         }
@@ -86,7 +85,7 @@ export const InlineSelector = <T, >(props: SelectorProps<T>) => {
     }, [autoCompleteSuggestions])
 
     const innerStyles = classNames(styles.autoCompleteInner, {
-        [styles.autoCompleteVisible]: typeInputHasFocus
+        [styles.autoCompleteVisible]: inputHasFocus
     })
 
     return (
@@ -99,9 +98,9 @@ export const InlineSelector = <T, >(props: SelectorProps<T>) => {
                     onKeyDown={onTypeInputKeyDown}
                     onFocus={onTypeInputFocus}
                     onBlur={onTypeInputBlur}
-                    value={typeInputContents}
+                    value={inputValue}
                     autoFocus={true}
-                    onChange={(event: React.ChangeEvent<HTMLInputElement>) => setTypeInputContents(event.target.value)}
+                    onChange={(event: React.ChangeEvent<HTMLInputElement>) => setInputValue(event.target.value)}
                     placeholder={'Type'}
                 />
                 {autoCompleteMenu}

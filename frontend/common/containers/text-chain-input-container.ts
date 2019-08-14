@@ -11,6 +11,7 @@ import { TextChain, TextBlockType } from 'lib/interpreter';
 
 const mapStateToProps = (state: ApplicationState, ownProps: {
     textChain: TextChain
+    nodeId: string,
     focusParent: () => void
     innerRef: React.RefObject<any>
     setTextChain: (message: TextChain) => void
