@@ -4,7 +4,7 @@ import { StylesheetContext } from 'lib/stylesheet-helper';
 import { nodeStyles } from 'styles/node-styles';
 import { PrecursorNode } from './precursor-node-component';
 import { LogNode } from './log-node-component';
-import { StorageCreateNode } from './storage-create-node-component';
+import { CreateVariableNode } from './create-variable-node-component';
 import classNames = require('classnames');
 
 export type NodeOuterProps = {
@@ -15,9 +15,9 @@ export type NodeOuterProps = {
     setNodeType: (type: NodeType) => void
     focusParent: () => void
     setLogMessage: (message: TextChain) => void
-    setStorageCreateLabel: (label: string) => void
-    setStorageCreateValueType: (valueType: ValueType) => void
-    setStorageCreateValue: (value: TextChain) => void
+    setCreateVariableLabel: (label: string) => void
+    setCreateVariableValueType: (valueType: ValueType) => void
+    setCreateVariableValue: (value: TextChain) => void
     parentOwnedRef?: React.RefObject<HTMLDivElement>
     nodes: { [key: string]: RiverNode }
 }
@@ -78,19 +78,19 @@ export const NodeOuter = (props: NodeOuterProps) => {
             selectNode={props.selectNode}
             nodes={props.nodes}
         />
-    } else if (props.node.nodeType === 'storage_create') {
+    } else if (props.node.nodeType === 'create_variable') {
         if (props.node.valueType === 'text') {
             nodeHasErrors = textChainHasErrors(props.nodes, props.node.value)
         }
-        innerNode = <StorageCreateNode
+        innerNode = <CreateVariableNode
             node={props.node}
             selected={props.selected}
             focusParent={focusParent}
             innerRef={innerRef}
             selectNode={props.selectNode}
-            setStorageCreateLabel={props.setStorageCreateLabel}
-            setStorageCreateValueType={props.setStorageCreateValueType}
-            setStorageCreateValue={props.setStorageCreateValue}
+            setCreateVariableLabel={props.setCreateVariableLabel}
+            setCreateVariableValueType={props.setCreateVariableValueType}
+            setCreateVariableValue={props.setCreateVariableValue}
         />
     }
 

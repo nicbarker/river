@@ -62,23 +62,23 @@ export const setLogMessage = (nodeId: string, message: TextChain) => {
     }
 }
 
-export const setStorageCreateLabel = (nodeId: string, label: string) => {
+export const setCreateVariableLabel = (nodeId: string, label: string) => {
     return {
-        type: 'SET_STORAGE_CREATE_LABEL',
+        type: 'SET_CREATE_VARIABLE_LABEL',
         payload: { nodeId, label }
     }
 }
 
-export const setStorageCreateValueType = (nodeId: string, valueType: ValueType) => {
+export const setCreateVariableValueType = (nodeId: string, valueType: ValueType) => {
     return {
-        type: 'SET_STORAGE_CREATE_VALUE_TYPE',
+        type: 'SET_CREATE_VARIABLE_VALUE_TYPE',
         payload: { nodeId, valueType }
     }
 }
 
-export const setStorageCreateValue = (nodeId: string, value: TextChain) => {
+export const setCreateVariableValue = (nodeId: string, value: TextChain) => {
     return {
-        type: 'SET_STORAGE_CREATE_VALUE',
+        type: 'SET_CREATE_VARIABLE_VALUE',
         payload: { nodeId, value }
     }
 }

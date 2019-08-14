@@ -3,7 +3,7 @@ import { extendStylesheet } from 'lib/stylesheet-helper'
 import { colours } from 'lib/colours'
 import * as Color from 'color'
 
-export const storageCreateNodeStyles = extendStylesheet(nodeStyles, {
+export const createVariableNodeStyles = extendStylesheet(nodeStyles, {
     node: {
         background: colours.bruisedPink,
     },

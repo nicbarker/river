@@ -1,7 +1,7 @@
 import { StyleObjects } from "lib/stylesheet-helper"
 import { ReduxAction } from "actions/application-actions"
 import { uuid } from "lib/uuid"
-import { RiverNode, LogNode, StorageNodes } from "lib/interpreter";
+import { RiverNode, LogNode, VariableNodes } from "lib/interpreter";
 
 export type Layer = 'editor' | 'docs' | 'logs'
 
@@ -147,46 +147,46 @@ export const applicationReducer = (state = initialState, action: ReduxAction) =>
         }
     }
     // --------------------------------------------------
-    // Sets the label of a Storage: Create node
+    // Sets the label of a Create Variable node
     // --------------------------------------------------
-    else if (action.type === 'SET_STORAGE_CREATE_LABEL') {
+    else if (action.type === 'SET_CREATE_VARIABLE_LABEL') {
         const node = newState.nodes[action.payload.nodeId]
-        if (node && node.nodeType === 'storage_create') {
-            const newNode = JSON.parse(JSON.stringify(node)) as StorageNodes.Create
+        if (node && node.nodeType === 'create_variable') {
+            const newNode = JSON.parse(JSON.stringify(node)) as VariableNodes.Create
             newNode.label = action.payload.label
             newState.nodes[action.payload.nodeId] = newNode
             newState.orderedNodes = createOrderedNodes(newState.nodes)
         } else if (action.payload.nodeId) { // If the node id was defined but no node was found, we're in trouble
-            throw Error('Error in SET_STORAGE_CREATE_LABEL, node with id ' + action.payload.nodeId + ' was not found or was not a log node')
+            throw Error('Error in SET_CREATE_VARIABLE_LABEL, node with id ' + action.payload.nodeId + ' was not found or was not a log node')
         }
     }
     // --------------------------------------------------
-    // Sets the value type of a Storage: Create node
+    // Sets the value type of a Create Variable node
     // --------------------------------------------------
-    else if (action.type === 'SET_STORAGE_CREATE_VALUE_TYPE') {
+    else if (action.type === 'SET_CREATE_VARIABLE_VALUE_TYPE') {
         const node = newState.nodes[action.payload.nodeId]
-        if (node && node.nodeType === 'storage_create') {
-            const newNode = JSON.parse(JSON.stringify(node)) as StorageNodes.Create
+        if (node && node.nodeType === 'create_variable') {
+            const newNode = JSON.parse(JSON.stringify(node)) as VariableNodes.Create
             newNode.valueType = action.payload.valueType
             newNode.value = [{ id: uuid(), type: 'raw', value: '' }]
             newState.nodes[action.payload.nodeId] = newNode
             newState.orderedNodes = createOrderedNodes(newState.nodes)
         } else if (action.payload.nodeId) { // If the node id was defined but no node was found, we're in trouble
-            throw Error('Error in SET_STORAGE_CREATE_VALUE_TYPE, node with id ' + action.payload.nodeId + ' was not found or was not a log node')
+            throw Error('Error in SET_CREATE_VARIABLE_VALUE_TYPE, node with id ' + action.payload.nodeId + ' was not found or was not a log node')
         }
     }
     // --------------------------------------------------
-    // Sets the value of a Storage: Create node
+    // Sets the value of a Create Variable node
     // --------------------------------------------------
-    else if (action.type === 'SET_STORAGE_CREATE_VALUE') {
+    else if (action.type === 'SET_CREATE_VARIABLE_VALUE') {
         const node = newState.nodes[action.payload.nodeId]
-        if (node && node.nodeType === 'storage_create') {
-            const newNode = JSON.parse(JSON.stringify(node)) as StorageNodes.Create
+        if (node && node.nodeType === 'create_variable') {
+            const newNode = JSON.parse(JSON.stringify(node)) as VariableNodes.Create
             newNode.value = action.payload.value
             newState.nodes[action.payload.nodeId] = newNode
             newState.orderedNodes = createOrderedNodes(newState.nodes)
         } else if (action.payload.nodeId) { // If the node id was defined but no node was found, we're in trouble
-            throw Error('Error in SET_STORAGE_CREATE_VALUE, node with id ' + action.payload.nodeId + ' was not found or was not a log node')
+            throw Error('Error in SET_CREATE_VARIABLE_VALUE, node with id ' + action.payload.nodeId + ' was not found or was not a log node')
         }
     }
 

@@ -6,7 +6,7 @@ import { connect } from 'react-redux'
 import { NodeOuter as NodeOuterComponent } from 'components/nodes/node-outer-component'
 import { ApplicationState } from 'reducers/application-reducer';
 import { Dispatch } from 'react';
-import { ReduxAction, deleteNode, setNodeType, setSelectedNode, setLogMessage, setStorageCreateValueType, setStorageCreateLabel, setStorageCreateValue } from 'actions/application-actions';
+import { ReduxAction, deleteNode, setNodeType, setSelectedNode, setLogMessage, setCreateVariableValueType, setCreateVariableLabel, setCreateVariableValue } from 'actions/application-actions';
 import { NodeType, ValueType, TextChain } from 'lib/interpreter';
 import { NodeOuterProps } from 'components/nodes/node-outer-component';
 
@@ -26,9 +26,9 @@ const mapDispatchToProps = (dispatch: Dispatch<ReduxAction>, ownProps: { nodeId:
         deleteNode: () => dispatch(deleteNode(ownProps.nodeId)),
         setNodeType: (type: NodeType) => dispatch(setNodeType(ownProps.nodeId, type)),
         setLogMessage: (message: TextChain) => dispatch(setLogMessage(ownProps.nodeId, message)),
-        setStorageCreateLabel: (label: string)  => dispatch(setStorageCreateLabel(ownProps.nodeId, label)),
-        setStorageCreateValueType: (valueType: ValueType)  => dispatch(setStorageCreateValueType(ownProps.nodeId, valueType)),
-        setStorageCreateValue: (value: TextChain)  => dispatch(setStorageCreateValue(ownProps.nodeId, value)),
+        setCreateVariableLabel: (label: string)  => dispatch(setCreateVariableLabel(ownProps.nodeId, label)),
+        setCreateVariableValueType: (valueType: ValueType)  => dispatch(setCreateVariableValueType(ownProps.nodeId, valueType)),
+        setCreateVariableValue: (value: TextChain)  => dispatch(setCreateVariableValue(ownProps.nodeId, value)),
     }
     return props
 }

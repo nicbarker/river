@@ -1,24 +1,24 @@
 import * as React from 'react'
 import { StylesheetContext } from 'lib/stylesheet-helper'
-import { StorageNodes, ValueType, searchableValueTypes, TextChain } from 'lib/interpreter'
-import { storageCreateNodeStyles } from 'styles/storage-create-node-styles'
+import { VariableNodes, ValueType, searchableValueTypes, TextChain } from 'lib/interpreter'
+import { createVariableNodeStyles } from 'styles/create-variable-node-styles'
 import { InlineSelector } from 'components/nodes/inline-selector-component'
 import TextIcon from 'ionicons/dist/ionicons/svg/ios-text.svg'
 import { TextChainInput } from 'containers/text-chain-input-container';
 import { colours } from 'lib/colours';
 
-export const StorageCreateNode = (props: {
-    node: StorageNodes.Create,
+export const CreateVariableNode = (props: {
+    node: VariableNodes.Create,
     innerRef: React.RefObject<any>
     focusParent: () => void
     selected?: boolean
-    setStorageCreateLabel: (valueType: string) => void
-    setStorageCreateValueType: (valueType: ValueType) => void
-    setStorageCreateValue: (value: TextChain) => void
+    setCreateVariableLabel: (valueType: string) => void
+    setCreateVariableValueType: (valueType: ValueType) => void
+    setCreateVariableValue: (value: TextChain) => void
     selectNode: () => void
 }) => {
     const { createStylesheet } = React.useContext(StylesheetContext)
-    const styles = createStylesheet(storageCreateNodeStyles)
+    const styles = createStylesheet(createVariableNodeStyles)
     const [labelInputContents, setLabelInputContents] = React.useState(props.node.label || '')
 
     const typeInputRef = React.useRef<HTMLInputElement>()
@@ -35,7 +35,7 @@ export const StorageCreateNode = (props: {
     }, [labelInputContents])
 
     const onLabelInputBlur = () => {
-        props.setStorageCreateLabel(labelInputContents)
+        props.setCreateVariableLabel(labelInputContents)
         props.focusParent()
     }
 
@@ -66,7 +66,7 @@ export const StorageCreateNode = (props: {
                     nodeId={props.node.id}
                     focusParent={props.focusParent}
                     textChain={props.node.value}
-                    setTextChain={props.setStorageCreateValue}
+                    setTextChain={props.setCreateVariableValue}
                     innerRef={valueInputRef}
                     colour={colours.bruisedPink}
                 />
@@ -86,7 +86,7 @@ export const StorageCreateNode = (props: {
         <InlineSelector
             currentSelection={props.node.valueType ? items.find(t => t.value === props.node.valueType) : undefined}
             items={items}
-            setValue={(type: ValueType) => props.setStorageCreateValueType(type)}
+            setValue={(type: ValueType) => props.setCreateVariableValueType(type)}
             focusParent={() => props.innerRef.current.focus()}
             innerRef={typeInputRef}
             colour={colours.bruisedPink}

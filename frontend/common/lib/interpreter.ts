@@ -2,10 +2,10 @@
 // Run a .rvr program
 // --------------------------------------------------
 
-export type NodeType = 'log' | 'empty' | 'storage_create'
+export type NodeType = 'log' | 'empty' | 'create_variable'
 export const searchableNodeTypes: { label: string, nodeType: NodeType }[] = [
     { label: 'Log', nodeType: 'log' },
-    { label: 'Create variable', nodeType: 'storage_create' }
+    { label: 'Create variable', nodeType: 'create_variable' }
 ]
 
 export type ValueType = 'text'
@@ -50,9 +50,9 @@ export type LogNode = BaseNodeProps & {
     message: TextChain
 }
 
-export namespace StorageNodes {
+export namespace VariableNodes {
     export type Create = BaseNodeProps & {
-        nodeType: 'storage_create'
+        nodeType: 'create_variable'
         label: string,
         valueType: 'text'
         value: TextChain,
@@ -61,7 +61,7 @@ export namespace StorageNodes {
 }
 
 
-export type RiverNode = EmptyNode | LogNode | StorageNodes.Create;
+export type RiverNode = EmptyNode | LogNode | VariableNodes.Create;
 
 export type RuntimeLogMessage = {
     timestamp: number
@@ -70,16 +70,13 @@ export type RuntimeLogMessage = {
     type: 'message' | 'error'
 }
 
-export const renderTextChain = (nodes: { [key: string]: RiverNode }, textChain: TextChain) => {
+export const renderTextChain = (nodes: { [key: string]: RiverNode }, variableValues: { [key: string]: any }, textChain: TextChain) => {
     let currentString = ''
     for (const block of textChain) {
         if (block.type === 'raw') {
             currentString += block.value
         } else if (block.type === 'variableReference') {
-            const relatedNode = nodes[block.nodeId]
-            if (relatedNode.nodeType === 'storage_create') {
-                currentString += relatedNode.runtimeValue
-            }
+            currentString += variableValues[block.nodeId]
         }
     }
     return currentString
@@ -115,20 +112,21 @@ const createLogError = (message: string, nodeId?: string): RuntimeLogMessage => 
 export const run = (program: { nodes: { [key: string]: RiverNode} }) => {
     const output: RuntimeLogMessage[] = []
     const entryPoint = Object.values(program.nodes).find(n => n.entryPoint)
+    const variableValues: { [key: string]: any } = {}
     output.push(createLogMessage('starting river program'))
     const executeNode = (node: RiverNode) => {
         if (node.nodeType === 'log') {
             if (textChainHasErrors(program.nodes, node.message)) {
                 output.push(createLogError(`Log failed because its message contains a variable that has been deleted.`, node.id))
             } else {
-                output.push(createLogMessage(renderTextChain(program.nodes, node.message), node.id))
+                output.push(createLogMessage(renderTextChain(program.nodes, variableValues, node.message), node.id))
             }
-        } else if (node.nodeType === 'storage_create') {
+        } else if (node.nodeType === 'create_variable') {
             if (node.valueType === 'text') {
                 if (textChainHasErrors(program.nodes, node.value)) {
                     output.push(createLogError(`Create Variable failed because its value contains another variable that has been deleted.`, node.id))
                 } else {
-                    node.runtimeValue = renderTextChain(program.nodes, node.value)
+                    variableValues[node.id] = renderTextChain(program.nodes, variableValues, node.value)
                 }
             }
         }

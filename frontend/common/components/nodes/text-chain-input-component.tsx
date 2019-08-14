@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { StylesheetContext } from 'lib/stylesheet-helper'
-import { RiverNode, StorageNodes, TextChain, TextBlockObjectType } from 'lib/interpreter'
+import { RiverNode, VariableNodes, TextChain, TextBlockObjectType } from 'lib/interpreter'
 import { uuid } from 'lib/uuid'
 import { textChainInputStyles } from 'styles/text-chain-input-styles'
 import classNames = require('classnames')
@@ -99,7 +99,7 @@ export const TextChainInput = (props: TextChainInputProps) => {
                 characterPositions.push(offset + canvasContext.current.measureText(block.value.substr(0, j)).width)
             }
         } else if (block.type === 'variableReference') {
-            const content = props.nodes[block.nodeId] ? (props.nodes[block.nodeId] as StorageNodes.Create).label : 'Deleted'
+            const content = props.nodes[block.nodeId] ? (props.nodes[block.nodeId] as VariableNodes.Create).label : 'Deleted'
             characterPositions.push(offset + canvasContext.current.measureText(content).width + 16)
         }
     }
@@ -107,7 +107,7 @@ export const TextChainInput = (props: TextChainInputProps) => {
     const selectedTextBlock = localTextChain[selectedTextBlockIndex]
     const selectedTextBlockOffset = blockOffsets[selectedTextBlockIndex]
 
-    let autoCompleteSuggestions: StorageNodes.Create[] = []
+    let autoCompleteSuggestions: VariableNodes.Create[] = []
     let autoCompleteMenu
     let wordStartIndex: number
     let wordEndIndex: number
@@ -120,15 +120,15 @@ export const TextChainInput = (props: TextChainInputProps) => {
         const currentWord = selectedTextBlock.value.slice(wordStartIndex, wordEndIndex)
         if (currentWord.length > 0) {
             autoCompleteSuggestions = Object.values(props.nodes).filter(n =>
-                n.nodeType === 'storage_create' &&
+                n.nodeType === 'create_variable' &&
                 n.id !== props.nodeId &&
                 n.label && n.label.toLowerCase().substr(0, currentWord.length) === currentWord.toLowerCase()
-            ) as StorageNodes.Create[]
+            ) as VariableNodes.Create[]
         }
 
         const autoCompleteSuggestionsRendered = autoCompleteSuggestions.map((suggestion) => {
             return (
-                <div key={suggestion.nodeType} className={styles.suggestion}>{suggestion.label}</div>
+                <div key={suggestion.id} className={styles.suggestion}>{suggestion.label}</div>
             )
         })
 
@@ -251,7 +251,7 @@ export const TextChainInput = (props: TextChainInputProps) => {
         if (block.type === 'raw') {
             return <span key={block.id} onMouseDown={(event) => onMouseDown(event, block.id)}>{block.value}</span>
         } else if (block.type === 'variableReference') {
-            const content = props.nodes[block.nodeId] ? (props.nodes[block.nodeId] as StorageNodes.Create).label : 'Deleted'
+            const content = props.nodes[block.nodeId] ? (props.nodes[block.nodeId] as VariableNodes.Create).label : 'Deleted'
             const variableClasses = classNames(styles.variable, {
                 [styles.brokenVariableReference]: !props.nodes[block.nodeId]
             })
