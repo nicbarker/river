@@ -79,6 +79,9 @@ export const NodeOuter = (props: NodeOuterProps) => {
             nodes={props.nodes}
         />
     } else if (props.node.nodeType === 'storage_create') {
+        if (props.node.valueType === 'text') {
+            nodeHasErrors = textChainHasErrors(props.nodes, props.node.value)
+        }
         innerNode = <StorageCreateNode
             node={props.node}
             selected={props.selected}

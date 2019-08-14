@@ -52,9 +52,9 @@ export const interpreterStyles = {
 
     outputLine: {
         flexDirection: 'row',
-        alignItems: 'center',
-        marginBottom: 5,
-        cursor: 'pointer'
+        alignItems: 'flex-start',
+        marginBottom: 10,
+        cursor: 'pointer',
     },
 
     'outputLine:hover': {
@@ -64,7 +64,8 @@ export const interpreterStyles = {
     logTime: {
         fontSize: 12,
         color: '#ccc',
-        marginRight: 10
+        marginRight: 16,
+        paddingTop: 4
     },
 
     logMessage: {

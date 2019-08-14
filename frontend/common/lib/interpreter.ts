@@ -124,7 +124,13 @@ export const run = (program: { nodes: { [key: string]: RiverNode} }) => {
                 output.push(createLogMessage(renderTextChain(program.nodes, node.message), node.id))
             }
         } else if (node.nodeType === 'storage_create') {
-            node.runtimeValue = renderTextChain(program.nodes, node.value)
+            if (node.valueType === 'text') {
+                if (textChainHasErrors(program.nodes, node.value)) {
+                    output.push(createLogError(`Create Variable failed because its value contains another variable that has been deleted.`, node.id))
+                } else {
+                    node.runtimeValue = renderTextChain(program.nodes, node.value)
+                }
+            }
         }
 
         if (node.nextNodeId) {
