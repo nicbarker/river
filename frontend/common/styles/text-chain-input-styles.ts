@@ -75,16 +75,14 @@ export const textChainInputStyles = (colour: string) => ({
     },
 
     'variable:focus': {
-        boxShadow: `0px 0px 24px 6px rgba(80,80,80,0.28)`,
+        boxShadow: `0px 0px 14px 3px rgba(0,0,0,0.28)`,
         fontWeight: '600',
         transform: 'scale(1.05, 1.05)'
     },
 
     brokenVariableReference: {
         background: colours.errorRed,
-        boxShadow: `0px 0px 24px 6px rgba(80,80,80,0.28)`,
         fontWeight: '600',
-        transform: 'scale(1.05, 1.05)'
     },
 
     wordHighlight: {
@@ -101,7 +99,7 @@ export const textChainInputStyles = (colour: string) => ({
         alignItems: 'stretch',
         top: '130%',
         width: 180,
-        boxShadow: `0px 0px 18px 6px rgba(40,40,40,0.35)`,
+        boxShadow: `0px 0px 14px 3px rgba(0,0,0,0.28)`,
         background: Color(colours.bruisedPink).darken(0.02).hex(),
         borderRadius: 3,
     },

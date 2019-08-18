@@ -6,11 +6,20 @@ import { connect } from 'react-redux'
 import { NodeOuter as NodeOuterComponent } from 'components/nodes/node-outer-component'
 import { ApplicationState } from 'reducers/application-reducer';
 import { Dispatch } from 'react';
-import { ReduxAction, deleteNode, setNodeType, setSelectedNode, setLogMessage, setCreateVariableValueType, setCreateVariableLabel, setCreateVariableValue } from 'actions/application-actions';
+import { ReduxAction, deleteNodes, setNodeType, setSelectedNode, setLogMessage, setCreateVariableValueType, setCreateVariableLabel, setCreateVariableValue } from 'actions/application-actions';
 import { NodeType, ValueType, TextChain } from 'lib/interpreter';
 import { NodeOuterProps } from 'components/nodes/node-outer-component';
 
-const mapStateToProps = (state: ApplicationState, ownProps: { nodeId: string, focusParent: () => void, parentOwnedRef?: React.RefObject<HTMLDivElement> }) => {
+type NodeOuterContainerProps = {
+    nodeId: string
+    dragSelected?: boolean
+    focusParent: () => void
+    parentOwnedRef?: React.RefObject<HTMLDivElement>
+    dragSelectionDimensions?: [number, number, number, number]
+    setNodeDragSelected: () => void
+}
+
+const mapStateToProps = (state: ApplicationState, ownProps: NodeOuterContainerProps) => {
     const node = state.nodes[ownProps.nodeId]
     const props: Partial<NodeOuterProps> = {
         node,
@@ -20,10 +29,10 @@ const mapStateToProps = (state: ApplicationState, ownProps: { nodeId: string, fo
     return props
 }
 
-const mapDispatchToProps = (dispatch: Dispatch<ReduxAction>, ownProps: { nodeId: string, focusParent: () => void, parentOwnedRef?: React.RefObject<HTMLDivElement> }) => {
+const mapDispatchToProps = (dispatch: Dispatch<ReduxAction>, ownProps: NodeOuterContainerProps) => {
     const props: Partial<NodeOuterProps> = {
         selectNode: () => dispatch(setSelectedNode(ownProps.nodeId)),
-        deleteNode: () => dispatch(deleteNode(ownProps.nodeId)),
+        deleteNode: () => dispatch(deleteNodes([ownProps.nodeId])),
         setNodeType: (type: NodeType) => dispatch(setNodeType(ownProps.nodeId, type)),
         setLogMessage: (message: TextChain) => dispatch(setLogMessage(ownProps.nodeId, message)),
         setCreateVariableLabel: (label: string)  => dispatch(setCreateVariableLabel(ownProps.nodeId, label)),

@@ -202,6 +202,8 @@ export const TextChainInput = (props: TextChainInputProps) => {
             } else {
                 updateRawTextBlock(selectedTextBlock.id, selectedTextBlock.value, true)
             }
+        } else if (event.key === 'Escape') {
+            props.focusParent()
         }
 
         event.stopPropagation()

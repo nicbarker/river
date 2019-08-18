@@ -16,7 +16,7 @@ export const typeSelectorStyles = (colour: string) => ({
     },
 
     autoCompleteVisible: {
-        boxShadow: `0px 0px 24px 6px rgba(80,80,80,0.28), inset 0px 0px 0px 1px ${Color(colour).lighten(0.3).hex()}`,
+        boxShadow: `0px 0px 14px 3px rgba(0,0,0,0.28), inset 0px 0px 0px 1px ${Color(colour).lighten(0.3).hex()}`,
         zIndex: 10,
     },
 

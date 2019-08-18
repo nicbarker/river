@@ -2,7 +2,7 @@ import * as React from 'react'
 import { StylesheetContext } from 'lib/stylesheet-helper'
 import { VariableNodes, ValueType, searchableValueTypes, TextChain } from 'lib/interpreter'
 import { createVariableNodeStyles } from 'styles/create-variable-node-styles'
-import { InlineSelector } from 'components/nodes/inline-selector-component'
+import { InlineSelector } from 'components/inline-selector-component'
 import TextIcon from 'ionicons/dist/ionicons/svg/ios-text.svg'
 import { TextChainInput } from 'containers/text-chain-input-container';
 import { colours } from 'lib/colours';

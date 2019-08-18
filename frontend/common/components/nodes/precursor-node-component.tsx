@@ -2,7 +2,7 @@ import * as React from 'react'
 import { StylesheetContext } from 'lib/stylesheet-helper'
 import { RiverNode, searchableNodeTypes, NodeType } from 'lib/interpreter'
 import MoreIcon from 'ionicons/dist/ionicons/svg/ios-more.svg'
-import { InlineSelector } from './inline-selector-component';
+import { InlineSelector } from '../inline-selector-component';
 import { colours } from 'lib/colours';
 import { precursorNodeStyles } from 'styles/precursor-node-styles';
 

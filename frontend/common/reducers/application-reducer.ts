@@ -47,6 +47,14 @@ export const applicationReducer = (state = initialState, action: ReduxAction) =>
         newState.styles = Object.assign({}, newState.styles, action.payload.styleObjects)
     }
     // --------------------------------------------------
+    // Adds style objects to be rendered into the <head> tag
+    // --------------------------------------------------
+    else if (action.type === 'SET_PROGRAM_NODES') {
+        newState.nodes = action.payload.nodes
+        newState.orderedNodes = createOrderedNodes(newState.nodes)
+        newState.selectedNodeId = newState.orderedNodes[0].id
+    }
+    // --------------------------------------------------
     // Sets the active layer in the editor
     // --------------------------------------------------
     else if (action.type === 'SET_ACTIVE_LAYER') {
@@ -86,33 +94,35 @@ export const applicationReducer = (state = initialState, action: ReduxAction) =>
         }
     }
     // --------------------------------------------------
-    // Deletes a node from the program
+    // Deletes nodes from the program
     // --------------------------------------------------
-    else if (action.type === 'DELETE_NODE') {
-        const node = newState.nodes[action.payload.nodeId]
-        if (node) {
-            newState.nodes = JSON.parse(JSON.stringify(newState.nodes))
-            const previousNode = Object.values(newState.nodes).find(n => n.nextNodeId === action.payload.nodeId)
-            // Select the next, or previous node
-            if (node.nextNodeId) {
-                newState.selectedNodeId = node.nextNodeId
-            } else if (previousNode) {
-                newState.selectedNodeId = previousNode.id
-            } else {
-                newState.selectedNodeId = undefined
+    else if (action.type === 'DELETE_NODES') {
+        for (const nodeId of action.payload.nodeIds) {
+            const node = newState.nodes[nodeId]
+            if (node) {
+                newState.nodes = JSON.parse(JSON.stringify(newState.nodes))
+                const previousNode = Object.values(newState.nodes).find(n => n.nextNodeId === nodeId)
+                // Select the next, or previous node
+                if (node.nextNodeId) {
+                    newState.selectedNodeId = node.nextNodeId
+                } else if (previousNode) {
+                    newState.selectedNodeId = previousNode.id
+                } else {
+                    newState.selectedNodeId = undefined
+                }
+                // If something was pointing to the deleted node, point it to the next node instead
+                if (previousNode) {
+                    previousNode.nextNodeId = node.nextNodeId
+                }
+                // If the deleted node was the entrypoint, make the next node the entrypoint instead
+                if (node.entryPoint && node.nextNodeId) {
+                    newState.nodes[node.nextNodeId].entryPoint = true
+                }
+                delete newState.nodes[nodeId]
+                newState.orderedNodes = createOrderedNodes(newState.nodes)
+            } else if (nodeId) { // If the node id was defined but no node was found, we're in trouble
+                throw Error('Error in DELETE_NODE, node with id ' + nodeId + ' was not found')
             }
-            // If something was pointing to the deleted node, point it to the next node instead
-            if (previousNode) {
-                previousNode.nextNodeId = node.nextNodeId
-            }
-            // If the deleted node was the entrypoint, make the next node the entrypoint instead
-            if (node.entryPoint && node.nextNodeId) {
-                newState.nodes[node.nextNodeId].entryPoint = true
-            }
-            delete newState.nodes[action.payload.nodeId]
-            newState.orderedNodes = createOrderedNodes(newState.nodes)
-        } else if (action.payload.nodeId) { // If the node id was defined but no node was found, we're in trouble
-            throw Error('Error in DELETE_NODE, node with id ' + action.payload.nodeId + ' was not found')
         }
     }
     // --------------------------------------------------

@@ -1,6 +1,6 @@
 import { StyleObjects } from "lib/stylesheet-helper";
 import { Layer } from "reducers/application-reducer";
-import { NodeType, ValueType, TextChain } from "lib/interpreter";
+import { NodeType, ValueType, TextChain, RiverNode } from "lib/interpreter";
 
 // -------------------------------------------------------------
 // Redux actions for interacting with the global application state.
@@ -17,6 +17,13 @@ export const addStyleObjects = (styleObjects: StyleObjects) => {
     return {
         type: 'ADD_STYLE_OBJECTS',
         payload: { styleObjects }
+    }
+}
+
+export const setProgramNodes = (nodes: { [id: string]: RiverNode }) => {
+    return {
+        type: 'SET_PROGRAM_NODES',
+        payload: { nodes }
     }
 }
 
@@ -41,10 +48,10 @@ export const insertNode = (previousNodeId: string) => {
     }
 }
 
-export const deleteNode = (nodeId: string) => {
+export const deleteNodes = (nodeIds: string[]) => {
     return {
-        type: 'DELETE_NODE',
-        payload: { nodeId }
+        type: 'DELETE_NODES',
+        payload: { nodeIds }
     }
 }
 

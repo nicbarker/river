@@ -8,13 +8,13 @@ export const nodeStyles = {
         paddingBottom: 8,
         paddingLeft: 18,
         paddingRight: 18,
-        outline: 'none'
+        outline: 'none',
     },
 
     node: {
         cursor: 'pointer',
         borderRadius: 3,
-        position: 'relative',
+        // position: 'relative',
         flexDirection: 'row',
         alignItems: 'stretch',
         outline: 'none',
@@ -27,7 +27,7 @@ export const nodeStyles = {
     },
 
     selected: {
-        background: Color(colours.darkGreySlate).lighten(0.07).hex()
+        background: Color(colours.darkGreySlate).lighten(0.2).hex()
     },
 
     error: {
@@ -36,6 +36,19 @@ export const nodeStyles = {
 
     errorSelected: {
         background: Color(colours.errorRed).fade(0.6).rgb().toString()
+    },
+
+    dragSelectionOverlayOuter: {
+        position: 'relative'
+    },
+
+    dragSelectionOverlay: {
+        background: Color(colours.lightBlue).fade(0.7).rgb().toString(),
+        zIndex: 11,
+        width: '100%',
+        height: '100%',
+        position: 'absolute',
+        borderRadius: 3
     },
 
     nodeLabel: {
