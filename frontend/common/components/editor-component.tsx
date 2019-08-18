@@ -20,6 +20,8 @@ export type EditorProps = {
     setNodeType: (nodeId: string, type: NodeType) => void
     setProgramNodes: (nodes: { [id: string]: RiverNode }) => void
     deleteNodes: (nodeIds: string[]) => void
+    undo: () => void
+    redo: () => void
 }
 
 export const Editor = (props: EditorProps) => {
@@ -59,6 +61,12 @@ export const Editor = (props: EditorProps) => {
             } else {
                 props.deleteNodes([props.selectedNodeId])
             }
+        } else if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key === 'z') {
+            props.redo()
+            event.preventDefault()
+        } else if ((event.ctrlKey || event.metaKey) && event.key === 'z') {
+            props.undo()
+            event.preventDefault()
         }
     }
 
@@ -157,8 +165,8 @@ export const Editor = (props: EditorProps) => {
             onFocus={() => { selectedNodeRef.current && selectedNodeRef.current.focus() }}
         >
             <div className={styles.editorHeader}>
-                <div className={styles.headerButton} style={{ borderTopLeftRadius: 5 }} onClick={() => props.setActiveLayer('editor')}>
-                    <div className={classNames(styles.headerButtonText, { [styles.active]: props.activeLayer === 'editor'})}>Editor</div>
+                <div className={styles.headerButton} onClick={() => props.setActiveLayer('editor')}>
+                    <div className={classNames(styles.headerButtonText, { [styles.active]: props.activeLayer === 'editor'})} style={{ borderTopLeftRadius: 5 }} >Editor</div>
                 </div>
                 <div className={styles.headerButton}>
                     <div className={classNames(styles.headerButtonText, { [styles.dropdownVisible]: fileMenuVisible})} onMouseDown={(event) => { event.stopPropagation(); setFileMenuVisible(true) }}>File</div>

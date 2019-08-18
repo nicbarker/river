@@ -38,13 +38,20 @@ const createOrderedNodes = (nodes: { [id: string]: RiverNode }) => {
     return orderedNodes
 }
 
+let undoStack: ApplicationState[] = [initialState]
+let undoStackPosition = 0
+
+let styleCache: StyleObjects[] = []
+
 export const applicationReducer = (state = initialState, action: ReduxAction) => {
-    const newState: ApplicationState = Object.assign({}, state)
+    let canUndo = false
+    let newState: ApplicationState = Object.assign({}, state)
     // --------------------------------------------------
     // Adds style objects to be rendered into the <head> tag
     // --------------------------------------------------
     if (action.type === 'ADD_STYLE_OBJECTS') {
         newState.styles = Object.assign({}, newState.styles, action.payload.styleObjects)
+        styleCache = newState.styles
     }
     // --------------------------------------------------
     // Adds style objects to be rendered into the <head> tag
@@ -53,6 +60,7 @@ export const applicationReducer = (state = initialState, action: ReduxAction) =>
         newState.nodes = action.payload.nodes
         newState.orderedNodes = createOrderedNodes(newState.nodes)
         newState.selectedNodeId = newState.orderedNodes[0].id
+        canUndo = true
     }
     // --------------------------------------------------
     // Sets the active layer in the editor
@@ -65,6 +73,22 @@ export const applicationReducer = (state = initialState, action: ReduxAction) =>
     // --------------------------------------------------
     else if (action.type === 'SET_SELECTED_NODE') {
         newState.selectedNodeId = action.payload.nodeId
+    }
+    // --------------------------------------------------
+    // Performs an "undo" action
+    // --------------------------------------------------
+    else if (action.type === 'UNDO') {
+        undoStackPosition = Math.max(undoStackPosition - 1, 0)
+        newState = undoStack[undoStackPosition]
+        newState.styles = styleCache
+    }
+    // --------------------------------------------------
+    // Performs a "redo" action
+    // --------------------------------------------------
+    else if (action.type === 'REDO') {
+        undoStackPosition = Math.min(undoStackPosition + 1, undoStack.length - 1)
+        newState = undoStack[undoStackPosition]
+        newState.styles = styleCache
     }
     // --------------------------------------------------
     // Inserts a new empty node in the program after the node
@@ -89,6 +113,7 @@ export const applicationReducer = (state = initialState, action: ReduxAction) =>
             }
             newState.selectedNodeId = newId
             newState.orderedNodes = createOrderedNodes(newState.nodes)
+            canUndo = true
         } else {
             throw Error('Error in INSERT_NODE, node with id ' + action.payload.previousNodeId + ' was not found')
         }
@@ -120,6 +145,7 @@ export const applicationReducer = (state = initialState, action: ReduxAction) =>
                 }
                 delete newState.nodes[nodeId]
                 newState.orderedNodes = createOrderedNodes(newState.nodes)
+                canUndo = true
             } else if (nodeId) { // If the node id was defined but no node was found, we're in trouble
                 throw Error('Error in DELETE_NODE, node with id ' + nodeId + ' was not found')
             }
@@ -152,6 +178,7 @@ export const applicationReducer = (state = initialState, action: ReduxAction) =>
             newNode.message = action.payload.message
             newState.nodes[action.payload.nodeId] = newNode
             newState.orderedNodes = createOrderedNodes(newState.nodes)
+            canUndo = true
         } else if (action.payload.nodeId) { // If the node id was defined but no node was found, we're in trouble
             throw Error('Error in SET_LOG_MESSAGE, node with id ' + action.payload.nodeId + ' was not found or was not a log node')
         }
@@ -166,6 +193,7 @@ export const applicationReducer = (state = initialState, action: ReduxAction) =>
             newNode.label = action.payload.label
             newState.nodes[action.payload.nodeId] = newNode
             newState.orderedNodes = createOrderedNodes(newState.nodes)
+            canUndo = true
         } else if (action.payload.nodeId) { // If the node id was defined but no node was found, we're in trouble
             throw Error('Error in SET_CREATE_VARIABLE_LABEL, node with id ' + action.payload.nodeId + ' was not found or was not a log node')
         }
@@ -181,6 +209,7 @@ export const applicationReducer = (state = initialState, action: ReduxAction) =>
             newNode.value = [{ id: uuid(), type: 'raw', value: '' }]
             newState.nodes[action.payload.nodeId] = newNode
             newState.orderedNodes = createOrderedNodes(newState.nodes)
+            canUndo = true
         } else if (action.payload.nodeId) { // If the node id was defined but no node was found, we're in trouble
             throw Error('Error in SET_CREATE_VARIABLE_VALUE_TYPE, node with id ' + action.payload.nodeId + ' was not found or was not a log node')
         }
@@ -195,11 +224,19 @@ export const applicationReducer = (state = initialState, action: ReduxAction) =>
             newNode.value = action.payload.value
             newState.nodes[action.payload.nodeId] = newNode
             newState.orderedNodes = createOrderedNodes(newState.nodes)
+            canUndo = true
         } else if (action.payload.nodeId) { // If the node id was defined but no node was found, we're in trouble
             throw Error('Error in SET_CREATE_VARIABLE_VALUE, node with id ' + action.payload.nodeId + ' was not found or was not a log node')
         }
     }
 
+    if (canUndo) {
+        if (undoStackPosition < undoStack.length - 1) {
+            undoStack = undoStack.slice(0, undoStackPosition)
+        }
+        undoStack.push(newState)
+        undoStackPosition++
+    }
 
     return newState
 }

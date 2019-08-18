@@ -42,15 +42,6 @@ export const NodeOuter = (props: NodeOuterProps) => {
     const dragSelectionOuterRef = React.useRef<HTMLDivElement>()
     // Preferentially use the ref passed in by the parent (it's passed in if this is selected to allow for focus)
     const containerRef = props.parentOwnedRef || nodeRef
-    // On selection, focus the outer node to listen for keyboard events
-    React.useEffect(() => {
-        if (props.selected && containerRef.current) {
-            // Don't focus this outer node if the inner content (such as text input) has been focused directly by mouse click
-            if (document.activeElement !== innerRef.current) {
-                containerRef.current.focus()
-            }
-        }
-    }, [props.selected])
 
     // On unmount, return focus to the parent
     React.useEffect(() => props.focusParent, [])
@@ -120,8 +111,15 @@ export const NodeOuter = (props: NodeOuterProps) => {
         dragSelectionOverlay = <div className={styles.dragSelectionOverlay} />
     }
 
+    const onFocus = (event: React.FocusEvent) => {
+        if (!props.selected) {
+            props.selectNode()
+        }
+        event.stopPropagation()
+    }
+
     return (
-        <div className={nodeOuterStyles} tabIndex={1} ref={containerRef} onKeyDown={onOuterKeyDown} onMouseDown={props.selectNode} onFocus={(event: React.FocusEvent) => { event.stopPropagation() }}>
+        <div className={nodeOuterStyles} tabIndex={1} ref={containerRef} onKeyDown={onOuterKeyDown} onMouseDown={props.selectNode} onFocus={onFocus}>
             <div className={styles.dragSelectionOverlayOuter} ref={dragSelectionOuterRef}>
                 {dragSelectionOverlay}
                 {innerNode}

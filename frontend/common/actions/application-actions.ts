@@ -8,7 +8,7 @@ import { NodeType, ValueType, TextChain, RiverNode } from "lib/interpreter";
 
 export type ReduxAction = {
     type: string,
-    payload: {
+    payload?: {
         [key: string]: any
     }
 }
@@ -38,6 +38,18 @@ export const setSelectedNode = (nodeId: string) => {
     return {
         type: 'SET_SELECTED_NODE',
         payload: { nodeId }
+    }
+}
+
+export const undo = () => {
+    return {
+        type: 'UNDO'
+    }
+}
+
+export const redo = () => {
+    return {
+        type: 'REDO'
     }
 }
 
