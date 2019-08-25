@@ -90,13 +90,16 @@ export const Editor = (props: EditorProps) => {
         const maxXPosition = Math.max(dragStartPosition[0], dragEndPosition[0]);
         const minYPosition = Math.min(dragStartPosition[1], dragEndPosition[1]);
         const maxYPosition = Math.max(dragStartPosition[1], dragEndPosition[1]);
-        dragSelection = <div className={styles.dragSelection} style={{
-            left: minXPosition,
-            top: minYPosition,
-            width: maxXPosition - minXPosition,
-            height: maxYPosition - minYPosition
-        }}/>
-        dragSelectionDimensions = [minXPosition, minYPosition, maxXPosition, maxYPosition]
+        // If the drag selection is wider or taller than 10 pixels
+        if (maxXPosition - minXPosition > 5 || maxYPosition - minYPosition > 5) {
+            dragSelection = <div className={styles.dragSelection} style={{
+                left: minXPosition,
+                top: minYPosition,
+                width: maxXPosition - minXPosition,
+                height: maxYPosition - minYPosition
+            }}/>
+            dragSelectionDimensions = [minXPosition, minYPosition, maxXPosition, maxYPosition]
+        }
     }
 
     const renderedNodes = Object.values(props.orderedNodes).map((node) => {
