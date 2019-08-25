@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { StylesheetContext } from 'lib/stylesheet-helper';
-import { typeSelectorStyles } from 'styles/inline-selector-styles';
+import { inlineSelectorStyles } from 'styles/inline-selector-styles';
 import classNames = require('classnames');
 
 type Item<T> = {
@@ -20,12 +20,13 @@ type SelectorProps<T> = {
 }
 
 export const InlineSelector = <T, >(props: SelectorProps<T>) => {
-    const stylesWithColour = React.useMemo(() => typeSelectorStyles(props.colour), [props.colour])
+    const stylesWithColour = React.useMemo(() => inlineSelectorStyles(props.colour), [props.colour])
     const { createStylesheet } = React.useContext(StylesheetContext)
     const styles = createStylesheet(stylesWithColour)
 
     const [inputValue, setInputValue] = React.useState(props.currentSelection && props.currentSelection.label as string || '')
     const [inputHasFocus, setInputHasFocus] = React.useState(false)
+    const [selectedSuggestionIndex, setSelectedSuggestionIndex] = React.useState(0)
 
     let autoCompleteSuggestions = props.items
     if (inputValue.length > 0) {
@@ -36,23 +37,23 @@ export const InlineSelector = <T, >(props: SelectorProps<T>) => {
         autoCompleteSuggestions = Array.from(new Set(matches))
     }
 
-    const onTypeInputBlur = () => {
+    const onInputBlur = () => {
         setInputHasFocus(false)
     }
 
-    const onTypeInputFocus = (event: React.FocusEvent) => {
+    const onInputFocus = (event: React.FocusEvent) => {
         // Don't fire multiple focus events up the tree
         event.stopPropagation()
         setInputHasFocus(true)
     }
 
-    const autoCompleteSuggestionsRendered = autoCompleteSuggestions.map((suggestion) => {
+    const autoCompleteSuggestionsRendered = autoCompleteSuggestions.map((suggestion, index) => {
         let icon
         if (suggestion.icon) {
             icon = <suggestion.icon className={styles.itemIcon} />
         }
         return (
-            <div key={suggestion.label} className={styles.suggestion} onMouseDown={() => props.setValue(suggestion.value)}>
+            <div key={suggestion.label} className={classNames(styles.suggestion, { [styles.suggestionSelected]: selectedSuggestionIndex === index })} onMouseDown={() => props.setValue(suggestion.value)}>
                 {icon} {suggestion.label}
             </div>
         )
@@ -71,18 +72,29 @@ export const InlineSelector = <T, >(props: SelectorProps<T>) => {
         )
     }
 
-    const onTypeInputKeyDown = React.useCallback((event: React.KeyboardEvent<HTMLDivElement>) => {
+    const onInputKeyDown = React.useCallback((event: React.KeyboardEvent<HTMLDivElement>) => {
         if (event.key === 'Enter') {
-            setInputValue(autoCompleteSuggestions[0].label)
-            props.setValue(autoCompleteSuggestions[0].value)
+            setInputValue(autoCompleteSuggestions[selectedSuggestionIndex].label)
+            props.setValue(autoCompleteSuggestions[selectedSuggestionIndex].value)
         } else if (event.key === 'Escape') {
             props.focusParent()
+        } else if (event.key === 'ArrowUp') {
+            if (selectedSuggestionIndex > 0) {
+                setSelectedSuggestionIndex(selectedSuggestionIndex - 1)
+            }
+        } else if (event.key === 'ArrowDown') {
+            if (selectedSuggestionIndex < props.items.length - 1) {
+                setSelectedSuggestionIndex(selectedSuggestionIndex + 1)
+            }
         }
 
-        if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') {
-            event.stopPropagation()
-        }
-    }, [autoCompleteSuggestions])
+        event.stopPropagation()
+    }, [autoCompleteSuggestions, selectedSuggestionIndex])
+
+    const onInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        setInputValue(event.target.value)
+        setSelectedSuggestionIndex(0)
+    }
 
     const innerStyles = classNames(styles.autoCompleteInner, {
         [styles.autoCompleteVisible]: inputHasFocus
@@ -92,15 +104,15 @@ export const InlineSelector = <T, >(props: SelectorProps<T>) => {
         <div className={styles.autoCompleteOuter} style={{ width: props.width || 100 }}>
             <div className={innerStyles}>
                 <input
-                    className={styles.typeInput}
+                    className={styles.input}
                     type='text'
                     ref={props.innerRef}
-                    onKeyDown={onTypeInputKeyDown}
-                    onFocus={onTypeInputFocus}
-                    onBlur={onTypeInputBlur}
+                    onKeyDown={onInputKeyDown}
+                    onFocus={onInputFocus}
+                    onBlur={onInputBlur}
                     value={inputValue}
                     autoFocus={true}
-                    onChange={(event: React.ChangeEvent<HTMLInputElement>) => setInputValue(event.target.value)}
+                    onChange={onInputChange}
                     placeholder={'Type'}
                 />
                 {autoCompleteMenu}

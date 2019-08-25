@@ -50,6 +50,7 @@ export const TextChainInput = (props: TextChainInputProps) => {
     const [cursorPositionBeforeEditing, setCursorPositionBeforeEditing] = React.useState(0)
     const [cursorStartPosition, setCursorStartPosition] = React.useState(0)
     const [cursorEndPosition, setCursorEndPosition] = React.useState(0)
+    const [selectedSuggestionIndex, setSelectedSuggestionIndex] = React.useState(0)
     const canvasContext = React.useRef((() => {
         const context = document.createElement('canvas').getContext('2d')
         context.font = '16px Noto Sans HK'
@@ -126,9 +127,9 @@ export const TextChainInput = (props: TextChainInputProps) => {
             ) as VariableNodes.Create[]
         }
 
-        const autoCompleteSuggestionsRendered = autoCompleteSuggestions.map((suggestion) => {
+        const autoCompleteSuggestionsRendered = autoCompleteSuggestions.map((suggestion, index) => {
             return (
-                <div key={suggestion.id} className={styles.suggestion}>{suggestion.label}</div>
+                <div key={suggestion.id} className={classNames(styles.suggestion, { [styles.suggestionSelected]: selectedSuggestionIndex === index })}>{suggestion.label}</div>
             )
         })
 
@@ -149,7 +150,7 @@ export const TextChainInput = (props: TextChainInputProps) => {
         }
     }
 
-    const onInputFocus = (event: React.FocusEvent) => {
+    const onInputFocus = () => {
         setInputHasFocus(true)
     }
 
@@ -191,7 +192,7 @@ export const TextChainInput = (props: TextChainInputProps) => {
             if (autoCompleteSuggestions.length > 0) {
                 replaceTextBlock(
                     selectedTextBlock.id,
-                    { id: uuid(), type: 'variableReference', nodeId: autoCompleteSuggestions[0].id },
+                    { id: uuid(), type: 'variableReference', nodeId: autoCompleteSuggestions[selectedSuggestionIndex].id },
                     wordStartIndex > 0 ? { id: uuid(), type: 'raw', value: selectedTextBlock.value.substr(0, wordStartIndex) } : undefined,
                     { id: uuid(), type: 'raw', value: selectedTextBlock.value.substr(wordEndIndex) }
                 )
@@ -202,8 +203,14 @@ export const TextChainInput = (props: TextChainInputProps) => {
             } else {
                 updateRawTextBlock(selectedTextBlock.id, selectedTextBlock.value, true)
             }
-        } else if (event.key === 'Escape') {
-            props.focusParent()
+        } else if (event.key === 'ArrowUp') {
+            if (selectedSuggestionIndex > 0) {
+                setSelectedSuggestionIndex(selectedSuggestionIndex - 1)
+            }
+        } else if (event.key === 'ArrowDown') {
+            if (selectedSuggestionIndex < autoCompleteSuggestions.length - 1) {
+                setSelectedSuggestionIndex(selectedSuggestionIndex + 1)
+            }
         }
 
         event.stopPropagation()

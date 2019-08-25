@@ -99,6 +99,8 @@ export const textChainInputStyles = (colour: string) => ({
         alignItems: 'stretch',
         top: '130%',
         width: 180,
+        paddingTop: 5,
+        paddingBottom: 5,
         boxShadow: `0px 0px 14px 3px rgba(0,0,0,0.28)`,
         background: Color(colours.bruisedPink).darken(0.02).hex(),
         borderRadius: 3,
@@ -121,7 +123,12 @@ export const textChainInputStyles = (colour: string) => ({
     },
 
     suggestion: {
-        padding: 16,
+        height: rowHeight - 8,
+        paddingLeft: 16,
         alignItems: 'center'
-    }
+    },
+
+    suggestionSelected: {
+        background: Color(colours.bruisedPink).lighten(0.05).hex()
+    },
 })

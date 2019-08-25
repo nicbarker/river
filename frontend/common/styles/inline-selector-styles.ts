@@ -1,7 +1,7 @@
 import * as Color from 'color'
 import { rowHeight } from 'lib/constants';
 
-export const typeSelectorStyles = (colour: string) => ({
+export const inlineSelectorStyles = (colour: string) => ({
     autoCompleteOuter: {
         position: 'relative',
         paddingRight: 0
@@ -21,6 +21,8 @@ export const typeSelectorStyles = (colour: string) => ({
     },
 
     autoCompleteSuggestions: {
+        paddingTop: 5,
+        paddingBottom: 5,
         flexDirection: 'column',
         alignItems: 'stretch',
         background: Color(colour).lighten(0.2).hex(),
@@ -31,8 +33,12 @@ export const typeSelectorStyles = (colour: string) => ({
     suggestion: {
         paddingLeft: 16,
         paddingRight: 16,
-        height: rowHeight,
+        height: rowHeight - 6,
         alignItems: 'center'
+    },
+
+    suggestionSelected: {
+        background: Color(colour).lighten(0.3).hex()
     },
 
     noMatches: {
@@ -45,7 +51,7 @@ export const typeSelectorStyles = (colour: string) => ({
         fill: Color(colour).darken(0.5).hex()
     },
 
-    typeInput: {
+    input: {
         fontSize: 16,
         fontFamily: 'Noto Sans HK',
         fontWeight: 400,
@@ -56,7 +62,7 @@ export const typeSelectorStyles = (colour: string) => ({
         background: Color(colour).lighten(0.1).hex(),
     },
 
-    'typeInput:focus': {
+    'input:focus': {
         background: Color(colour).lighten(0.2).hex(),
         borderRadius: 3
     }
