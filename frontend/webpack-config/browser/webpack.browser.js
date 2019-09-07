@@ -12,9 +12,8 @@ const assetsPluginInstance = new AssetsPlugin({
 const common = {
     module: {
         rules: [
-            { test: /\.js$/, loader: 'babel-loader', exclude: /node_modules/ },
             { test: /\.tsx?$/, loader: 'ts-loader', exclude: /node_modules/, options: { transpileOnly: true, experimentalWatchApi: true } },
-            { test: /\.svg$/, use: [ { loader: "babel-loader" }, { loader: "react-svg-loader" } ] }
+            { test: /\.svg$/, use: [ { loader: "react-svg-loader" } ] }
         ]
     },
     target: 'web',
