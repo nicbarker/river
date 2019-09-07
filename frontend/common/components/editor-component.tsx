@@ -38,7 +38,7 @@ export const Editor = (props: EditorProps) => {
     const [editorMouseDown, setEditorMouseDown] = React.useState(false)
     const [dragStartPosition, setDragStartPosition] = React.useState([0, 0])
     const [dragEndPosition, setDragEndPosition] = React.useState([0, 0])
-    const [dragSelectedNodes, setDragSelectedNodes] = React.useState<RiverNode[]>([])
+    const [dragSelectedNodes, setDragSelectedNodes] = React.useState<{ [key: string]: RiverNode }>({})
 
     // Register keyboard shortcuts
     const handleKeyPress = (event: React.KeyboardEvent<HTMLDivElement>) => {
@@ -56,8 +56,8 @@ export const Editor = (props: EditorProps) => {
         } else if (event.key === 'e') {
             props.setActiveLayer('editor')
         } else if (event.key === 'Backspace') {
-            if (dragSelectedNodes.length > 0) {
-                props.deleteNodes(dragSelectedNodes.map(n => n.id))
+            if (Object.values(dragSelectedNodes).length > 0) {
+                props.deleteNodes(Object.values(dragSelectedNodes).map(n => n.id))
             } else {
                 props.deleteNodes([props.selectedNodeId])
             }
@@ -73,14 +73,13 @@ export const Editor = (props: EditorProps) => {
     const onEditorMouseDown = (event: React.MouseEvent) => {
         setFileMenuVisible(false)
         setEditorMouseDown(true)
-        setDragSelectedNodes([])
+        setDragSelectedNodes({})
         setDragStartPosition([event.clientX - nodesContainerRef.current.offsetLeft, event.clientY - nodesContainerRef.current.offsetTop])
         setDragEndPosition([event.clientX - nodesContainerRef.current.offsetLeft, event.clientY - nodesContainerRef.current.offsetTop])
     }
 
     const onEditorMouseMove = (event: React.MouseEvent) => {
         setDragEndPosition([event.clientX - nodesContainerRef.current.offsetLeft, event.clientY - nodesContainerRef.current.offsetTop])
-        setDragSelectedNodes([])
     }
 
     let dragSelection
@@ -103,10 +102,13 @@ export const Editor = (props: EditorProps) => {
     }
 
     const renderedNodes = Object.values(props.orderedNodes).map((node) => {
-        const setNodeDragSelected = () => {
-            if (!dragSelectedNodes.includes(node)) {
-                setDragSelectedNodes(dragSelectedNodes.concat([node]))
+        const setNodeDragSelected = (selected: boolean) => {
+            if (selected) {
+                dragSelectedNodes[node.id] = node;
+            } else {
+                delete dragSelectedNodes[node.id]
             }
+            setDragSelectedNodes(dragSelectedNodes)
         }
         return <NodeOuter
             key={node.id}
@@ -115,7 +117,7 @@ export const Editor = (props: EditorProps) => {
             parentOwnedRef={node.id === props.selectedNodeId ? selectedNodeRef : undefined}
             dragSelectionDimensions={dragSelectionDimensions}
             setNodeDragSelected={setNodeDragSelected}
-            dragSelected={dragSelectedNodes.includes(node)}
+            dragSelected={!!dragSelectedNodes[node.id]}
         />
     })
 

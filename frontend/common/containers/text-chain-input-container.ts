@@ -14,7 +14,11 @@ const mapStateToProps = (state: ApplicationState, ownProps: {
     nodeId: string,
     focusParent: () => void
     innerRef: React.RefObject<any>
-    setTextChain: (message: TextChain) => void
+    onInputKeyDown?: (event: React.KeyboardEvent) => void
+    updateTextChain: (message: TextChain) => void
+    saveTextChain: (message: TextChain) => void
+    allowVariables?: boolean
+    placeholder?: string
     colour: string
 }): Partial<TextChainInputProps> => {
     return {

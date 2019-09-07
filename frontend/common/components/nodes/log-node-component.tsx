@@ -16,6 +16,7 @@ export const LogNode = (props: {
 }) => {
     const { createStylesheet } = React.useContext(StylesheetContext)
     const styles = createStylesheet(logNodeStyles)
+    const [textChain, setTextChain] = React.useState(props.node.message)
     React.useEffect(() => {
         props.innerRef.current.focus()
     }, [])
@@ -27,10 +28,12 @@ export const LogNode = (props: {
                 <TextChainInput
                     nodeId={props.node.id}
                     focusParent={props.focusParent}
-                    textChain={props.node.message}
-                    setTextChain={props.setLogMessage}
+                    textChain={textChain}
+                    updateTextChain={setTextChain}
+                    saveTextChain={props.setLogMessage}
                     innerRef={props.innerRef}
                     colour={colours.lightPurple}
+                    allowVariables={true}
                 />
             </div>
         </div>

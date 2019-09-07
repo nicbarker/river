@@ -2,6 +2,8 @@ import * as React from 'react'
 import { StylesheetContext } from 'lib/stylesheet-helper';
 import { inlineSelectorStyles } from 'styles/inline-selector-styles';
 import classNames = require('classnames');
+import { TextChainInput } from 'containers/text-chain-input-container';
+import { RawTextChain, createRawTextChainFromString, TextBlockObjectType, RawTextBlock } from 'lib/interpreter';
 
 type Item<T> = {
     label: string
@@ -12,11 +14,13 @@ type Item<T> = {
 type SelectorProps<T> = {
     currentSelection?: Item<T>
     items: Item<T>[]
+    value?: T
     setValue: (value: T) => void
     focusParent: () => void
     innerRef: React.RefObject<HTMLInputElement>
     colour: string
     width?: number
+    placeholder?: string
 }
 
 export const InlineSelector = <T, >(props: SelectorProps<T>) => {
@@ -24,27 +28,23 @@ export const InlineSelector = <T, >(props: SelectorProps<T>) => {
     const { createStylesheet } = React.useContext(StylesheetContext)
     const styles = createStylesheet(stylesWithColour)
 
-    const [inputValue, setInputValue] = React.useState(props.currentSelection && props.currentSelection.label as string || '')
     const [inputHasFocus, setInputHasFocus] = React.useState(false)
+    const [inputValue, setInputValue] = React.useState<RawTextChain>(createRawTextChainFromString(props.currentSelection ? props.currentSelection.label : ''))
     const [selectedSuggestionIndex, setSelectedSuggestionIndex] = React.useState(0)
 
+    const setSelectedItem = (item: Item<T>) => {
+        setInputValue(createRawTextChainFromString(item.label))
+        props.setValue(item.value)
+    }
+
     let autoCompleteSuggestions = props.items
-    if (inputValue.length > 0) {
+    const inputValueString = inputValue[0].value
+    if (inputValueString.length > 0) {
         // If the user has typed in the box, put exact match auto complete at the top, followed by partial match
-        const matches = props.items.filter(t => t.label.toLowerCase().substr(0, inputValue.length) === inputValue.toLowerCase())
-            .concat(props.items.filter(t => t.label.toLowerCase().includes(inputValue.toLowerCase())))
+        const matches = props.items.filter(t => t.label.toLowerCase().substr(0, inputValueString.length) === inputValueString.toLowerCase())
+            .concat(props.items.filter(t => t.label.toLowerCase().includes(inputValueString.toLowerCase())))
         // Deduplicate results by creating a set
         autoCompleteSuggestions = Array.from(new Set(matches))
-    }
-
-    const onInputBlur = () => {
-        setInputHasFocus(false)
-    }
-
-    const onInputFocus = (event: React.FocusEvent) => {
-        // Don't fire multiple focus events up the tree
-        event.stopPropagation()
-        setInputHasFocus(true)
     }
 
     const autoCompleteSuggestionsRendered = autoCompleteSuggestions.map((suggestion, index) => {
@@ -53,7 +53,10 @@ export const InlineSelector = <T, >(props: SelectorProps<T>) => {
             icon = <suggestion.icon className={styles.itemIcon} />
         }
         return (
-            <div key={suggestion.label} className={classNames(styles.suggestion, { [styles.suggestionSelected]: selectedSuggestionIndex === index })} onMouseDown={() => props.setValue(suggestion.value)}>
+            <div key={suggestion.label}
+                className={classNames(styles.suggestion, { [styles.suggestionSelected]: selectedSuggestionIndex === index })}
+                onMouseDown={() => setSelectedItem(suggestion)}
+            >
                 {icon} {suggestion.label}
             </div>
         )
@@ -64,18 +67,27 @@ export const InlineSelector = <T, >(props: SelectorProps<T>) => {
     }
 
     let autoCompleteMenu
+    let placeholder
     if (inputHasFocus) {
         autoCompleteMenu = (
             <div className={styles.autoCompleteSuggestions}>
                 {autoCompleteSuggestionsRendered}
             </div>
         )
+        if (autoCompleteSuggestions.length > 0) {
+            if (inputValueString.length === 0) {
+                placeholder = autoCompleteSuggestions[selectedSuggestionIndex].label
+            } else if (autoCompleteSuggestions[selectedSuggestionIndex].label.toLowerCase().substr(0, inputValueString.length) === inputValueString.toLowerCase()) {
+                placeholder = inputValueString + autoCompleteSuggestions[selectedSuggestionIndex].label.substr(inputValueString.length)
+            }
+        }
+    } else {
+        placeholder = props.placeholder
     }
 
     const onInputKeyDown = React.useCallback((event: React.KeyboardEvent<HTMLDivElement>) => {
         if (event.key === 'Enter') {
-            setInputValue(autoCompleteSuggestions[selectedSuggestionIndex].label)
-            props.setValue(autoCompleteSuggestions[selectedSuggestionIndex].value)
+            setSelectedItem(autoCompleteSuggestions[selectedSuggestionIndex])
         } else if (event.key === 'Escape') {
             props.focusParent()
         } else if (event.key === 'ArrowUp') {
@@ -91,30 +103,37 @@ export const InlineSelector = <T, >(props: SelectorProps<T>) => {
         event.stopPropagation()
     }, [autoCompleteSuggestions, selectedSuggestionIndex])
 
-    const onInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-        setInputValue(event.target.value)
-        setSelectedSuggestionIndex(0)
-    }
-
     const innerStyles = classNames(styles.autoCompleteInner, {
         [styles.autoCompleteVisible]: inputHasFocus
     })
 
+    const setInputValueWithBlocks = (message: TextBlockObjectType[]) => {
+        setInputValue([message[0] as RawTextBlock])
+        setSelectedSuggestionIndex(0)
+    }
+
+    const onBlur = () => {
+        setInputHasFocus(false)
+        setInputValue(createRawTextChainFromString(props.currentSelection ? props.currentSelection.label : ''))
+    }
+
     return (
-        <div className={styles.autoCompleteOuter} style={{ width: props.width || 100 }}>
-            <div className={innerStyles}>
-                <input
-                    className={styles.input}
-                    type='text'
-                    ref={props.innerRef}
-                    onKeyDown={onInputKeyDown}
-                    onFocus={onInputFocus}
-                    onBlur={onInputBlur}
-                    value={inputValue}
-                    autoFocus={true}
-                    onChange={onInputChange}
-                    placeholder={'Type'}
-                />
+        <div className={styles.autoCompleteOuter}>
+            <div className={innerStyles} onFocus={() => setInputHasFocus(true)} onBlur={onBlur}>
+                <div style={{ height: '100%', minWidth: props.width, flexShrink: 0 }}>
+                    <TextChainInput
+                        nodeId={'input'}
+                        focusParent={props.focusParent}
+                        textChain={inputValue}
+                        onInputKeyDown={onInputKeyDown}
+                        updateTextChain={setInputValueWithBlocks}
+                        saveTextChain={setInputValueWithBlocks}
+                        innerRef={props.innerRef}
+                        colour={props.colour}
+                        allowVariables={true}
+                        placeholder={placeholder}
+                    />
+                </div>
                 {autoCompleteMenu}
             </div>
         </div>

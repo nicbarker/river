@@ -7,7 +7,8 @@ export const textChainInputStyles = (colour: string) => ({
         background: Color(colour).lighten(0.1).hex(),
         borderRadius: 3,
         alignItems: 'center',
-        minWidth: 100
+        minWidth: 100,
+        flexGrow: 1
     },
 
     textChainHasFocus: {
@@ -21,16 +22,28 @@ export const textChainInputStyles = (colour: string) => ({
         flexGrow: 1,
         position: 'relative',
         cursor: 'text',
-        paddingLeft: 10,
-        paddingRight: 10,
         height: '100%',
         alignItems: 'center'
+    },
+
+    inputPaddingLeft: {
+        width: 12,
+        flexShrink: 0,
+        height: '100%'
+    },
+
+    inputPaddingRight: {
+        width: 12,
+        flexShrink: 0,
+        height: '100%',
+        flexGrow: 1
     },
 
     cursor: {
         position: 'absolute',
         width: 2,
         height: 25,
+        zIndex: 1,
         '-webkit-animation': '1s blink step-end infinite',
         '-moz-animation': '1s blink step-end infinite',
         '-ms-animation': '1s blink step-end infinite',
@@ -38,6 +51,13 @@ export const textChainInputStyles = (colour: string) => ({
         animation: '1s blink step-end infinite',
         'animation-timing-function': 'ease-in-out',
         '-webkit-animation-timing-function': 'ease-in-out'
+    },
+
+    placeholder: {
+        position: 'absolute',
+        opacity: 0.4,
+        paddingLeft: 12,
+        zIndex: 0
     },
 
     autoCompleteOuter: {
@@ -60,6 +80,10 @@ export const textChainInputStyles = (colour: string) => ({
         opacity: 0,
         position: 'absolute',
         zIndex: -10
+    },
+
+    block: {
+        zIndex: 1,
     },
 
     variable: {
@@ -104,6 +128,7 @@ export const textChainInputStyles = (colour: string) => ({
         boxShadow: `0px 0px 14px 3px rgba(0,0,0,0.28)`,
         background: Color(colours.bruisedPink).darken(0.02).hex(),
         borderRadius: 3,
+        zIndex: 1,
     },
 
     autoCompleteSuggestionsArrow: {
@@ -124,7 +149,7 @@ export const textChainInputStyles = (colour: string) => ({
 
     suggestion: {
         height: rowHeight - 8,
-        paddingLeft: 16,
+        paddingLeft: 12,
         alignItems: 'center'
     },
 

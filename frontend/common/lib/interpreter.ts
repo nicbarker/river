@@ -34,6 +34,8 @@ export type TextBlockObjectType = VariableReferenceTextBlock | RawTextBlock
 
 export type TextChain = (TextBlockObjectType)[]
 
+export type RawTextChain = [RawTextBlock]
+
 type BaseNodeProps = {
     id: string
     nextNodeId?: string
@@ -68,6 +70,14 @@ export type RuntimeLogMessage = {
     message: string
     nodeId?: string // Id of the node that this log message originated from
     type: 'message' | 'error'
+}
+
+export const createRawTextChainFromString = (message: string): RawTextChain => {
+    return [{
+        id: 'string',
+        type: 'raw',
+        value: message
+    }]
 }
 
 export const renderTextChain = (nodes: { [key: string]: RiverNode }, variableValues: { [key: string]: any }, textChain: TextChain) => {

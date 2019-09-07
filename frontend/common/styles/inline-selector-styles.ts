@@ -3,16 +3,13 @@ import { rowHeight } from 'lib/constants';
 
 export const inlineSelectorStyles = (colour: string) => ({
     autoCompleteOuter: {
-        position: 'relative',
         paddingRight: 0
     },
 
     autoCompleteInner: {
-        position: 'absolute',
         flexDirection: 'column',
         alignItems: 'stretch',
         borderRadius: 3,
-        overflow: 'hidden'
     },
 
     autoCompleteVisible: {
@@ -28,11 +25,12 @@ export const inlineSelectorStyles = (colour: string) => ({
         background: Color(colour).lighten(0.2).hex(),
         borderBottomRightRadius: 3,
         borderBottomLeftRadius: 3,
+        marginTop: -1
     },
 
     suggestion: {
-        paddingLeft: 16,
-        paddingRight: 16,
+        paddingLeft: 12,
+        paddingRight: 12,
         height: rowHeight - 6,
         alignItems: 'center'
     },
@@ -49,21 +47,5 @@ export const inlineSelectorStyles = (colour: string) => ({
         marginRight: 8,
         width: 20,
         fill: Color(colour).darken(0.5).hex()
-    },
-
-    input: {
-        fontSize: 16,
-        fontFamily: 'Noto Sans HK',
-        fontWeight: 400,
-        paddingLeft: 16,
-        paddingRight: 16,
-        height: rowHeight - 12,
-        width: '100%',
-        background: Color(colour).lighten(0.1).hex(),
-    },
-
-    'input:focus': {
-        background: Color(colour).lighten(0.2).hex(),
-        borderRadius: 3
     }
 })

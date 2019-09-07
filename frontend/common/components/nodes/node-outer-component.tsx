@@ -29,7 +29,7 @@ export type NodeOuterProps = {
     setCreateVariableLabel: (label: string) => void
     setCreateVariableValueType: (valueType: ValueType) => void
     setCreateVariableValue: (value: TextChain) => void
-    setNodeDragSelected: () => void
+    setNodeDragSelected: (selected: boolean) => void
     parentOwnedRef?: React.RefObject<HTMLDivElement>
     nodes: { [key: string]: RiverNode }
 }
@@ -43,8 +43,15 @@ export const NodeOuter = (props: NodeOuterProps) => {
     // Preferentially use the ref passed in by the parent (it's passed in if this is selected to allow for focus)
     const containerRef = props.parentOwnedRef || nodeRef
 
-    // On unmount, return focus to the parent
-    React.useEffect(() => props.focusParent, [])
+    // On selection, focus the outer node to listen for keyboard events
+    React.useEffect(() => {
+        if (props.selected && containerRef.current) {
+            // Don't focus this outer node if the inner content (such as text input) has been focused directly by mouse click
+            if (document.activeElement.tagName !== 'INPUT') {
+                containerRef.current.focus()
+            }
+        }
+    }, [props.selected])
 
     const onOuterKeyDown = React.useCallback((event: React.KeyboardEvent<HTMLDivElement>) => {
         if (event.key === 'ArrowRight' && innerRef.current) {
@@ -103,7 +110,9 @@ export const NodeOuter = (props: NodeOuterProps) => {
 
     const r2 = dragSelectionOuterRef.current
     if (!props.dragSelected && props.dragSelectionDimensions && r2 && rectanglesIntersect(props.dragSelectionDimensions, [r2.offsetLeft, r2.offsetTop, r2.offsetLeft + r2.offsetWidth, r2.offsetTop + r2.offsetHeight])) {
-        props.setNodeDragSelected()
+        props.setNodeDragSelected(true)
+    } else if (props.dragSelected && props.dragSelectionDimensions && !(r2 && rectanglesIntersect(props.dragSelectionDimensions, [r2.offsetLeft, r2.offsetTop, r2.offsetLeft + r2.offsetWidth, r2.offsetTop + r2.offsetHeight]))) {
+        props.setNodeDragSelected(false)
     }
 
     let dragSelectionOverlay

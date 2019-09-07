@@ -10,7 +10,11 @@ export type TextChainInputProps = {
     textChain: TextChain
     innerRef: React.RefObject<any>
     focusParent: () => void
-    setTextChain: (message: TextChain) => void
+    onInputKeyDown?: (event: React.KeyboardEvent) => void
+    updateTextChain: (message: TextChain) => void
+    saveTextChain: (message: TextChain) => void
+    allowVariables?: boolean
+    placeholder?: string
     nodes: { [key: string]: RiverNode }
     colour: string
 }
@@ -24,31 +28,10 @@ export const TextChainInput = (props: TextChainInputProps) => {
         props.innerRef.current.focus()
     }, [])
 
-    const mergeAdjacentRawTextBlocks = (textChain: TextChain) => {
-        let newTextChain = textChain
-        for (let i = 0; i < newTextChain.length - 1; i++) {
-            const blockOne = newTextChain[i]
-            const blockTwo = newTextChain[i + 1]
-            if (blockOne.type === 'raw' && blockTwo.type === 'raw') {
-                const merged = blockOne.value + blockTwo.value
-                newTextChain = newTextChain.slice(0, i).concat([{ id: uuid(), type: 'raw', value: merged }]).concat(newTextChain.slice(i + 2))
-                i--
-            }
-        }
-        return newTextChain
-    }
-
-    const deleteTextBlock = (id: string) => {
-        const index = localTextChain.findIndex(b => b.id === id)
-        const newTextChain = localTextChain.slice(0, index).concat(localTextChain.slice(index + 1))
-        setLocalTextChain(mergeAdjacentRawTextBlocks(newTextChain))
-    }
-
-    const [localTextChain, setLocalTextChain] = React.useState(props.textChain)
     const [inputHasFocus, setInputHasFocus] = React.useState(true)
     const [hiddenInputValue, setHiddenInputValue] = React.useState('')
     const [cursorPositionBeforeEditing, setCursorPositionBeforeEditing] = React.useState(0)
-    const [cursorStartPosition, setCursorStartPosition] = React.useState(0)
+    const [internalCursorStartPosition, setInternalCursorStartPosition] = React.useState(0)
     const [cursorEndPosition, setCursorEndPosition] = React.useState(0)
     const [selectedSuggestionIndex, setSelectedSuggestionIndex] = React.useState(0)
     const canvasContext = React.useRef((() => {
@@ -57,43 +40,10 @@ export const TextChainInput = (props: TextChainInputProps) => {
         return context
     })())
 
-    const replaceTextBlock = (id: string, newBlock: TextBlockObjectType, insertBefore?: TextBlockObjectType, insertAfter?: TextBlockObjectType) => {
-        const index = localTextChain.findIndex(b => b.id === id)
-        const newBlocks = [insertBefore, newBlock, insertAfter].filter(b => !!b)
-        const newTextChain = localTextChain.slice(0, index).concat(newBlocks).concat(localTextChain.slice(index + 1))
-        setLocalTextChain(newTextChain)
-    }
-
-    const updateRawTextBlock = (id: string, value: string, shouldBlur: boolean) => {
-        const index = localTextChain.findIndex(b => b.id === id)
-        const newBlock = {...localTextChain[index], ...{ value }}
-        const newTextChain = localTextChain.slice(0, index).concat([newBlock]).concat(localTextChain.slice(index + 1))
-        setLocalTextChain(newTextChain)
-        if (shouldBlur) {
-            props.setTextChain(newTextChain)
-            props.focusParent()
-        }
-    }
-
-    let selectedTextBlockIndex: number
-    let blockOffsets: number[] = [0]
-    for (let i = 0; i < localTextChain.length; i++) {
-        const block = localTextChain[i]
-        const previousOffset = blockOffsets[i]
-        if (block.type === 'raw') {
-            blockOffsets[i + 1] = previousOffset + block.value.length
-            if (blockOffsets[i + 1] >= cursorStartPosition || i === localTextChain.length - 1) {
-                selectedTextBlockIndex = selectedTextBlockIndex == null ? i : selectedTextBlockIndex
-            }
-        } else if (block.type === 'variableReference') {
-            blockOffsets[i + 1] = previousOffset + 1
-        }
-    }
-
     let characterPositions: number[] = [0]
 
-    for (let i = 0; i < localTextChain.length; i++) {
-        const block = localTextChain[i]
+    for (let i = 0; i < props.textChain.length; i++) {
+        const block = props.textChain[i]
         const offset = i > 0 ? characterPositions[characterPositions.length - 1] : 0
         if (block.type === 'raw') {
             for (let j = 1; j <= block.value.length; j++) {
@@ -105,7 +55,25 @@ export const TextChainInput = (props: TextChainInputProps) => {
         }
     }
 
-    const selectedTextBlock = localTextChain[selectedTextBlockIndex]
+    // If the parent updates the text chain programatically and makes the cursor position invalid, just use 0 until the user types again
+    const cursorStartPosition = characterPositions.length - 1 < internalCursorStartPosition ? 0 : internalCursorStartPosition
+
+    let selectedTextBlockIndex: number
+    let blockOffsets: number[] = [0]
+    for (let i = 0; i < props.textChain.length; i++) {
+        const block = props.textChain[i]
+        const previousOffset = blockOffsets[i]
+        if (block.type === 'raw') {
+            blockOffsets[i + 1] = previousOffset + block.value.length
+            if (blockOffsets[i + 1] >= cursorStartPosition || i === props.textChain.length - 1) {
+                selectedTextBlockIndex = selectedTextBlockIndex == null ? i : selectedTextBlockIndex
+            }
+        } else if (block.type === 'variableReference') {
+            blockOffsets[i + 1] = previousOffset + 1
+        }
+    }
+
+    const selectedTextBlock = props.textChain[selectedTextBlockIndex]
     const selectedTextBlockOffset = blockOffsets[selectedTextBlockIndex]
 
     let autoCompleteSuggestions: VariableNodes.Create[] = []
@@ -113,7 +81,7 @@ export const TextChainInput = (props: TextChainInputProps) => {
     let wordStartIndex: number
     let wordEndIndex: number
     let wordHighlight
-    if (selectedTextBlock.type === 'raw') {
+    if (selectedTextBlock.type === 'raw' && props.allowVariables) {
         const firstHalf = selectedTextBlock.value.slice(0, cursorStartPosition - selectedTextBlockOffset).split(' ').slice(-1)[0]
         const secondHalf = selectedTextBlock.value.slice(cursorStartPosition - selectedTextBlockOffset).split(' ').slice(0)[0]
         wordStartIndex = cursorStartPosition - selectedTextBlockOffset - firstHalf.length
@@ -133,20 +101,58 @@ export const TextChainInput = (props: TextChainInputProps) => {
             )
         })
 
-        if (autoCompleteSuggestions.length > 0) {
+        if (autoCompleteSuggestions.length > 0 && inputHasFocus) {
             autoCompleteMenu = (
-                <>
-                    <div className={styles.autoCompleteSuggestions} style={{ left: characterPositions[wordStartIndex + selectedTextBlockOffset] + 6}}>
-                        {autoCompleteSuggestionsRendered}
-                        <div className={styles.autoCompleteSuggestionsArrow} />
-                    </div>
-                </>
+                <div className={styles.autoCompleteSuggestions} style={{ left: characterPositions[wordStartIndex + selectedTextBlockOffset] + 6}}>
+                    {autoCompleteSuggestionsRendered}
+                    <div className={styles.autoCompleteSuggestionsArrow} />
+                </div>
             )
 
             wordHighlight = <div className={styles.wordHighlight} style={{
                 width: characterPositions[wordEndIndex + selectedTextBlockOffset] - characterPositions[wordStartIndex + selectedTextBlockOffset] + 8,
                 left: characterPositions[wordStartIndex + selectedTextBlockOffset] + 6,
             }}></div>
+        }
+    }
+
+    const mergeAdjacentRawTextBlocks = (textChain: TextChain) => {
+        let newTextChain = textChain
+        for (let i = 0; i < newTextChain.length - 1; i++) {
+            const blockOne = newTextChain[i]
+            const blockTwo = newTextChain[i + 1]
+            if (blockOne.type === 'raw' && blockTwo.type === 'raw') {
+                const merged = blockOne.value + blockTwo.value
+                newTextChain = newTextChain.slice(0, i).concat([{ id: uuid(), type: 'raw', value: merged }]).concat(newTextChain.slice(i + 2))
+                i--
+            }
+        }
+        return newTextChain
+    }
+
+    const deleteTextBlock = (id: string) => {
+        const index = props.textChain.findIndex(b => b.id === id)
+        const newTextChain = props.textChain.slice(0, index).concat(props.textChain.slice(index + 1))
+        const merged = mergeAdjacentRawTextBlocks(newTextChain)
+        props.updateTextChain(merged)
+        props.saveTextChain(merged)
+    }
+
+    const replaceTextBlock = (id: string, newBlock: TextBlockObjectType, insertBefore: TextBlockObjectType, insertAfter: TextBlockObjectType) => {
+        const index = props.textChain.findIndex(b => b.id === id)
+        const newBlocks = [insertBefore, newBlock, insertAfter].filter(b => !!b)
+        const newTextChain = props.textChain.slice(0, index).concat(newBlocks).concat(props.textChain.slice(index + 1))
+        props.updateTextChain(newTextChain)
+        props.saveTextChain(newTextChain)
+    }
+
+    const updateRawTextBlock = (id: string, value: string, shouldBlur: boolean) => {
+        const index = props.textChain.findIndex(b => b.id === id)
+        const newBlock = {...props.textChain[index], ...{ value }}
+        const newTextChain = props.textChain.slice(0, index).concat([newBlock]).concat(props.textChain.slice(index + 1))
+        props.updateTextChain(newTextChain)
+        if (shouldBlur) {
+            props.focusParent()
         }
     }
 
@@ -157,52 +163,54 @@ export const TextChainInput = (props: TextChainInputProps) => {
     const onInputBlur = () => {
         setInputHasFocus(false)
         setHiddenInputValue('')
-        props.setTextChain(localTextChain)
+        props.saveTextChain(props.textChain)
     }
 
     const onKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
         if (event.key === 'ArrowLeft') {
             const newCursorPosition = Math.max(cursorStartPosition - 1, 0)
-            setCursorStartPosition(newCursorPosition)
+            setInternalCursorStartPosition(newCursorPosition)
             setCursorPositionBeforeEditing(newCursorPosition)
             setHiddenInputValue('')
         } else if (event.key === 'ArrowRight') {
             const newCursorPosition = Math.min(cursorStartPosition + 1, characterPositions.length - 1)
-            setCursorStartPosition(newCursorPosition)
+            setInternalCursorStartPosition(newCursorPosition)
             setCursorPositionBeforeEditing(newCursorPosition)
             setHiddenInputValue('')
         } else if (event.key === 'Backspace') {
             if (selectedTextBlock.type === 'raw' && cursorStartPosition - selectedTextBlockOffset > 0) {
                 const newCursorPosition = cursorStartPosition - 1
-                setCursorStartPosition(newCursorPosition)
+                setInternalCursorStartPosition(newCursorPosition)
                 setCursorPositionBeforeEditing(newCursorPosition)
                 const offsetCursorPosition = newCursorPosition - selectedTextBlockOffset
                 updateRawTextBlock(selectedTextBlock.id, selectedTextBlock.value.slice(0, offsetCursorPosition) + selectedTextBlock.value.slice(offsetCursorPosition + 1), false)
             } else if (selectedTextBlock.type === 'raw' && cursorStartPosition - selectedTextBlockOffset === 0) {
-                const blockIndex = localTextChain.findIndex(b => b.id === selectedTextBlock.id)
+                const blockIndex = props.textChain.findIndex(b => b.id === selectedTextBlock.id)
                 if (blockIndex > 0) {
                     const newCursorPosition = cursorStartPosition - 1
-                    setCursorStartPosition(newCursorPosition)
+                    setInternalCursorStartPosition(newCursorPosition)
                     setCursorPositionBeforeEditing(newCursorPosition)
-                    deleteTextBlock(localTextChain[blockIndex - 1].id)
+                    deleteTextBlock(props.textChain[blockIndex - 1].id)
                 }
             }
             setHiddenInputValue('')
         } else if (event.key === 'Enter' && selectedTextBlock.type === 'raw') {
-            if (autoCompleteSuggestions.length > 0) {
+            if (autoCompleteSuggestions.length > 0 && props.allowVariables) {
                 replaceTextBlock(
                     selectedTextBlock.id,
                     { id: uuid(), type: 'variableReference', nodeId: autoCompleteSuggestions[selectedSuggestionIndex].id },
-                    wordStartIndex > 0 ? { id: uuid(), type: 'raw', value: selectedTextBlock.value.substr(0, wordStartIndex) } : undefined,
+                    { id: uuid(), type: 'raw', value: selectedTextBlock.value.substr(0, wordStartIndex) },
                     { id: uuid(), type: 'raw', value: selectedTextBlock.value.substr(wordEndIndex) }
                 )
                 const newCursorPosition = wordStartIndex + 1 + selectedTextBlockOffset
-                setCursorStartPosition(newCursorPosition)
+                setInternalCursorStartPosition(newCursorPosition)
                 setCursorPositionBeforeEditing(newCursorPosition)
                 setHiddenInputValue('')
             } else {
                 updateRawTextBlock(selectedTextBlock.id, selectedTextBlock.value, true)
             }
+        } else if (event.key === 'Escape') {
+            props.focusParent()
         } else if (event.key === 'ArrowUp') {
             if (selectedSuggestionIndex > 0) {
                 setSelectedSuggestionIndex(selectedSuggestionIndex - 1)
@@ -213,11 +221,22 @@ export const TextChainInput = (props: TextChainInputProps) => {
             }
         }
 
+        if (props.onInputKeyDown) {
+            props.onInputKeyDown(event)
+        }
+
         event.stopPropagation()
     }
 
+    const updateCursorPosition = (position: number) => {
+        setInternalCursorStartPosition(position)
+        setCursorPositionBeforeEditing(position)
+        setHiddenInputValue('')
+        props.innerRef.current.focus()
+    }
+
     const onMouseDown = (event: React.MouseEvent, blockId: string) => {
-        const index = localTextChain.findIndex(b => b.id === blockId)
+        const index = props.textChain.findIndex(b => b.id === blockId)
         const offset = event.nativeEvent.offsetX + characterPositions[blockOffsets[index]]
         if (offset > 0) {
             for (let i = 0; i < characterPositions.length; i++) {
@@ -225,17 +244,11 @@ export const TextChainInput = (props: TextChainInputProps) => {
                 const nextDiff = i === characterPositions.length - 1 ? -Infinity : offset - characterPositions[i + 1]
                 if (currentDiff > 0 && nextDiff < 0) {
                     const characterIndex = currentDiff > Math.abs(nextDiff) ? i + 1 : i
-                    setCursorStartPosition(characterIndex)
-                    setCursorPositionBeforeEditing(characterIndex)
-                    setHiddenInputValue('')
-                    props.innerRef.current.focus()
+                    updateCursorPosition(characterIndex)
                 }
             }
         } else {
-            setCursorStartPosition(0)
-            setCursorPositionBeforeEditing(0)
-            setHiddenInputValue('')
-            props.innerRef.current.focus()
+            updateCursorPosition(0)
         }
 
         event.stopPropagation()
@@ -246,7 +259,7 @@ export const TextChainInput = (props: TextChainInputProps) => {
         if (selectedTextBlock.type === 'raw') {
             setHiddenInputValue(event.target.value)
             const newCursorPosition = cursorPositionBeforeEditing + event.target.value.length
-            setCursorStartPosition(newCursorPosition)
+            setInternalCursorStartPosition(newCursorPosition)
             const newBlockValue = selectedTextBlock.value.slice(0, cursorPositionBeforeEditing - selectedTextBlockOffset) + event.target.value + selectedTextBlock.value.slice(cursorPositionBeforeEditing + hiddenInputValue.length - selectedTextBlockOffset)
             updateRawTextBlock(selectedTextBlock.id, newBlockValue, false)
         }
@@ -256,28 +269,36 @@ export const TextChainInput = (props: TextChainInputProps) => {
         [styles.textChainHasFocus]: inputHasFocus
     })
 
-    const blocksRendered = localTextChain.map((block) => {
+    const blocksRendered = props.textChain.map((block) => {
         if (block.type === 'raw') {
-            return <span key={block.id} onMouseDown={(event) => onMouseDown(event, block.id)}>{block.value}</span>
+            return <span key={block.id} className={styles.block} onMouseDown={(event) => onMouseDown(event, block.id)}>{block.value}</span>
         } else if (block.type === 'variableReference') {
             const content = props.nodes[block.nodeId] ? (props.nodes[block.nodeId] as VariableNodes.Create).label : 'Deleted'
-            const variableClasses = classNames(styles.variable, {
+            const variableClasses = classNames(styles.variable, styles.block, {
                 [styles.brokenVariableReference]: !props.nodes[block.nodeId]
             })
             return <span key={block.id} className={variableClasses}>{content}</span>
         }
     })
 
-    const cursor = inputHasFocus ? <div key={Math.random()} className={styles.cursor} style={{ left: characterPositions[cursorStartPosition] + 10 }} /> : null
+    const cursor = inputHasFocus ? <div key={Math.random()} className={styles.cursor} style={{ left: characterPositions[cursorStartPosition] + 11 }} /> : null
+
+    let placeholder
+    if (props.placeholder) {
+        placeholder = <div className={styles.placeholder}>{props.placeholder}</div>
+    }
 
     return (
         <div className={textChainClasses} onMouseDown={(event) => { props.innerRef.current.focus(); event.preventDefault(); event.stopPropagation(); }}>
             <div className={styles.textChainInputInner} onKeyDown={onKeyDown} onMouseUp={() => {
                 setCursorEndPosition(window.getSelection().focusOffset)
             }}>
+                <div className={styles.inputPaddingLeft} onMouseDown={() => updateCursorPosition(0)} />
                 {blocksRendered || <span dangerouslySetInnerHTML={{ __html: '&nbsp;'}} />}
+                <div className={styles.inputPaddingRight} onMouseDown={() => updateCursorPosition(characterPositions.length - 1)} />
                 {wordHighlight}
                 {cursor}
+                {placeholder}
                 <input
                     ref={props.innerRef}
                     onFocus={onInputFocus}

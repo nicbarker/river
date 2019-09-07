@@ -16,7 +16,7 @@ type NodeOuterContainerProps = {
     focusParent: () => void
     parentOwnedRef?: React.RefObject<HTMLDivElement>
     dragSelectionDimensions?: [number, number, number, number]
-    setNodeDragSelected: () => void
+    setNodeDragSelected: (selected: boolean) => void
 }
 
 const mapStateToProps = (state: ApplicationState, ownProps: NodeOuterContainerProps) => {
