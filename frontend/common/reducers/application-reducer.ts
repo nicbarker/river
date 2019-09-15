@@ -78,17 +78,19 @@ export const applicationReducer = (state = initialState, action: ReduxAction) =>
     // Performs an "undo" action
     // --------------------------------------------------
     else if (action.type === 'UNDO') {
-        undoStackPosition = Math.max(undoStackPosition - 1, 0)
-        newState = undoStack[undoStackPosition]
-        newState.styles = styleCache
+        // DISABLE UNDO UNTIL IT'S IMPLEMENTED PROPERLY
+        // undoStackPosition = Math.max(undoStackPosition - 1, 0)
+        // newState = undoStack[undoStackPosition]
+        // newState.styles = styleCache
     }
     // --------------------------------------------------
     // Performs a "redo" action
     // --------------------------------------------------
     else if (action.type === 'REDO') {
-        undoStackPosition = Math.min(undoStackPosition + 1, undoStack.length - 1)
-        newState = undoStack[undoStackPosition]
-        newState.styles = styleCache
+        // DISABLE UNDO UNTIL IT'S IMPLEMENTED PROPERLY
+        // undoStackPosition = Math.min(undoStackPosition + 1, undoStack.length - 1)
+        // newState = undoStack[undoStackPosition]
+        // newState.styles = styleCache
     }
     // --------------------------------------------------
     // Inserts a new empty node in the program after the node
