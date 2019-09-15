@@ -1,7 +1,8 @@
 import * as React from 'react'
-import { interpreterStyles } from 'styles/interpreter-styles';
-import { StylesheetContext } from 'lib/stylesheet-helper';
-import { run, RuntimeLogMessage, RiverNode } from 'lib/interpreter';
+import { interpreterStyles } from 'styles/interpreter-styles'
+import { StylesheetContext } from 'lib/stylesheet-helper'
+import { run, RuntimeLogMessage, RiverNode } from 'lib/interpreter'
+import PlayCircleIcon from 'ionicons/dist/ionicons/svg/ios-play-circle.svg'
 
 export type InterpreterProps = {
     nodes: { [id: string]: RiverNode },
@@ -28,13 +29,15 @@ export const Interpreter = (props: InterpreterProps) => {
 
     return (
         <div className={styles.container}>
-            <div className={styles.header}>
-                <div className={styles.button} onClick={() => setProgramOutput(run({ nodes: props.nodes }))}>Run</div>
+            <div className={styles.interpreterHeader}>
+                <div className={styles.headerButton} onClick={() => setProgramOutput(run({ nodes: props.nodes }))}>
+                    <PlayCircleIcon className={styles.headerIcon} style={{ fill: '#fff' }} />Run
+                </div>
             </div>
             <div className={styles.output}>
                 {outputRendered}
             </div>
-            <div>
+            <div className={styles.executionTimeMessage}>
                 {executionTimeMessage}
             </div>
         </div>

@@ -1,84 +1,74 @@
 import * as Color from 'color'
+import { colours } from 'lib/colours';
+import { rowHeight } from 'lib/constants';
 
 export const nodeStyles = {
-    node: {
-        marginTop: 8,
-        marginBottom: 8,
-        cursor: 'pointer',
-        background: '#B9CFD2',
-        borderRadius: 5,
-        position: 'relative',
-        flexDirection: 'row',
-        alignItems: 'center',
-        outline: 'none'
-    },
-
     nodeOuter: {
-        outline: 'none'
+        paddingTop: 8,
+        paddingBottom: 8,
+        paddingLeft: 18,
+        paddingRight: 18,
+        outline: 'none',
     },
 
-    'node:hover': {
-        background: Color('#B9CFD2').darken(0.05).hex()
-    },
-
-    'node:active': {
-        background: Color('#B9CFD2').darken(0.1).hex()
-    },
-
-    selected: {
-        background: Color('#B9CFD2').darken(0.1).hex()
-    },
-
-    'selected:hover': {
-        background: Color('#B9CFD2').darken(0.1).hex()
-    },
-
-    'selected:active': {
-        background: Color('#B9CFD2').darken(0.1).hex()
+    node: {
+        cursor: 'pointer',
+        borderRadius: 3,
+        // position: 'relative',
+        flexDirection: 'row',
+        alignItems: 'stretch',
+        outline: 'none',
+        height: rowHeight,
     },
 
     nodeInner: {
-        padding: 16
+        alignItems: 'stretch',
+        padding: 6
     },
 
-    nodeLabel: {
-        marginLeft: 16,
-        marginRight: 8,
-        color: '#888',
+    selected: {
+        background: Color(colours.darkGreySlate).lighten(0.2).hex()
     },
 
-    autoCompleteVisible: {
-        borderBottomRightRadius: 0,
-        borderBottomLeftRadius: 0,
-        zIndex: 1,
+    error: {
+        background: Color(colours.errorRed).fade(0.8).rgb().toString()
     },
 
-    nodeTypeInput: {
-        fontSize: 16,
-        fontFamily: 'Open Sans',
-        fontWeight: 400,
-        padding: 10,
-        margin: 6
+    errorSelected: {
+        background: Color(colours.errorRed).fade(0.6).rgb().toString()
     },
 
-    'nodeTypeInput:focus': {
-        background: Color('#B9CFD2').hex(),
+    dragSelectionOverlayOuter: {
+        position: 'relative'
+    },
+
+    dragSelectionOverlay: {
+        background: Color(colours.lightBlue).fade(0.7).rgb().toString(),
+        zIndex: 11,
+        width: '100%',
+        height: '100%',
+        position: 'absolute',
         borderRadius: 3
     },
 
-    autoCompleteSuggestions: {
-        position: 'absolute',
-        flexDirection: 'column',
-        alignItems: 'stretch',
-        borderTop: '1px solid ' + Color('#B9CFD2').darken(0.2).hex(),
-        top: '100%',
-        width: '100%',
-        background: Color('#B9CFD2').darken(0.1).hex(),
-        borderBottomRightRadius: 5,
-        borderBottomLeftRadius: 5,
+    nodeLabel: {
+        paddingLeft: 16,
+        paddingRight: 16,
+        alignItems: 'center',
+        color: '#111',
     },
 
-    suggestion: {
-        padding: 16
+    labelIcon: {
+        width: 26,
+    },
+
+    genericInput: {
+        fontSize: 16,
+        fontFamily: 'Noto Sans HK',
+        fontWeight: 400,
+        paddingLeft: 10,
+        paddingRight: 10,
+        alignItems: 'center',
+        borderRadius: 3,
     }
 }

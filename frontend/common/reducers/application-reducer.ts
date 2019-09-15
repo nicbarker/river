@@ -1,7 +1,7 @@
 import { StyleObjects } from "lib/stylesheet-helper"
 import { ReduxAction } from "actions/application-actions"
 import { uuid } from "lib/uuid"
-import { RiverNode } from "lib/interpreter";
+import { RiverNode, LogNode, VariableNodes } from "lib/interpreter";
 
 export type Layer = 'editor' | 'docs' | 'logs'
 
@@ -38,13 +38,29 @@ const createOrderedNodes = (nodes: { [id: string]: RiverNode }) => {
     return orderedNodes
 }
 
+let undoStack: ApplicationState[] = [initialState]
+let undoStackPosition = 0
+
+let styleCache: StyleObjects[] = []
+
 export const applicationReducer = (state = initialState, action: ReduxAction) => {
-    const newState: ApplicationState = Object.assign({}, state)
+    let canUndo = false
+    let newState: ApplicationState = Object.assign({}, state)
     // --------------------------------------------------
     // Adds style objects to be rendered into the <head> tag
     // --------------------------------------------------
     if (action.type === 'ADD_STYLE_OBJECTS') {
         newState.styles = Object.assign({}, newState.styles, action.payload.styleObjects)
+        styleCache = newState.styles
+    }
+    // --------------------------------------------------
+    // Adds style objects to be rendered into the <head> tag
+    // --------------------------------------------------
+    else if (action.type === 'SET_PROGRAM_NODES') {
+        newState.nodes = action.payload.nodes
+        newState.orderedNodes = createOrderedNodes(newState.nodes)
+        newState.selectedNodeId = newState.orderedNodes[0].id
+        canUndo = true
     }
     // --------------------------------------------------
     // Sets the active layer in the editor
@@ -59,6 +75,24 @@ export const applicationReducer = (state = initialState, action: ReduxAction) =>
         newState.selectedNodeId = action.payload.nodeId
     }
     // --------------------------------------------------
+    // Performs an "undo" action
+    // --------------------------------------------------
+    else if (action.type === 'UNDO') {
+        // DISABLE UNDO UNTIL IT'S IMPLEMENTED PROPERLY
+        // undoStackPosition = Math.max(undoStackPosition - 1, 0)
+        // newState = undoStack[undoStackPosition]
+        // newState.styles = styleCache
+    }
+    // --------------------------------------------------
+    // Performs a "redo" action
+    // --------------------------------------------------
+    else if (action.type === 'REDO') {
+        // DISABLE UNDO UNTIL IT'S IMPLEMENTED PROPERLY
+        // undoStackPosition = Math.min(undoStackPosition + 1, undoStack.length - 1)
+        // newState = undoStack[undoStackPosition]
+        // newState.styles = styleCache
+    }
+    // --------------------------------------------------
     // Inserts a new empty node in the program after the node
     // with previousNodeId, updating the nextNode reference
     // --------------------------------------------------
@@ -70,7 +104,7 @@ export const applicationReducer = (state = initialState, action: ReduxAction) =>
             newState.nodes[newId] = {
                 id: newId,
                 nextNodeId: previousNode ? previousNode.nextNodeId : undefined,
-                type: 'empty'
+                nodeType: 'empty'
             }
             // If there's only one node, make it the entrypoint
             if (Object.values(newState.nodes).length === 1) {
@@ -81,38 +115,42 @@ export const applicationReducer = (state = initialState, action: ReduxAction) =>
             }
             newState.selectedNodeId = newId
             newState.orderedNodes = createOrderedNodes(newState.nodes)
+            canUndo = true
         } else {
             throw Error('Error in INSERT_NODE, node with id ' + action.payload.previousNodeId + ' was not found')
         }
     }
     // --------------------------------------------------
-    // Deletes a node from the program
+    // Deletes nodes from the program
     // --------------------------------------------------
-    else if (action.type === 'DELETE_NODE') {
-        const node = newState.nodes[action.payload.nodeId]
-        if (node) {
-            newState.nodes = JSON.parse(JSON.stringify(newState.nodes))
-            const previousNode = Object.values(newState.nodes).find(n => n.nextNodeId === action.payload.nodeId)
-            // Select the next, or previous node
-            if (node.nextNodeId) {
-                newState.selectedNodeId = node.nextNodeId
-            } else if (previousNode) {
-                newState.selectedNodeId = previousNode.id
-            } else {
-                newState.selectedNodeId = undefined
+    else if (action.type === 'DELETE_NODES') {
+        for (const nodeId of action.payload.nodeIds) {
+            const node = newState.nodes[nodeId]
+            if (node) {
+                newState.nodes = JSON.parse(JSON.stringify(newState.nodes))
+                const previousNode = Object.values(newState.nodes).find(n => n.nextNodeId === nodeId)
+                // Select the next, or previous node
+                if (node.nextNodeId) {
+                    newState.selectedNodeId = node.nextNodeId
+                } else if (previousNode) {
+                    newState.selectedNodeId = previousNode.id
+                } else {
+                    newState.selectedNodeId = undefined
+                }
+                // If something was pointing to the deleted node, point it to the next node instead
+                if (previousNode) {
+                    previousNode.nextNodeId = node.nextNodeId
+                }
+                // If the deleted node was the entrypoint, make the next node the entrypoint instead
+                if (node.entryPoint && node.nextNodeId) {
+                    newState.nodes[node.nextNodeId].entryPoint = true
+                }
+                delete newState.nodes[nodeId]
+                newState.orderedNodes = createOrderedNodes(newState.nodes)
+                canUndo = true
+            } else if (nodeId) { // If the node id was defined but no node was found, we're in trouble
+                throw Error('Error in DELETE_NODE, node with id ' + nodeId + ' was not found')
             }
-            // If something was pointing to the deleted node, point it to the next node instead
-            if (previousNode) {
-                previousNode.nextNodeId = node.nextNodeId
-            }
-            // If the deleted node was the entrypoint, make the next node the entrypoint instead
-            if (node.entryPoint && node.nextNodeId) {
-                newState.nodes[node.nextNodeId].entryPoint = true
-            }
-            delete newState.nodes[action.payload.nodeId]
-            newState.orderedNodes = createOrderedNodes(newState.nodes)
-        } else if (action.payload.nodeId) { // If the node id was defined but no node was found, we're in trouble
-            throw Error('Error in DELETE_NODE, node with id ' + action.payload.nodeId + ' was not found')
         }
     }
     // --------------------------------------------------
@@ -121,7 +159,12 @@ export const applicationReducer = (state = initialState, action: ReduxAction) =>
     else if (action.type === 'SET_NODE_TYPE') {
         const node = newState.nodes[action.payload.nodeId]
         if (node) {
-            newState.nodes[action.payload.nodeId] = {...JSON.parse(JSON.stringify(node)), ...{type: action.payload.type}}
+            const newNode = JSON.parse(JSON.stringify(node)) as RiverNode
+            newNode.nodeType = action.payload.type
+            if (newNode.nodeType === 'log') {
+                newNode.message = [{ id: uuid(), type: 'raw', value: '' }]
+            }
+            newState.nodes[action.payload.nodeId] = newNode
             newState.orderedNodes = createOrderedNodes(newState.nodes)
         } else if (action.payload.nodeId) { // If the node id was defined but no node was found, we're in trouble
             throw Error('Error in SET_NODE_TYPE, node with id ' + action.payload.nodeId + ' was not found')
@@ -132,12 +175,69 @@ export const applicationReducer = (state = initialState, action: ReduxAction) =>
     // --------------------------------------------------
     else if (action.type === 'SET_LOG_MESSAGE') {
         const node = newState.nodes[action.payload.nodeId]
-        if (node && node.type === 'log') {
-            newState.nodes[action.payload.nodeId] = {...JSON.parse(JSON.stringify(node)), ...{message: action.payload.message}}
+        if (node && node.nodeType === 'log') {
+            const newNode = JSON.parse(JSON.stringify(node)) as LogNode
+            newNode.message = action.payload.message
+            newState.nodes[action.payload.nodeId] = newNode
             newState.orderedNodes = createOrderedNodes(newState.nodes)
+            canUndo = true
         } else if (action.payload.nodeId) { // If the node id was defined but no node was found, we're in trouble
             throw Error('Error in SET_LOG_MESSAGE, node with id ' + action.payload.nodeId + ' was not found or was not a log node')
         }
+    }
+    // --------------------------------------------------
+    // Sets the label of a Create Variable node
+    // --------------------------------------------------
+    else if (action.type === 'SET_CREATE_VARIABLE_LABEL') {
+        const node = newState.nodes[action.payload.nodeId]
+        if (node && node.nodeType === 'create_variable') {
+            const newNode = JSON.parse(JSON.stringify(node)) as VariableNodes.Create
+            newNode.label = action.payload.label
+            newState.nodes[action.payload.nodeId] = newNode
+            newState.orderedNodes = createOrderedNodes(newState.nodes)
+            canUndo = true
+        } else if (action.payload.nodeId) { // If the node id was defined but no node was found, we're in trouble
+            throw Error('Error in SET_CREATE_VARIABLE_LABEL, node with id ' + action.payload.nodeId + ' was not found or was not a log node')
+        }
+    }
+    // --------------------------------------------------
+    // Sets the value type of a Create Variable node
+    // --------------------------------------------------
+    else if (action.type === 'SET_CREATE_VARIABLE_VALUE_TYPE') {
+        const node = newState.nodes[action.payload.nodeId]
+        if (node && node.nodeType === 'create_variable') {
+            const newNode = JSON.parse(JSON.stringify(node)) as VariableNodes.Create
+            newNode.valueType = action.payload.valueType
+            newNode.value = [{ id: uuid(), type: 'raw', value: '' }]
+            newState.nodes[action.payload.nodeId] = newNode
+            newState.orderedNodes = createOrderedNodes(newState.nodes)
+            canUndo = true
+        } else if (action.payload.nodeId) { // If the node id was defined but no node was found, we're in trouble
+            throw Error('Error in SET_CREATE_VARIABLE_VALUE_TYPE, node with id ' + action.payload.nodeId + ' was not found or was not a log node')
+        }
+    }
+    // --------------------------------------------------
+    // Sets the value of a Create Variable node
+    // --------------------------------------------------
+    else if (action.type === 'SET_CREATE_VARIABLE_VALUE') {
+        const node = newState.nodes[action.payload.nodeId]
+        if (node && node.nodeType === 'create_variable') {
+            const newNode = JSON.parse(JSON.stringify(node)) as VariableNodes.Create
+            newNode.value = action.payload.value
+            newState.nodes[action.payload.nodeId] = newNode
+            newState.orderedNodes = createOrderedNodes(newState.nodes)
+            canUndo = true
+        } else if (action.payload.nodeId) { // If the node id was defined but no node was found, we're in trouble
+            throw Error('Error in SET_CREATE_VARIABLE_VALUE, node with id ' + action.payload.nodeId + ' was not found or was not a log node')
+        }
+    }
+
+    if (canUndo) {
+        if (undoStackPosition < undoStack.length - 1) {
+            undoStack = undoStack.slice(0, undoStackPosition)
+        }
+        undoStack.push(newState)
+        undoStackPosition++
     }
 
     return newState
