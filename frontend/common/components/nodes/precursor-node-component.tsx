@@ -9,14 +9,13 @@ import { precursorNodeStyles } from 'styles/precursor-node-styles';
 export const PrecursorNode = (props: {
     node: RiverNode
     selected?: boolean
-    deleteNode: () => void
     setNodeType: (type: NodeType) => void
     focusParent: () => void
     innerRef: React.RefObject<any>
     selectNode: () => void
 }) => {
-    const { createStylesheet } = React.useContext(StylesheetContext)
-    const styles = createStylesheet(precursorNodeStyles)
+    const { createStyles } = React.useContext(StylesheetContext)
+    const styles = createStyles(precursorNodeStyles)
 
     const items = searchableNodeTypes.map(n => {
         return {

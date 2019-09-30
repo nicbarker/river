@@ -1,9 +1,10 @@
 import * as React from 'react'
 import { StylesheetContext } from 'lib/stylesheet-helper'
-import { RiverNode, VariableNodes, TextChain, TextBlockObjectType } from 'lib/interpreter'
+import { VariableNodes, TextChain, TextBlockObjectType } from 'lib/interpreter'
 import { uuid } from 'lib/uuid'
 import { textChainInputStyles } from 'styles/text-chain-input-styles'
 import classNames = require('classnames')
+import { StoreContext } from 'reducers/reducer-context'
 
 export type TextChainInputProps = {
     nodeId: string,
@@ -15,14 +16,14 @@ export type TextChainInputProps = {
     saveTextChain: (message: TextChain) => void
     allowVariables?: boolean
     placeholder?: string
-    nodes: { [key: string]: RiverNode }
     colour: string
 }
 
 export const TextChainInput = (props: TextChainInputProps) => {
+    const { state } = React.useContext(StoreContext)
     const stylesWithColour = React.useMemo(() => textChainInputStyles(props.colour), [props.colour])
-    const { createStylesheet } = React.useContext(StylesheetContext)
-    const styles = createStylesheet(stylesWithColour)
+    const { createStyles } = React.useContext(StylesheetContext)
+    const styles = createStyles(stylesWithColour)
 
     React.useEffect(() => {
         props.innerRef.current.focus()
@@ -50,7 +51,7 @@ export const TextChainInput = (props: TextChainInputProps) => {
                 characterPositions.push(offset + canvasContext.current.measureText(block.value.substr(0, j)).width)
             }
         } else if (block.type === 'variableReference') {
-            const content = props.nodes[block.nodeId] ? (props.nodes[block.nodeId] as VariableNodes.Create).label : 'Deleted'
+            const content = state.nodes[block.nodeId] ? (state.nodes[block.nodeId] as VariableNodes.Create).label : 'Deleted'
             characterPositions.push(offset + canvasContext.current.measureText(content).width + 16)
         }
     }
@@ -88,7 +89,7 @@ export const TextChainInput = (props: TextChainInputProps) => {
         wordEndIndex = cursorStartPosition - selectedTextBlockOffset + secondHalf.length
         const currentWord = selectedTextBlock.value.slice(wordStartIndex, wordEndIndex)
         if (currentWord.length > 0) {
-            autoCompleteSuggestions = Object.values(props.nodes).filter(n =>
+            autoCompleteSuggestions = Object.values(state.nodes).filter(n =>
                 n.nodeType === 'create_variable' &&
                 n.id !== props.nodeId &&
                 n.label && n.label.toLowerCase().substr(0, currentWord.length) === currentWord.toLowerCase()
@@ -273,9 +274,9 @@ export const TextChainInput = (props: TextChainInputProps) => {
         if (block.type === 'raw') {
             return <span key={block.id} className={styles.block} onMouseDown={(event) => onMouseDown(event, block.id)}>{block.value}</span>
         } else if (block.type === 'variableReference') {
-            const content = props.nodes[block.nodeId] ? (props.nodes[block.nodeId] as VariableNodes.Create).label : 'Deleted'
+            const content = state.nodes[block.nodeId] ? (state.nodes[block.nodeId] as VariableNodes.Create).label : 'Deleted'
             const variableClasses = classNames(styles.variable, styles.block, {
-                [styles.brokenVariableReference]: !props.nodes[block.nodeId]
+                [styles.brokenVariableReference]: !state.nodes[block.nodeId]
             })
             return <span key={block.id} className={variableClasses}>{content}</span>
         }

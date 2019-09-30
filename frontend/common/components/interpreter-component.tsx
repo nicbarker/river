@@ -1,21 +1,18 @@
 import * as React from 'react'
 import { interpreterStyles } from 'styles/interpreter-styles'
 import { StylesheetContext } from 'lib/stylesheet-helper'
-import { run, RuntimeLogMessage, RiverNode } from 'lib/interpreter'
+import { run, RuntimeLogMessage } from 'lib/interpreter'
 import PlayCircleIcon from 'ionicons/dist/ionicons/svg/ios-play-circle.svg'
+import { StoreContext } from 'reducers/reducer-context'
 
-export type InterpreterProps = {
-    nodes: { [id: string]: RiverNode },
-    setSelectedNode: (nodeId: string) => void
-}
-
-export const Interpreter = (props: InterpreterProps) => {
-    const { createStylesheet } = React.useContext(StylesheetContext)
-    const styles = createStylesheet(interpreterStyles);
+export const Interpreter = () => {
+    const { state, dispatch } = React.useContext(StoreContext)
+    const { createStyles } = React.useContext(StylesheetContext)
+    const styles = createStyles(interpreterStyles);
     const [programOutput, setProgramOutput] = React.useState<RuntimeLogMessage[]>([])
 
     const outputRendered = programOutput.map((line, index) => (
-        <div key={index} className={styles.outputLine} onClick={line.nodeId ? () => props.setSelectedNode(line.nodeId) : null}>
+        <div key={index} className={styles.outputLine} onClick={line.nodeId ? () => dispatch({ type: 'SET_SELECTED_NODE', payload: { selectedNodeId: line.nodeId } }) : null}>
             <div className={styles.logTime}>{line.timestamp}</div>
             <div className={styles.logMessage}>{line.message}</div>
         </div>
@@ -30,7 +27,7 @@ export const Interpreter = (props: InterpreterProps) => {
     return (
         <div className={styles.container}>
             <div className={styles.interpreterHeader}>
-                <div className={styles.headerButton} onClick={() => setProgramOutput(run({ nodes: props.nodes }))}>
+                <div className={styles.headerButton} onClick={() => setProgramOutput(run({ nodes: state.nodes }))}>
                     <PlayCircleIcon className={styles.headerIcon} style={{ fill: '#fff' }} />Run
                 </div>
             </div>

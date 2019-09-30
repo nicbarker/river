@@ -5,18 +5,10 @@
 
 import * as React from 'react'
 import * as ReactDOM from 'react-dom'
-import { Provider } from 'react-redux'
 import { BrowserRouter as Router, Route } from 'react-router-dom'
-import { Application } from 'containers/application-container'
-import { StylesheetContext, createStylesheetHelper } from 'lib/stylesheet-helper'
-import { createStore } from 'redux'
-import { applicationReducer } from 'reducers/application-reducer'
-
-const store = createStore(applicationReducer)
-
-window.store = store
-
-const stylesheetHelper = { createStylesheet: createStylesheetHelper(store) }
+import { Application } from 'components/application-component'
+import { StylesheetProvider } from 'lib/stylesheet-helper'
+import { StoreProvider } from 'reducers/reducer-context'
 
 // Load sentry if an error occurs
 const captureError = async (error: any) => {
@@ -25,19 +17,19 @@ const captureError = async (error: any) => {
 }
 
 window.onerror = (message, url, line, column, error) => captureError(error)
-window.onunhandledrejection = event => captureError(event.reason)
+window.onunhandledrejection = (event: PromiseRejectionEvent) => captureError(event.reason)
 
 const hydrate = () => {
     if (document.readyState !== "loading")  {
         ReactDOM.render((
-            <StylesheetContext.Provider value={stylesheetHelper}>
-                <Provider store={store}>
+            <StylesheetProvider>
+                <StoreProvider>
                     <Router>
                         <Route path="/" component={Application} />
                     </Router>
-                </Provider>
-            </StylesheetContext.Provider>
-        ) as any, document.getElementById('container'))
+                </StoreProvider>
+            </StylesheetProvider>
+        ), document.getElementById('container'))
     } else {
         setTimeout(() => {
             hydrate()

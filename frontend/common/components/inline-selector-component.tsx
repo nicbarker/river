@@ -2,7 +2,7 @@ import * as React from 'react'
 import { StylesheetContext } from 'lib/stylesheet-helper';
 import { inlineSelectorStyles } from 'styles/inline-selector-styles';
 import classNames = require('classnames');
-import { TextChainInput } from 'containers/text-chain-input-container';
+import { TextChainInput } from 'components/nodes/text-chain-input-component';
 import { RawTextChain, createRawTextChainFromString, TextBlockObjectType, RawTextBlock } from 'lib/interpreter';
 
 type Item<T> = {
@@ -25,8 +25,8 @@ type SelectorProps<T> = {
 
 export const InlineSelector = <T, >(props: SelectorProps<T>) => {
     const stylesWithColour = React.useMemo(() => inlineSelectorStyles(props.colour), [props.colour])
-    const { createStylesheet } = React.useContext(StylesheetContext)
-    const styles = createStylesheet(stylesWithColour)
+    const { createStyles } = React.useContext(StylesheetContext)
+    const styles = createStyles(stylesWithColour)
 
     const [inputHasFocus, setInputHasFocus] = React.useState(false)
     const [inputValue, setInputValue] = React.useState<RawTextChain>(createRawTextChainFromString(props.currentSelection ? props.currentSelection.label : ''))

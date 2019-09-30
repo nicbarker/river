@@ -4,7 +4,7 @@ import { VariableNodes, ValueType, searchableValueTypes, TextChain, createRawTex
 import { createVariableNodeStyles } from 'styles/create-variable-node-styles'
 import { InlineSelector } from 'components/inline-selector-component'
 import TextIcon from 'ionicons/dist/ionicons/svg/ios-text.svg'
-import { TextChainInput } from 'containers/text-chain-input-container';
+import { TextChainInput } from 'components/nodes/text-chain-input-component';
 import { colours } from 'lib/colours';
 
 export const CreateVariableNode = (props: {
@@ -17,8 +17,8 @@ export const CreateVariableNode = (props: {
     setCreateVariableValue: (value: TextChain) => void
     selectNode: () => void
 }) => {
-    const { createStylesheet } = React.useContext(StylesheetContext)
-    const styles = createStylesheet(createVariableNodeStyles)
+    const { createStyles } = React.useContext(StylesheetContext)
+    const styles = createStyles(createVariableNodeStyles)
     const [labelInputContents, setLabelInputContents] = React.useState(props.node.label || '')
     const typeInputRef = React.useRef<HTMLInputElement>()
     const labelInputRef = React.useRef<HTMLInputElement>()

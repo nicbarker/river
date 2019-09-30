@@ -1,7 +1,4 @@
 import * as React from 'react'
-import { addStyleObjects, ReduxAction } from 'actions/application-actions'
-import { Store, createStore } from 'redux';
-import { ApplicationState, applicationReducer } from 'reducers/application-reducer';
 
 const noUnits: { [key: string]: boolean} = {
     'flex': true,
@@ -18,13 +15,13 @@ const isVendorPrefix = (attribute: string) => {
 
 export const extendStylesheet = <A extends StyleObject, B extends StyleObject>(baseStyles: A, extendedStyles: B): A & B => {
     // Variables
-    const extended: A & B  = {} as A & B
+    let extended: A & B  = {} as A & B
 
     // Merge the object into the extended object
     var merge = function (obj: A | B) {
         for (const prop in obj) {
             if (obj.hasOwnProperty(prop)) {
-                extended[prop] = {...extended[prop], ...obj[prop]}
+                extended = {...extended, ...{ [prop]: { ...extended[prop], ...obj[prop] } } }
             }
         }
     }
@@ -49,7 +46,7 @@ export type StyleObject = {
     }
 }
 
-export const createStylesheetHelper = (store: Store<ApplicationState, ReduxAction>) => {
+const createStylesheetHelper = (dispatch: React.Dispatch<StyleObjects>) => {
     const classMapCache: Array<any> = []
     let classMapIndex = 0
 
@@ -84,10 +81,22 @@ export const createStylesheetHelper = (store: Store<ApplicationState, ReduxActio
             }
         }
 
-        store.dispatch(addStyleObjects(styleObjects))
+        dispatch(styleObjects)
         classMapCache.push({ styleObject, classMap })
         return classMap
     }
 }
 
-export const StylesheetContext = React.createContext({ createStylesheet: createStylesheetHelper(createStore(applicationReducer)) });
+const reducer = (state: StyleObjects, newStyles: StyleObjects) => Object.assign({}, state, newStyles)
+
+export const StylesheetContext = React.createContext({ styles: {} as StyleObjects, createStyles: createStylesheetHelper(() => void 0) });
+
+export const StylesheetProvider = ({ children }: { children: React.ReactElement}) => {
+    const [state, dispatch] = React.useReducer(reducer, {})
+    const createStyles = React.useRef(createStylesheetHelper(dispatch))
+    return (
+        <StylesheetContext.Provider value={{ styles: state, createStyles: createStyles.current }}>
+            {children}
+        </StylesheetContext.Provider>
+    );
+};

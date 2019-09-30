@@ -1,7 +1,7 @@
 import * as React from 'react'
 import { StylesheetContext } from 'lib/stylesheet-helper'
 import { LogNode as LogNodeType, RiverNode, TextChain } from 'lib/interpreter'
-import { TextChainInput } from 'containers/text-chain-input-container';
+import { TextChainInput } from 'components/nodes/text-chain-input-component';
 import { colours } from 'lib/colours';
 import { logNodeStyles } from 'styles/log-node-styles';
 
@@ -14,8 +14,8 @@ export const LogNode = (props: {
     selectNode: () => void
     nodes: { [key: string]: RiverNode }
 }) => {
-    const { createStylesheet } = React.useContext(StylesheetContext)
-    const styles = createStylesheet(logNodeStyles)
+    const { createStyles } = React.useContext(StylesheetContext)
+    const styles = createStyles(logNodeStyles)
     const [textChain, setTextChain] = React.useState(props.node.message)
     React.useEffect(() => {
         props.innerRef.current.focus()

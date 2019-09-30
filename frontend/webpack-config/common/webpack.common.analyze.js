@@ -4,7 +4,10 @@ const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPl
 
 const config = {
     plugins: [
-        new BundleAnalyzerPlugin()
+        new BundleAnalyzerPlugin({
+            analyzerPort: 8899,
+            analyzerMode: 'static'
+        })
     ],
 }
 

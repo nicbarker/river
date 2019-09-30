@@ -1,32 +1,17 @@
 import * as React from 'react'
 import { StylesheetContext } from 'lib/stylesheet-helper'
 import { editorStyles } from 'styles/editor-styles'
-import { Layer } from 'reducers/application-reducer'
 import classNames = require('classnames')
-import { NodeType, RiverNode } from 'lib/interpreter';
-import { NodeOuter } from 'containers/node-outer-container';
+import { RiverNode } from 'lib/interpreter';
+import { NodeOuter } from 'components/nodes/node-outer-component';
 import DownloadIcon from 'ionicons/dist/ionicons/svg/md-cloud-download.svg'
 import UploadIcon from 'ionicons/dist/ionicons/svg/md-cloud-upload.svg'
+import { StoreContext } from 'reducers/reducer-context'
 
-export type EditorProps = {
-    nodes: { [id: string]: RiverNode }
-    orderedNodes: RiverNode[]
-    activeLayer: Layer
-    selectedNodeId: string
-
-    setActiveLayer: (activeLayer: Layer) => void
-    setSelectedNode: (nodeId: string) => void
-    insertNode: (previousNodeId: string) => void
-    setNodeType: (nodeId: string, type: NodeType) => void
-    setProgramNodes: (nodes: { [id: string]: RiverNode }) => void
-    deleteNodes: (nodeIds: string[]) => void
-    undo: () => void
-    redo: () => void
-}
-
-export const Editor = (props: EditorProps) => {
-    const { createStylesheet } = React.useContext(StylesheetContext)
-    const styles = createStylesheet(editorStyles)
+export const Editor = () => {
+    const { createStyles } = React.useContext(StylesheetContext)
+    const { state, dispatch } = React.useContext(StoreContext)
+    const styles = createStyles(editorStyles)
     const editorRef = React.useRef<HTMLDivElement>()
     const nodesContainerRef = React.useRef<HTMLDivElement>()
     const selectedNodeRef = React.useRef<HTMLDivElement>()
@@ -43,29 +28,29 @@ export const Editor = (props: EditorProps) => {
     // Register keyboard shortcuts
     const handleKeyPress = (event: React.KeyboardEvent<HTMLDivElement>) => {
         if (event.key === 'Enter') {
-            props.insertNode(props.selectedNodeId)
+            dispatch({ type: 'INSERT_NODE', payload: { previousNodeId: state.selectedNodeId } })
         } else if (event.key === 'ArrowUp') {
-            const previousNode = Object.values(props.nodes).find(n => n.nextNodeId === props.selectedNodeId)
+            const previousNode = Object.values(state.nodes).find(n => n.nextNodeId === state.selectedNodeId)
             if (previousNode) {
-                props.setSelectedNode(previousNode.id)
+                dispatch({ type: 'SET_SELECTED_NODE', payload: { selectedNodeId: previousNode.id } })
             }
         } else if (event.key === 'ArrowDown') {
-            if (props.nodes[props.selectedNodeId].nextNodeId) {
-                props.setSelectedNode(props.nodes[props.selectedNodeId].nextNodeId)
+            if (state.nodes[state.selectedNodeId].nextNodeId) {
+                dispatch({ type: 'SET_SELECTED_NODE', payload: { selectedNodeId: state.nodes[state.selectedNodeId].nextNodeId } })
             }
         } else if (event.key === 'e') {
-            props.setActiveLayer('editor')
+            dispatch({ type: 'SET_ACTIVE_LAYER', payload: { activeLayer: 'editor' } })
         } else if (event.key === 'Backspace') {
             if (Object.values(dragSelectedNodes).length > 0) {
-                props.deleteNodes(Object.values(dragSelectedNodes).map(n => n.id))
+                dispatch({ type: 'DELETE_NODES', payload: { nodeIds: Object.values(dragSelectedNodes).map(n => n.id) } })
             } else {
-                props.deleteNodes([props.selectedNodeId])
+                dispatch({ type: 'DELETE_NODES', payload: { nodeIds: [state.selectedNodeId] } })
             }
         } else if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key === 'z') {
-            props.redo()
+            // state.redo()
             event.preventDefault()
         } else if ((event.ctrlKey || event.metaKey) && event.key === 'z') {
-            props.undo()
+            // state.undo()
             event.preventDefault()
         }
     }
@@ -101,7 +86,7 @@ export const Editor = (props: EditorProps) => {
         }
     }
 
-    const renderedNodes = Object.values(props.orderedNodes).map((node) => {
+    const renderedNodes = Object.values(state.orderedNodes).map((node) => {
         const setNodeDragSelected = (selected: boolean) => {
             if (selected) {
                 dragSelectedNodes[node.id] = node;
@@ -114,7 +99,7 @@ export const Editor = (props: EditorProps) => {
             key={node.id}
             nodeId={node.id}
             focusParent={focusEditor}
-            parentOwnedRef={node.id === props.selectedNodeId ? selectedNodeRef : undefined}
+            parentOwnedRef={node.id === state.selectedNodeId ? selectedNodeRef : undefined}
             dragSelectionDimensions={dragSelectionDimensions}
             setNodeDragSelected={setNodeDragSelected}
             dragSelected={!!dragSelectedNodes[node.id]}
@@ -125,7 +110,7 @@ export const Editor = (props: EditorProps) => {
 
     const downloadProgram = () => {
         const element = document.createElement('a');
-        element.setAttribute('href', 'data:text/text;charset=utf-8,' + encodeURI(JSON.stringify(props.nodes)));
+        element.setAttribute('href', 'data:text/text;charset=utf-8,' + encodeURI(JSON.stringify(state.nodes)));
         element.setAttribute('download', "program.rvr");
         element.click();
     }
@@ -135,7 +120,7 @@ export const Editor = (props: EditorProps) => {
             const reader = new FileReader();
             reader.onload = () => {
                 const program = JSON.parse(reader.result as string)
-                props.setProgramNodes(program)
+                dispatch({ type: 'SET_PROGRAM_NODES', payload: { nodes: program } })
                 setFileMenuVisible(false)
             }
             reader.readAsText(event.target.files[0])
@@ -170,8 +155,8 @@ export const Editor = (props: EditorProps) => {
             onFocus={() => { selectedNodeRef.current && selectedNodeRef.current.focus() }}
         >
             <div className={styles.editorHeader}>
-                <div className={styles.headerButton} onClick={() => props.setActiveLayer('editor')}>
-                    <div className={classNames(styles.headerButtonText, { [styles.active]: props.activeLayer === 'editor'})} style={{ borderTopLeftRadius: 5 }} >Editor</div>
+                <div className={styles.headerButton} onClick={() => dispatch({ type: 'SET_ACTIVE_LAYER', payload: { activeLayer: 'editor' } })}>
+                    <div className={classNames(styles.headerButtonText, { [styles.active]: state.activeLayer === 'editor'})} style={{ borderTopLeftRadius: 5 }} >Editor</div>
                 </div>
                 <div className={styles.headerButton}>
                     <div className={classNames(styles.headerButtonText, { [styles.dropdownVisible]: fileMenuVisible})} onMouseDown={(event) => { event.stopPropagation(); setFileMenuVisible(true) }}>File</div>
