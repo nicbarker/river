@@ -32,16 +32,14 @@ export const Editor = () => {
 
     useEffect(() => {
         if (!ancestorFocus || currentFocus.length > 1) { return }
-        const currentNode = state.orderedNodes[currentFocus[0]]
-
         const backspaceHandler = () => {
             if (Object.values(dragSelectedNodes).length > 0) {
                 dispatch({ type: 'DELETE_NODES', payload: { nodeIds: Object.values(dragSelectedNodes).map(n => n.id) } })
             } else if (currentFocus.length === 1) {
-                dispatch({ type: 'DELETE_NODES', payload: { nodeIds: [state.orderedNodes[currentFocus[0]].id] } })
+                dispatch({ type: 'DELETE_NODES', payload: { nodeIds: [state.orderedNodes[currentFocus[0] - 1].id] } })
                 if (state.orderedNodes.length === 1) {
                     focusUtil.setCurrentFocus([])
-                } else if (currentFocus[0] === state.orderedNodes.length - 1) {
+                } else if (currentFocus[0] - 1 === state.orderedNodes.length - 1) {
                     focusUtil.incrementCurrentFocus(-1)
                 }
             }
@@ -51,7 +49,7 @@ export const Editor = () => {
         const arrowDownHandler = () => focusUtil.incrementCurrentFocus(1)
         const enterHandler = (conditional: boolean = false) => {
             dispatch({ type: 'INSERT_NODE', payload: {
-                previousNodeId: currentFocus.length === 1 ? state.orderedNodes[currentFocus[0]].id : undefined,
+                previousNodeId: currentFocus.length === 1 && currentFocus[0] !== 0 ? state.orderedNodes[currentFocus[0] - 1].id : undefined,
                 conditional
             }})
         }
@@ -72,8 +70,8 @@ export const Editor = () => {
 
     useEffect(() => {
         if (currentFocus.length === 1) {
-            if (currentFocus[0] > Object.values(state.orderedNodes).length - 1) {
-                focusUtil.setCurrentFocus([Object.values(state.orderedNodes).length - 1])
+            if (currentFocus[0] > Object.values(state.orderedNodes).length) {
+                focusUtil.setCurrentFocus([Object.values(state.orderedNodes).length])
             } else if (currentFocus[0] < 0) {
                 focusUtil.setCurrentFocus([0])
             }
@@ -127,7 +125,7 @@ export const Editor = () => {
             dragSelectionDimensions={dragSelectionDimensions}
             setNodeDragSelected={setNodeDragSelected}
             dragSelected={!!dragSelectedNodes[node.id]}
-            focusState={[index]}
+            focusState={[index + 1]}
         />
     })
 
@@ -195,6 +193,7 @@ export const Editor = () => {
             >
                 {dragSelection}
                 <div className={styles.nodes}>
+                    <div className={classNames(styles.beforeFirstNode, { [styles.visible]: currentFocus[0] === 0 })} />
                     {renderedNodes}
                     {pressEnterMessage}
                 </div>

@@ -49,7 +49,8 @@ export const NodeOuter = (props: NodeOuterProps) => {
             if (currentFocus[currentFocus.length - 1] === 1) {
                 focusUtil.incrementCurrentFocus(-1)
             } else {
-                const upOneLevel = currentFocus.slice(currentFocus.length - 1)
+                console.log(currentFocus)
+                const upOneLevel = currentFocus.slice(0, currentFocus.length - 1)
                 upOneLevel[upOneLevel.length - 1]--
                 focusUtil.setCurrentFocus(upOneLevel)
             }
@@ -58,7 +59,7 @@ export const NodeOuter = (props: NodeOuterProps) => {
             if (currentFocus[currentFocus.length - 1] === 0) {
                 focusUtil.incrementCurrentFocus(1)
             } else {
-                const upOneLevel = currentFocus.slice(currentFocus.length - 1)
+                const upOneLevel = currentFocus.slice(0, currentFocus.length - 1)
                 upOneLevel[upOneLevel.length - 1]++
                 focusUtil.setCurrentFocus(upOneLevel)
             }

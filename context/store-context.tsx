@@ -160,7 +160,13 @@ const reducer = (state: ApplicationState, action: ReducerAction) => {
             // If there's only one node, make it the entrypoint
             if (Object.values(newState.nodes).length === 1) {
                 newState.nodes[newId].entryPoint = true
+            // If we've inserted a new node before the first node
+            } else if (!action.payload.previousNodeId && Object.values(newState.nodes).length > 1) {
+                newState.nodes[newId].nextNodeId = newState.orderedNodes[0].id
+                newState.nodes[newId].entryPoint = true
+                newState.nodes[newState.orderedNodes[0].id].entryPoint = false
             }
+
             if (previousNode) {
                 previousNode.nextNodeId = newId
             }

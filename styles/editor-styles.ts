@@ -107,6 +107,17 @@ export const editorStyles = {
         width: 29,
     },
 
+    beforeFirstNode: {
+        width: '100%',
+        height: 4,
+        background: Color(colours.darkGreySlate).lighten(0.2).hex(),
+        visibility: 'hidden',
+    },
+
+    visible: {
+        visibility: 'visible'
+    },
+
     nodes: {
         flexGrow: 1,
         flexDirection: 'column',

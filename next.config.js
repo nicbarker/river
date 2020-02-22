@@ -10,11 +10,7 @@ module.exports = {
             test: /\.svg$/,
             use: [
                 {
-                    loader: 'react-svg-loader',
-                    // include: [path.resolve(__dirname, "ionicons/dist/ionicons/svg")],
-                    options: {
-                        // jsx: true
-                    }
+                    loader: 'react-svg-loader'
                 }
             ]
         })
