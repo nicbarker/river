@@ -1,30 +1,26 @@
-This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/zeit/next.js/tree/canary/packages/create-next-app).
+# River
+### Experimental non text-based programming language and IDE
 
-## Getting Started
+Read the language development blog here: https://blog.riverlanguage.org
 
-First, run the development server:
+### Using River
+You can either run the dev environment from this repository directly, or just head to https://editor.riverlanguage.org to try it out.
 
-```bash
+### Setting up the dev environment
+The River editor is currently a web application, built using Typescript and React. It's recommended to install the latest NodeJS environment on your machine.
+
+```
+git clone git@github.com:nicbarker/river.git
+cd river/frontend
+npm install
 npm run dev
-# or
-yarn dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+You should see the river editor running at `http://localhost:3000`.
 
-You can start editing the page by modifying `pages/index.js`. The page auto-updates as you edit the file.
+Good luck!
 
-## Learn More
+### Contributing
+The master branch of River is protected, and all pull requests will need to be approved before being merged.
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/zeit/next.js/) - your feedback and contributions are welcome!
-
-## Deploy on ZEIT Now
-
-The easiest way to deploy your Next.js app is to use the [ZEIT Now Platform](https://zeit.co/) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.
+I'm currently working using both release branches and feature branches. If you're keen to contribute to the current release, please open a pull request for your feature or bug fix against the currently open feature branch (for example, 0.0.1).
