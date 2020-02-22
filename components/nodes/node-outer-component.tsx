@@ -73,6 +73,17 @@ export const NodeOuter = (props: NodeOuterProps) => {
             }
         }
 
+        const backspaceHandler = () => {
+            if (ancestorFocus && currentFocus.length === props.focusState.length + 1) {
+                dispatch({ type: 'DELETE_NODES', payload: { nodeIds: [props.nodeId] } })
+                const newFocus = [...props.focusState]
+                newFocus[newFocus.length - 1]--
+                focusUtil.setCurrentFocus(newFocus)
+            }
+        }
+
+        const escapeHandler = () => focusUtil.setCurrentFocus(currentFocus.slice(0, currentFocus.length - 1))
+
         const conditionalHandler = () => {
             const conditional = !!!node.conditional
             dispatch({ type: 'SET_NODE_CONDITIONAL', payload: { nodeId: props.nodeId, conditional }})
@@ -86,11 +97,13 @@ export const NodeOuter = (props: NodeOuterProps) => {
             { key: 'ArrowDown', callback: arrowDownHandler },
             { key: 'ArrowRight', callback: arrowRightHandler },
             { key: 'Enter', callback: enterHandler },
+            { key: 'Backspace', callback: backspaceHandler },
+            { key: 'Escape', callback: escapeHandler },
             { key: 'c', callback: conditionalHandler },
         ])
 
         return () => {
-            keyboardUtil.deregisterKeyListeners([arrowRightHandler, arrowUpHandler, arrowDownHandler, enterHandler, conditionalHandler])
+            keyboardUtil.deregisterKeyListeners([arrowRightHandler, arrowUpHandler, arrowDownHandler, enterHandler, backspaceHandler, escapeHandler, conditionalHandler])
         }
     }, [hasFocus, focusUtil.incrementCurrentFocus, currentFocus, ancestorFocus, node, props.nodeId, props.focusState])
 
