@@ -8,8 +8,22 @@
     "start": "next start"
   },
   "dependencies": {
+    "@sentry/browser": "^5.12.4",
+    "@types/node": "^13.7.4",
+    "@types/react": "^16.9.20",
+    "classnames": "^2.2.6",
+    "color": "^3.1.2",
+    "ionicons": "^4.6.3",
     "next": "9.2.2",
     "react": "16.12.0",
-    "react-dom": "16.12.0"
+    "react-dom": "16.12.0",
+    "typescript": "^3.7.5"
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^2.20.0",
+    "@typescript-eslint/parser": "^2.20.0",
+    "babel-loader": "^8.0.6",
+    "eslint": "^6.8.0",
+    "react-svg-loader": "^3.0.3"
   }
 }
