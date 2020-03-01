@@ -155,7 +155,7 @@ const reducer = (state: ApplicationState, action: ReducerAction) => {
                 id: newId,
                 nextNodeId: previousNode ? previousNode.nextNodeId : undefined,
                 nodeType: 'EmptyNode',
-                conditional: action.payload.conditional ? { type: 'empty' } : undefined
+                conditional: action.payload.conditional ? { conditionalType: 'EmptyConditional' } : undefined
             }
             // If there's only one node, make it the entrypoint
             if (Object.values(newState.nodes).length === 1) {
@@ -225,7 +225,7 @@ const reducer = (state: ApplicationState, action: ReducerAction) => {
         const node = newState.nodes[action.payload.nodeId]
         if (node) {
             const newNode = JSON.parse(JSON.stringify(node)) as RiverNode
-            newNode.conditional = action.payload.conditional ? { type: 'empty' } : undefined
+            newNode.conditional = action.payload.conditional ? { conditionalType: 'EmptyConditional' } : undefined
             newState.nodes[action.payload.nodeId] = newNode
             newState.orderedNodes = createOrderedNodes(newState.nodes)
         } else if (action.payload.nodeId) { // If the node id was defined but no node was found, we're in trouble
@@ -240,9 +240,9 @@ const reducer = (state: ApplicationState, action: ReducerAction) => {
         if (node) {
             const newNode = JSON.parse(JSON.stringify(node)) as RiverNode
             switch (action.payload.type) {
-                case 'empty': newNode.conditional = { type: 'empty' }; break
-                case 'equals': newNode.conditional = { type: 'equals', leftSide: createRawTextChainFromString(''), rightSide: createRawTextChainFromString('') }; break
-                case 'not_equals': newNode.conditional = { type: 'not_equals', leftSide: createRawTextChainFromString(''), rightSide: createRawTextChainFromString('') }; break
+                case 'EmptyConditional': newNode.conditional = { conditionalType: 'EmptyConditional' }; break
+                case 'EqualsConditional': newNode.conditional = { conditionalType: 'EqualsConditional', leftSide: createRawTextChainFromString(''), rightSide: createRawTextChainFromString('') }; break
+                case 'NotEqualsConditional': newNode.conditional = { conditionalType: 'NotEqualsConditional', leftSide: createRawTextChainFromString(''), rightSide: createRawTextChainFromString('') }; break
             }
             newState.nodes[action.payload.nodeId] = newNode
             newState.orderedNodes = createOrderedNodes(newState.nodes)
@@ -257,7 +257,7 @@ const reducer = (state: ApplicationState, action: ReducerAction) => {
         const node = newState.nodes[action.payload.nodeId]
         if (node) {
             const newNode = JSON.parse(JSON.stringify(node)) as RiverNode
-            if (newNode.conditional.type !== 'empty') {
+            if (newNode.conditional.conditionalType !== 'EmptyConditional') {
                 newNode.conditional.leftSide = action.payload.leftSide
             }
             newState.nodes[action.payload.nodeId] = newNode
@@ -273,7 +273,7 @@ const reducer = (state: ApplicationState, action: ReducerAction) => {
         const node = newState.nodes[action.payload.nodeId]
         if (node) {
             const newNode = JSON.parse(JSON.stringify(node)) as RiverNode
-            if (newNode.conditional.type !== 'empty') {
+            if (newNode.conditional.conditionalType !== 'EmptyConditional') {
                 newNode.conditional.rightSide = action.payload.rightSide
             }
             newState.nodes[action.payload.nodeId] = newNode

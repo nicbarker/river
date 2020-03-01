@@ -36,29 +36,29 @@ export type TextChain = (TextBlockObjectType)[]
 
 export type RawTextChain = [RawTextBlock]
 
-export type ConditionalType = 'empty' | 'equals' | 'not_equals'
+export type ConditionalType = 'EmptyConditional' | 'EqualsConditional' | 'NotEqualsConditional'
 
 export const searchableConditionalTypes: { label: string, conditionalType: ConditionalType }[] = [
-    { label: 'Equals', conditionalType: 'equals' },
-    { label: 'Not Equals', conditionalType: 'not_equals' }
+    { label: 'Equals', conditionalType: 'EqualsConditional' },
+    { label: 'Not Equals', conditionalType: 'NotEqualsConditional' }
 ]
 
 type BaseConditional = {
-    type: ConditionalType
+    conditionalType: ConditionalType
 }
 
 type EmptyConditional = {
-    type: 'empty'
+    conditionalType: 'EmptyConditional'
 } & BaseConditional
 
 type EqualsConditional<T = TextChain> = {
-    type: 'equals'
+    conditionalType: 'EqualsConditional'
     leftSide: T
     rightSide: T
 } & BaseConditional
 
 type NotEqualsConditional<T = TextChain> = {
-    type: 'not_equals'
+    conditionalType: 'NotEqualsConditional'
     leftSide: T
     rightSide: T
 } & BaseConditional
@@ -154,19 +154,19 @@ export const run = (program: { nodes: { [key: string]: RiverNode} }) => {
     output.push(createLogMessage('starting river program'))
     const executeNode = (node: RiverNode) => {
         if (node.conditional) {
-            switch (node.conditional.type) {
-                case 'equals':
-                case 'not_equals': {
+            switch (node.conditional.conditionalType) {
+                case 'EqualsConditional':
+                case 'NotEqualsConditional': {
                     const leftSide = renderTextChain(program.nodes, variableValues, node.conditional.leftSide)
                     const rightSide = renderTextChain(program.nodes, variableValues, node.conditional.rightSide)
-                    if ((leftSide !== rightSide && node.conditional.type === 'equals') || (leftSide === rightSide && node.conditional.type === 'not_equals')) {
+                    if ((leftSide !== rightSide && node.conditional.conditionalType === 'EqualsConditional') || (leftSide === rightSide && node.conditional.conditionalType === 'NotEqualsConditional')) {
                         if (node.nextNodeId) {
                             executeNode(program.nodes[node.nextNodeId])
                         }
                         return
                     }
                 }
-                case 'empty':
+                case 'EmptyConditional':
             }
         }
 

@@ -24,9 +24,9 @@ export const Conditional = (props: {
     const { currentFocus, focusUtil, keyboardUtil } = useContext(InteractionContext)
     const [hasFocus, ancestorFocus] = focusUtil.hasFocus(props.focusState)
     const [leftSideInputContents, setLeftSideInputContents] = 
-        useState((props.node.conditional.type !== 'empty' && props.node.conditional.leftSide || createRawTextChainFromString('')))
+        useState((props.node.conditional.conditionalType !== 'EmptyConditional' && props.node.conditional.leftSide || createRawTextChainFromString('')))
     const [rightSideInputContents, setRightSideInputContents] = 
-        useState((props.node.conditional.type !== 'empty' && props.node.conditional.rightSide || createRawTextChainFromString('')))
+        useState((props.node.conditional.conditionalType !== 'EmptyConditional' && props.node.conditional.rightSide || createRawTextChainFromString('')))
 
     // Register keyboard handling
     useEffect(() => {
@@ -46,7 +46,7 @@ export const Conditional = (props: {
     }, [ancestorFocus, currentFocus, focusUtil.incrementCurrentFocus])
 
     let content: React.ReactNode
-    if (props.node.conditional?.type === 'empty') {
+    if (props.node.conditional?.conditionalType === 'EmptyConditional') {
         const items = searchableConditionalTypes.map(c => {
             return {
                 label: c.label,
@@ -65,7 +65,7 @@ export const Conditional = (props: {
             width={150}
             focusState={[...props.focusState, 0]}
         />
-    } else if (props.node.conditional.type === 'equals' || props.node.conditional.type === 'not_equals') {
+    } else if (props.node.conditional.conditionalType === 'EqualsConditional' || props.node.conditional.conditionalType === 'NotEqualsConditional') {
         let leftSidePlaceholder
         if (leftSideInputContents.length === 1 &&
             (leftSideInputContents[0].textBlockType !== 'RawTextBlock' || (leftSideInputContents[0] as RawTextBlock).value.length === 0)) {
@@ -77,9 +77,9 @@ export const Conditional = (props: {
             rightSidePlaceholder = 'Value'
         }
         const getOperator = () => {
-            switch (props.node.conditional.type) {
-                case 'equals': return '='
-                case 'not_equals': return '!='
+            switch (props.node.conditional.conditionalType) {
+                case 'EqualsConditional': return '='
+                case 'NotEqualsConditional': return '!='
             }
         }
         content = (

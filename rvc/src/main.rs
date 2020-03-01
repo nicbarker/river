@@ -59,6 +59,29 @@ struct CreateVariableNode {
 }
 
 #[derive(Deserialize, Debug)]
+#[serde(tag = "conditionalType")]
+enum Conditional<T = Vec<TextBlock>> {
+    EmptyConditional(EmptyConditional),
+    EqualsConditional(EqualsConditional<T>),
+    NotEqualsConditional(NotEqualsConditional<T>)
+}
+
+#[derive(Deserialize, Debug)]
+struct EmptyConditional;
+
+#[derive(Deserialize, Debug)]
+struct EqualsConditional<T> {
+    leftSide: T,
+    rightSide: T
+}
+
+#[derive(Deserialize, Debug)]
+struct NotEqualsConditional<T> {
+    leftSide: T,
+    rightSide: T
+}
+
+#[derive(Deserialize, Debug)]
 #[serde(tag = "nodeType")]
 enum NodeType {
     EmptyNode(EmptyNode),
@@ -71,7 +94,7 @@ struct RiverNode {
     id: String,
     nextNodeId: Option<String>,
     entryPoint: Option<bool>,
-    conditional: Option<String>,
+    conditional: Option<Conditional>,
     #[serde(flatten)]
     props: NodeType,
 }
@@ -114,6 +137,24 @@ struct CreateVariableNode {
     value: Vec<TextBlock>
 }
 
+enum Conditional<T = Vec<TextBlock>> {
+    EmptyConditional(EmptyConditional),
+    EqualsConditional(EqualsConditional<T>),
+    NotEqualsConditional(NotEqualsConditional<T>)
+}
+
+struct EmptyConditional;
+
+struct EqualsConditional<T> {
+    leftSide: T,
+    rightSide: T
+}
+
+struct NotEqualsConditional<T> {
+    leftSide: T,
+    rightSide: T
+}
+
 enum NodeType {
     EmptyNode(EmptyNode),
     LogNode(LogNode),
@@ -124,7 +165,7 @@ struct RiverNode {
     id: String,
     nextNodeId: Option<String>,
     entryPoint: Option<bool>,
-    conditional: Option<String>,
+    conditional: Option<Conditional>,
     props: NodeType,
 }
 
@@ -162,6 +203,34 @@ static bottom: &str = r#"
         let mut variableValues: HashMap<String, String> = HashMap::new();
         
         fn executeNode(node: &RiverNode, program: &RiverProgram, variableValues: &mut HashMap<String, String>) {
+            if node.conditional.is_some() {
+                match &node.conditional.as_ref().unwrap() {
+                    Conditional::EmptyConditional(_) => (),
+                    Conditional::EqualsConditional(equals) => {
+                        let leftSide = renderTextChain(variableValues, &equals.leftSide);
+                        let rightSide = renderTextChain(variableValues, &equals.rightSide);
+                        if leftSide != rightSide {
+                            if node.nextNodeId.is_some() {
+                                let nextNodeId = node.nextNodeId.clone().unwrap().to_string();
+                                executeNode(program.get(&nextNodeId).unwrap(), program, variableValues)
+                            }
+                            return
+                        }
+                    }
+                    Conditional::NotEqualsConditional(equals) => {
+                        let leftSide = renderTextChain(variableValues, &equals.leftSide);
+                        let rightSide = renderTextChain(variableValues, &equals.rightSide);
+                        if leftSide == rightSide {
+                            if node.nextNodeId.is_some() {
+                                let nextNodeId = node.nextNodeId.clone().unwrap().to_string();
+                                executeNode(program.get(&nextNodeId).unwrap(), program, variableValues)
+                            }
+                            return
+                        }
+                    }
+                }
+            }
+
             match &node.props {
                 NodeType::EmptyNode(_node) => (),
                 NodeType::LogNode(node) => {
@@ -235,7 +304,32 @@ fn main() -> std::io::Result<()> {
         toOutput.push_str(&format!("id: String::from(\"{}\"),\n", node.id));
         toOutput.push_str(&format!("nextNodeId: {},\n", if node.nextNodeId.is_some() { format!("{}{}{}", "Some(String::from(\"", node.nextNodeId.as_ref().unwrap(), "\"))") } else { String::from("None") }));
         toOutput.push_str(&format!("entryPoint: {:#?},\n", node.entryPoint));
-        toOutput.push_str(&format!("conditional: {:#?},\n", node.conditional));
+        toOutput.push_str("conditional: ");
+        match node.conditional.as_ref().unwrap() {
+            Conditional::EmptyConditional(_) => { toOutput.push_str(&format!("Some(Conditional::EmptyConditional(\n EmptyConditional {{\n")) },
+            Conditional::EqualsConditional(equals) => {
+                toOutput.push_str(&format!("Some(Conditional::EqualsConditional(\n"));
+                toOutput.push_str(&format!("EqualsConditional {{\n"));
+                toOutput.push_str(&format!("leftSide: vec![\n"));
+                renderTextChainAsCode(&mut toOutput, &equals.leftSide);
+                toOutput.push_str(&format!("],\n"));
+                toOutput.push_str(&format!("rightSide: vec![\n"));
+                renderTextChainAsCode(&mut toOutput, &equals.rightSide);
+                toOutput.push_str(&format!("]\n"));
+            },
+            Conditional::NotEqualsConditional(notEquals) => {
+                toOutput.push_str(&format!("Conditional::NotEqualsConditional(\n"));
+                toOutput.push_str(&format!("NotEqualsConditional {{\n"));
+                toOutput.push_str(&format!("leftSide: vec![\n"));
+                renderTextChainAsCode(&mut toOutput, &notEquals.leftSide);
+                toOutput.push_str(&format!("],\n"));
+                toOutput.push_str(&format!("rightSide: vec![\n"));
+                renderTextChainAsCode(&mut toOutput, &notEquals.rightSide);
+                toOutput.push_str(&format!("]\n"));
+            },
+        }
+        toOutput.push_str(&format!("}},\n"));
+        toOutput.push_str(&format!(")),\n"));
         toOutput.push_str(&format!("props: "));
         match &node.props {
             NodeType::EmptyNode(_node) => (),
