@@ -10,15 +10,6 @@ import { StoreProvider } from 'context/store-context'
 import { InteractionProvider } from 'context/interaction-context'
 import Head from 'next/head'
 
-// Load sentry if an error occurs
-const captureError = async (error: any) => {
-    const { logError } = await import(/* webpackChunkName: "sentry" */ 'lib/sentry')
-    logError(error)
-}
-
-// window.onerror = (message, url, line, column, error) => captureError(error)
-// window.onunhandledrejection = (event: PromiseRejectionEvent) => captureError(event.reason)
-
 const River = () => (
     <>
         <Head>
