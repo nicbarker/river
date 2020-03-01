@@ -1,6 +1,8 @@
 # River
 ### Experimental non text-based programming language and IDE
 
+<img width="1401" alt="Screenshot 2020-03-01 21 29 51" src="https://user-images.githubusercontent.com/2264338/75622332-d10a6c80-5c03-11ea-8d75-11e605492870.png">
+
 Read the language development blog here: https://blog.riverlanguage.org
 
 ### Using River
@@ -18,7 +20,21 @@ npm run dev
 
 You should see the river editor running at `http://localhost:3000`.
 
-Good luck!
+### Compiling static binaries from .rvr files
+River includes a compiler written in [Rust](https://www.rust-lang.org/) called __rvc__. You can find the source code for it in `/rvc`. You'll need to install Rust and the rust package manager, `cargo`. To compile river programs into binary executables, use the following:
+
+```
+cd rvc/
+cargo build
+cargo run YOUR_RVR_FILE
+```
+
+If compilation succeeds, you'll see a file with the same name as your river program in the `rvc` directory.
+
+#### Notes on static compilation
+The river compiler basically just transpiles river directly into rust code, then runs the rust compiler `rustc`. It's currently not as fast or optimised as it could be as it's basically just a direct port of the node graph from typescript (using a hashmap for the nodes).
+
+If the compiler fails and you want to look at the generated rust code to debug, check out the files generated in the `rvc/out` directory.
 
 ### Contributing
 The master branch of River is protected, and all pull requests will need to be approved before being merged.
