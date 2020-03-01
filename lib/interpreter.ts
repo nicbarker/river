@@ -2,10 +2,10 @@
 // Run a .rvr program
 // --------------------------------------------------
 
-export type NodeType = 'log' | 'empty' | 'create_variable'
+export type NodeType = 'LogNode' | 'EmptyNode' | 'CreateVariableNode'
 export const searchableNodeTypes: { label: string, nodeType: NodeType }[] = [
-    { label: 'Log', nodeType: 'log' },
-    { label: 'Create variable', nodeType: 'create_variable' }
+    { label: 'Log', nodeType: 'LogNode' },
+    { label: 'Create variable', nodeType: 'CreateVariableNode' }
 ]
 
 export type ValueType = 'text'
@@ -13,20 +13,20 @@ export const searchableValueTypes: { label: string, valueType: ValueType }[] = [
     { label: 'Text', valueType: 'text' }
 ]
 
-export type TextBlockType = 'raw' | 'variableReference'
+export type TextBlockType = 'RawTextBlock' | 'VariableReferenceTextBlock'
 
 export type TextBlock = {
     id: string
-    type: TextBlockType
+    textBlockType: TextBlockType
 }
 
 export type RawTextBlock = TextBlock & {
-    type: 'raw',
+    textBlockType: 'RawTextBlock',
     value: string
 }
 
 export type VariableReferenceTextBlock = TextBlock & {
-    type: 'variableReference'
+    textBlockType: 'VariableReferenceTextBlock'
     nodeId: string
 }
 
@@ -72,20 +72,20 @@ type BaseNodeProps = {
 }
 
 export type EmptyNode = BaseNodeProps & {
-    nodeType: 'empty'
+    nodeType: 'EmptyNode'
 }
 
 export type LogNode = BaseNodeProps & {
-    nodeType: 'log'
+    nodeType: 'LogNode',
     message: TextChain
 }
 
 export namespace VariableNodes {
     export type Create = BaseNodeProps & {
-        nodeType: 'create_variable'
+        nodeType: 'CreateVariableNode'
         label: string,
         valueType: 'text'
-        value: TextChain,
+        value: TextChain
         runtimeValue: string
     }
 }
@@ -103,7 +103,7 @@ export type RuntimeLogMessage = {
 export const createRawTextChainFromString = (message: string): RawTextChain => {
     return [{
         id: 'string',
-        type: 'raw',
+        textBlockType: 'RawTextBlock',
         value: message
     }]
 }
@@ -111,9 +111,9 @@ export const createRawTextChainFromString = (message: string): RawTextChain => {
 export const renderTextChain = (nodes: { [key: string]: RiverNode }, variableValues: { [key: string]: any }, textChain: TextChain) => {
     let currentString = ''
     for (const block of textChain) {
-        if (block.type === 'raw') {
+        if (block.textBlockType === 'RawTextBlock') {
             currentString += block.value
-        } else if (block.type === 'variableReference') {
+        } else if (block.textBlockType === 'VariableReferenceTextBlock') {
             currentString += variableValues[block.nodeId]
         }
     }
@@ -122,7 +122,7 @@ export const renderTextChain = (nodes: { [key: string]: RiverNode }, variableVal
 
 export const textChainHasErrors = (nodes: { [key: string]: RiverNode }, textChain: TextChain) => {
     for (const block of textChain) {
-        if (block.type === 'variableReference' && !nodes[block.nodeId]) {
+        if (block.textBlockType === 'VariableReferenceTextBlock' && !nodes[block.nodeId]) {
             return true
         }
     }
@@ -160,7 +160,6 @@ export const run = (program: { nodes: { [key: string]: RiverNode} }) => {
                     const leftSide = renderTextChain(program.nodes, variableValues, node.conditional.leftSide)
                     const rightSide = renderTextChain(program.nodes, variableValues, node.conditional.rightSide)
                     if ((leftSide !== rightSide && node.conditional.type === 'equals') || (leftSide === rightSide && node.conditional.type === 'not_equals')) {
-                        console.log('skip')
                         if (node.nextNodeId) {
                             executeNode(program.nodes[node.nextNodeId])
                         }
@@ -171,18 +170,17 @@ export const run = (program: { nodes: { [key: string]: RiverNode} }) => {
             }
         }
 
-        if (node.nodeType === 'log') {
+        if (node.nodeType === 'LogNode') {
             if (textChainHasErrors(program.nodes, node.message)) {
                 output.push(createLogError(`Log failed because its message contains a variable that has been deleted.`, node.id))
             } else {
                 output.push(createLogMessage(renderTextChain(program.nodes, variableValues, node.message), node.id))
             }
-        } else if (node.nodeType === 'create_variable') {
+        } else if (node.nodeType === 'CreateVariableNode') {
             if (node.valueType === 'text') {
                 if (textChainHasErrors(program.nodes, node.value)) {
                     output.push(createLogError(`Create Variable failed because its value contains another variable that has been deleted.`, node.id))
                 } else {
-                    console.log('test')
                     variableValues[node.id] = renderTextChain(program.nodes, variableValues, node.value)
                 }
             }

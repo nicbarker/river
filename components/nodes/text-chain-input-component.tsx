@@ -48,11 +48,11 @@ export const TextChainInput = (props: TextChainInputProps) => {
     for (let i = 0; i < props.textChain.length; i++) {
         const block = props.textChain[i]
         const offset = i > 0 ? characterPositions[characterPositions.length - 1] : 0
-        if (block.type === 'raw') {
+        if (block.textBlockType === 'RawTextBlock') {
             for (let j = 1; j <= block.value.length; j++) {
                 characterPositions.push(offset + canvasContext.current.measureText(block.value.substr(0, j)).width)
             }
-        } else if (block.type === 'variableReference') {
+        } else if (block.textBlockType === 'VariableReferenceTextBlock') {
             const content = state.nodes[block.nodeId] ? (state.nodes[block.nodeId] as VariableNodes.Create).label : 'Deleted'
             characterPositions.push(offset + canvasContext.current.measureText(content).width + 16)
         }
@@ -66,12 +66,12 @@ export const TextChainInput = (props: TextChainInputProps) => {
     for (let i = 0; i < props.textChain.length; i++) {
         const block = props.textChain[i]
         const previousOffset = blockOffsets[i]
-        if (block.type === 'raw') {
+        if (block.textBlockType === 'RawTextBlock') {
             blockOffsets[i + 1] = previousOffset + block.value.length
             if (blockOffsets[i + 1] >= cursorStartPosition || i === props.textChain.length - 1) {
                 selectedTextBlockIndex = selectedTextBlockIndex == null ? i : selectedTextBlockIndex
             }
-        } else if (block.type === 'variableReference') {
+        } else if (block.textBlockType === 'VariableReferenceTextBlock') {
             blockOffsets[i + 1] = previousOffset + 1
         }
     }
@@ -84,7 +84,7 @@ export const TextChainInput = (props: TextChainInputProps) => {
     let wordStartIndex: number
     let wordEndIndex: number
     let wordHighlight
-    if (selectedTextBlock.type === 'raw' && props.allowVariables) {
+    if (selectedTextBlock.textBlockType === 'RawTextBlock' && props.allowVariables) {
         const firstHalf = selectedTextBlock.value.slice(0, cursorStartPosition - selectedTextBlockOffset).split(' ').slice(-1)[0]
         const secondHalf = selectedTextBlock.value.slice(cursorStartPosition - selectedTextBlockOffset).split(' ').slice(0)[0]
         wordStartIndex = cursorStartPosition - selectedTextBlockOffset - firstHalf.length
@@ -92,7 +92,7 @@ export const TextChainInput = (props: TextChainInputProps) => {
         const currentWord = selectedTextBlock.value.slice(wordStartIndex, wordEndIndex)
         if (currentWord.length > 0) {
             autoCompleteSuggestions = Object.values(state.nodes).filter(n =>
-                n.nodeType === 'create_variable' &&
+                n.nodeType === 'CreateVariableNode' &&
                 n.id !== props.nodeId &&
                 n.label && n.label.toLowerCase().substr(0, currentWord.length) === currentWord.toLowerCase()
             ) as VariableNodes.Create[]
@@ -124,9 +124,9 @@ export const TextChainInput = (props: TextChainInputProps) => {
         for (let i = 0; i < newTextChain.length - 1; i++) {
             const blockOne = newTextChain[i]
             const blockTwo = newTextChain[i + 1]
-            if (blockOne.type === 'raw' && blockTwo.type === 'raw') {
+            if (blockOne.textBlockType === 'RawTextBlock' && blockTwo.textBlockType === 'RawTextBlock') {
                 const merged = blockOne.value + blockTwo.value
-                newTextChain = newTextChain.slice(0, i).concat([{ id: uuid(), type: 'raw', value: merged }]).concat(newTextChain.slice(i + 2))
+                newTextChain = newTextChain.slice(0, i).concat([{ id: uuid(), textBlockType: 'RawTextBlock', value: merged }]).concat(newTextChain.slice(i + 2))
                 i--
             }
         }
@@ -181,13 +181,13 @@ export const TextChainInput = (props: TextChainInputProps) => {
         }
 
         const backspaceHandler = () => {
-            if (selectedTextBlock.type === 'raw' && cursorStartPosition - selectedTextBlockOffset > 0) {
+            if (selectedTextBlock.textBlockType === 'RawTextBlock' && cursorStartPosition - selectedTextBlockOffset > 0) {
                 const newCursorPosition = cursorStartPosition - 1
                 setInternalCursorStartPosition(newCursorPosition)
                 setCursorPositionBeforeEditing(newCursorPosition)
                 const offsetCursorPosition = newCursorPosition - selectedTextBlockOffset
                 updateRawTextBlock(selectedTextBlock.id, selectedTextBlock.value.slice(0, offsetCursorPosition) + selectedTextBlock.value.slice(offsetCursorPosition + 1), false)
-            } else if (selectedTextBlock.type === 'raw' && cursorStartPosition - selectedTextBlockOffset === 0) {
+            } else if (selectedTextBlock.textBlockType === 'RawTextBlock' && cursorStartPosition - selectedTextBlockOffset === 0) {
                 const blockIndex = props.textChain.findIndex(b => b.id === selectedTextBlock.id)
                 if (blockIndex > 0) {
                     const newCursorPosition = cursorStartPosition - 1
@@ -212,13 +212,13 @@ export const TextChainInput = (props: TextChainInputProps) => {
         }
 
         const enterHandler = () => {
-            if (selectedTextBlock.type === 'raw') {
+            if (selectedTextBlock.textBlockType === 'RawTextBlock') {
                 if (autoCompleteSuggestions.length > 0 && props.allowVariables) {
                     replaceTextBlock(
                         selectedTextBlock.id,
-                        { id: uuid(), type: 'variableReference', nodeId: autoCompleteSuggestions[selectedSuggestionIndex].id },
-                        { id: uuid(), type: 'raw', value: selectedTextBlock.value.substr(0, wordStartIndex) },
-                        { id: uuid(), type: 'raw', value: selectedTextBlock.value.substr(wordEndIndex) }
+                        { id: uuid(), textBlockType: 'VariableReferenceTextBlock', nodeId: autoCompleteSuggestions[selectedSuggestionIndex].id },
+                        { id: uuid(), textBlockType: 'RawTextBlock', value: selectedTextBlock.value.substr(0, wordStartIndex) },
+                        { id: uuid(), textBlockType: 'RawTextBlock', value: selectedTextBlock.value.substr(wordEndIndex) }
                     )
                     const newCursorPosition = wordStartIndex + 1 + selectedTextBlockOffset
                     setInternalCursorStartPosition(newCursorPosition)
@@ -287,7 +287,7 @@ export const TextChainInput = (props: TextChainInputProps) => {
     }
 
     const onHiddenInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-        if (selectedTextBlock.type === 'raw') {
+        if (selectedTextBlock.textBlockType === 'RawTextBlock') {
             setHiddenInputValue(event.target.value)
             const newCursorPosition = cursorPositionBeforeEditing + event.target.value.length
             setInternalCursorStartPosition(newCursorPosition)
@@ -301,9 +301,9 @@ export const TextChainInput = (props: TextChainInputProps) => {
     })
 
     const blocksRendered = props.textChain.map((block) => {
-        if (block.type === 'raw') {
+        if (block.textBlockType === 'RawTextBlock') {
             return <span key={block.id} className={styles.block} onMouseDown={(event) => onMouseDown(event, block.id)}>{block.value}</span>
-        } else if (block.type === 'variableReference') {
+        } else if (block.textBlockType === 'VariableReferenceTextBlock') {
             const content = state.nodes[block.nodeId] ? (state.nodes[block.nodeId] as VariableNodes.Create).label : 'Deleted'
             const variableClasses = classNames(styles.variable, styles.block, {
                 [styles.brokenVariableReference]: !state.nodes[block.nodeId]

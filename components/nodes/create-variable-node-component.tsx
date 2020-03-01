@@ -101,7 +101,7 @@ export const CreateVariableNode = (props: {
     if (props.node.label) {
         let valuePlaceholder
         if (props.node.value.length === 1 &&
-            (props.node.value[0].type !== 'raw' || (props.node.value[0] as RawTextBlock).value.length === 0)) {
+            (props.node.value[0].textBlockType !== 'RawTextBlock' || (props.node.value[0] as RawTextBlock).value.length === 0)) {
             valuePlaceholder = 'Value'
         }
         valueInputContainer = (

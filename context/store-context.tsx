@@ -154,7 +154,7 @@ const reducer = (state: ApplicationState, action: ReducerAction) => {
             newState.nodes[newId] = {
                 id: newId,
                 nextNodeId: previousNode ? previousNode.nextNodeId : undefined,
-                nodeType: 'empty',
+                nodeType: 'EmptyNode',
                 conditional: action.payload.conditional ? { type: 'empty' } : undefined
             }
             // If there's only one node, make it the entrypoint
@@ -209,8 +209,8 @@ const reducer = (state: ApplicationState, action: ReducerAction) => {
         if (node) {
             const newNode = JSON.parse(JSON.stringify(node)) as RiverNode
             newNode.nodeType = action.payload.type
-            if (newNode.nodeType === 'log') {
-                newNode.message = [{ id: uuid(), type: 'raw', value: '' }]
+            if (newNode.nodeType === 'LogNode') {
+                newNode.message = [{ id: uuid(), textBlockType: 'RawTextBlock', value: '' }]
             }
             newState.nodes[action.payload.nodeId] = newNode
             newState.orderedNodes = createOrderedNodes(newState.nodes)
@@ -287,7 +287,7 @@ const reducer = (state: ApplicationState, action: ReducerAction) => {
     // --------------------------------------------------
     else if (action.type === 'SET_LOG_MESSAGE') {
         const node = newState.nodes[action.payload.nodeId]
-        if (node && node.nodeType === 'log') {
+        if (node && node.nodeType === 'LogNode') {
             const newNode = JSON.parse(JSON.stringify(node)) as LogNode
             newNode.message = action.payload.message
             newState.nodes[action.payload.nodeId] = newNode
@@ -302,7 +302,7 @@ const reducer = (state: ApplicationState, action: ReducerAction) => {
     // --------------------------------------------------
     else if (action.type === 'SET_CREATE_VARIABLE_LABEL') {
         const node = newState.nodes[action.payload.nodeId]
-        if (node && node.nodeType === 'create_variable') {
+        if (node && node.nodeType === 'CreateVariableNode') {
             const newNode = JSON.parse(JSON.stringify(node)) as VariableNodes.Create
             newNode.label = action.payload.label
             newState.nodes[action.payload.nodeId] = newNode
@@ -317,10 +317,10 @@ const reducer = (state: ApplicationState, action: ReducerAction) => {
     // --------------------------------------------------
     else if (action.type === 'SET_CREATE_VARIABLE_VALUE_TYPE') {
         const node = newState.nodes[action.payload.nodeId]
-        if (node && node.nodeType === 'create_variable') {
+        if (node && node.nodeType === 'CreateVariableNode') {
             const newNode = JSON.parse(JSON.stringify(node)) as VariableNodes.Create
             newNode.valueType = action.payload.valueType
-            newNode.value = [{ id: uuid(), type: 'raw', value: '' }]
+            newNode.value = [{ id: uuid(), textBlockType: 'RawTextBlock', value: '' }]
             newState.nodes[action.payload.nodeId] = newNode
             newState.orderedNodes = createOrderedNodes(newState.nodes)
             canUndo = true
@@ -333,7 +333,7 @@ const reducer = (state: ApplicationState, action: ReducerAction) => {
     // --------------------------------------------------
     else if (action.type === 'SET_CREATE_VARIABLE_VALUE') {
         const node = newState.nodes[action.payload.nodeId]
-        if (node && node.nodeType === 'create_variable') {
+        if (node && node.nodeType === 'CreateVariableNode') {
             const newNode = JSON.parse(JSON.stringify(node)) as VariableNodes.Create
             newNode.value = action.payload.value
             newState.nodes[action.payload.nodeId] = newNode

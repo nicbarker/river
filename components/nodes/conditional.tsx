@@ -68,12 +68,12 @@ export const Conditional = (props: {
     } else if (props.node.conditional.type === 'equals' || props.node.conditional.type === 'not_equals') {
         let leftSidePlaceholder
         if (leftSideInputContents.length === 1 &&
-            (leftSideInputContents[0].type !== 'raw' || (leftSideInputContents[0] as RawTextBlock).value.length === 0)) {
+            (leftSideInputContents[0].textBlockType !== 'RawTextBlock' || (leftSideInputContents[0] as RawTextBlock).value.length === 0)) {
             leftSidePlaceholder = 'Value'
         }
         let rightSidePlaceholder
         if (rightSideInputContents.length === 1 &&
-            (rightSideInputContents[0].type !== 'raw' || (rightSideInputContents[0] as RawTextBlock).value.length === 0)) {
+            (rightSideInputContents[0].textBlockType !== 'RawTextBlock' || (rightSideInputContents[0] as RawTextBlock).value.length === 0)) {
             rightSidePlaceholder = 'Value'
         }
         const getOperator = () => {

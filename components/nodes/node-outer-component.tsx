@@ -49,7 +49,6 @@ export const NodeOuter = (props: NodeOuterProps) => {
             if (currentFocus[currentFocus.length - 1] === 1) {
                 focusUtil.incrementCurrentFocus(-1)
             } else {
-                console.log(currentFocus)
                 const upOneLevel = currentFocus.slice(0, currentFocus.length - 1)
                 upOneLevel[upOneLevel.length - 1]--
                 focusUtil.setCurrentFocus(upOneLevel)
@@ -82,7 +81,7 @@ export const NodeOuter = (props: NodeOuterProps) => {
             }
         }
 
-        const escapeHandler = () => focusUtil.setCurrentFocus(currentFocus.slice(0, currentFocus.length - 1))
+        const escapeHandler = () => node.conditional && focusUtil.setCurrentFocus(currentFocus.slice(0, currentFocus.length - 1))
 
         const conditionalHandler = () => {
             const conditional = !!!node.conditional
@@ -116,7 +115,7 @@ export const NodeOuter = (props: NodeOuterProps) => {
     const selectNode = () => dispatch({ type: 'SET_SELECTED_NODE', payload: { selectedNodeId: props.nodeId } })
 
     let innerNode
-    if (node.nodeType === 'empty') {
+    if (node.nodeType === 'EmptyNode') {
         innerNode = <PrecursorNode
             node={node}
             selected={hasFocus}
@@ -124,7 +123,7 @@ export const NodeOuter = (props: NodeOuterProps) => {
             selectNode={selectNode}
             focusState={nodeFocusState}
         />
-    } else if (node.nodeType === 'log') {
+    } else if (node.nodeType === 'LogNode') {
         nodeHasErrors = textChainHasErrors(state.nodes, node.message)
         innerNode = <LogNode
             node={node}
@@ -134,7 +133,7 @@ export const NodeOuter = (props: NodeOuterProps) => {
             nodes={state.nodes}
             focusState={nodeFocusState}
         />
-    } else if (node.nodeType === 'create_variable') {
+    } else if (node.nodeType === 'CreateVariableNode') {
         if (node.valueType === 'text') {
             nodeHasErrors = textChainHasErrors(state.nodes, node.value)
         }
