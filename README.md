@@ -1,7 +1,7 @@
 # River
 ### Experimental non text-based programming language and IDE
 
-<img width="1469" alt="Screenshot 2020-03-01 21 27 53" src="https://user-images.githubusercontent.com/2264338/75622296-97396600-5c03-11ea-936a-b4204b33998f.png">
+<img width="1401" alt="Screenshot 2020-03-01 21 29 51" src="https://user-images.githubusercontent.com/2264338/75622332-d10a6c80-5c03-11ea-8d75-11e605492870.png">
 
 Read the language development blog here: https://blog.riverlanguage.org
 
