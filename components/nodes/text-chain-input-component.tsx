@@ -50,7 +50,7 @@ export const TextChainInput = (props: TextChainInputProps) => {
         const offset = i > 0 ? characterPositions[characterPositions.length - 1] : 0
         if (block.textBlockType === 'RawTextBlock') {
             for (let j = 1; j <= block.value.length; j++) {
-                characterPositions.push(offset + canvasContext.current.measureText(block.value.substr(0, j)).width)
+                characterPositions.push(offset + canvasContext.current.measureText(block.value.substr(0, j).replace(/\ /g, '·')).width)
             }
         } else if (block.textBlockType === 'VariableReferenceTextBlock') {
             const content = state.nodes[block.nodeId] ? (state.nodes[block.nodeId] as VariableNodes.Create).label : 'Deleted'
@@ -302,7 +302,7 @@ export const TextChainInput = (props: TextChainInputProps) => {
 
     const blocksRendered = props.textChain.map((block) => {
         if (block.textBlockType === 'RawTextBlock') {
-            return <span key={block.id} className={styles.block} onMouseDown={(event) => onMouseDown(event, block.id)}>{block.value}</span>
+            return <span key={block.id} className={styles.block} onMouseDown={(event) => onMouseDown(event, block.id)}>{block.value.replace(/\ /g, '·')}</span>
         } else if (block.textBlockType === 'VariableReferenceTextBlock') {
             const content = state.nodes[block.nodeId] ? (state.nodes[block.nodeId] as VariableNodes.Create).label : 'Deleted'
             const variableClasses = classNames(styles.variable, styles.block, {
