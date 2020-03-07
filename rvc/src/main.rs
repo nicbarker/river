@@ -263,7 +263,7 @@ fn main() -> std::io::Result<()> {
         serde_json::from_reader(json_file).expect("error while reading json");
     let increment = 0;
 
-    let fileName: String = format!("out/{}.rs", &json_file_path.file_stem().and_then(OsStr::to_str).unwrap());
+    let fileName: String = format!("out/riverprogram.rs");
     let mut file = OpenOptions::new()
         .create(true)
         .write(true)
@@ -304,32 +304,36 @@ fn main() -> std::io::Result<()> {
         toOutput.push_str(&format!("id: String::from(\"{}\"),\n", node.id));
         toOutput.push_str(&format!("nextNodeId: {},\n", if node.nextNodeId.is_some() { format!("{}{}{}", "Some(String::from(\"", node.nextNodeId.as_ref().unwrap(), "\"))") } else { String::from("None") }));
         toOutput.push_str(&format!("entryPoint: {:#?},\n", node.entryPoint));
-        toOutput.push_str("conditional: ");
-        match node.conditional.as_ref().unwrap() {
-            Conditional::EmptyConditional(_) => { toOutput.push_str(&format!("Some(Conditional::EmptyConditional(\n EmptyConditional {{\n")) },
-            Conditional::EqualsConditional(equals) => {
-                toOutput.push_str(&format!("Some(Conditional::EqualsConditional(\n"));
-                toOutput.push_str(&format!("EqualsConditional {{\n"));
-                toOutput.push_str(&format!("leftSide: vec![\n"));
-                renderTextChainAsCode(&mut toOutput, &equals.leftSide);
-                toOutput.push_str(&format!("],\n"));
-                toOutput.push_str(&format!("rightSide: vec![\n"));
-                renderTextChainAsCode(&mut toOutput, &equals.rightSide);
-                toOutput.push_str(&format!("]\n"));
-            },
-            Conditional::NotEqualsConditional(notEquals) => {
-                toOutput.push_str(&format!("Conditional::NotEqualsConditional(\n"));
-                toOutput.push_str(&format!("NotEqualsConditional {{\n"));
-                toOutput.push_str(&format!("leftSide: vec![\n"));
-                renderTextChainAsCode(&mut toOutput, &notEquals.leftSide);
-                toOutput.push_str(&format!("],\n"));
-                toOutput.push_str(&format!("rightSide: vec![\n"));
-                renderTextChainAsCode(&mut toOutput, &notEquals.rightSide);
-                toOutput.push_str(&format!("]\n"));
-            },
+        if node.conditional.is_some() {
+            toOutput.push_str("conditional: ");
+            match node.conditional.as_ref().unwrap() {
+                Conditional::EmptyConditional(_) => { toOutput.push_str(&format!("Some(Conditional::EmptyConditional(\n EmptyConditional {{\n")) },
+                Conditional::EqualsConditional(equals) => {
+                    toOutput.push_str(&format!("Some(Conditional::EqualsConditional(\n"));
+                    toOutput.push_str(&format!("EqualsConditional {{\n"));
+                    toOutput.push_str(&format!("leftSide: vec![\n"));
+                    renderTextChainAsCode(&mut toOutput, &equals.leftSide);
+                    toOutput.push_str(&format!("],\n"));
+                    toOutput.push_str(&format!("rightSide: vec![\n"));
+                    renderTextChainAsCode(&mut toOutput, &equals.rightSide);
+                    toOutput.push_str(&format!("]\n"));
+                },
+                Conditional::NotEqualsConditional(notEquals) => {
+                    toOutput.push_str(&format!("Conditional::NotEqualsConditional(\n"));
+                    toOutput.push_str(&format!("NotEqualsConditional {{\n"));
+                    toOutput.push_str(&format!("leftSide: vec![\n"));
+                    renderTextChainAsCode(&mut toOutput, &notEquals.leftSide);
+                    toOutput.push_str(&format!("],\n"));
+                    toOutput.push_str(&format!("rightSide: vec![\n"));
+                    renderTextChainAsCode(&mut toOutput, &notEquals.rightSide);
+                    toOutput.push_str(&format!("]\n"));
+                },
+            }
+            toOutput.push_str(&format!("}},\n"));
+            toOutput.push_str(&format!(")),\n"));
+        } else {
+            toOutput.push_str("conditional: None,\n");
         }
-        toOutput.push_str(&format!("}},\n"));
-        toOutput.push_str(&format!(")),\n"));
         toOutput.push_str(&format!("props: "));
         match &node.props {
             NodeType::EmptyNode(_node) => (),
