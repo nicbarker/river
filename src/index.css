@@ -1,0 +1,108 @@
+html,
+#root,
+.App {
+  height: 100%;
+}
+
+.App {
+  display: flex;
+  flex-direction: column;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen",
+    "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  height: 100%;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New",
+    monospace;
+  white-space: pre;
+}
+
+.top {
+  padding: 16px;
+  height: 70%;
+  width: 100%;
+  background: #222;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.bottom {
+  height: 30%;
+  background: #333;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.line {
+  display: flex;
+}
+
+.lineNumber {
+  color: #aaa;
+  margin-right: 16px;
+}
+
+span.cursor,
+span.cursorLeft {
+  position: relative;
+}
+
+span.cursor:after {
+  content: " ";
+  position: absolute;
+  right: 0;
+  height: 100%;
+  border-right: 2px solid #0af;
+}
+
+span.cursorLeft:after {
+  content: " ";
+  position: absolute;
+  left: 0;
+  height: 100%;
+  border-left: 2px solid #0af;
+}
+
+.empty {
+  display: inline-block;
+  content: "\200b";
+  height: 19px;
+}
+
+.bottom .buttons {
+  align-items: flex-start;
+  width: 100%;
+  display: flex;
+}
+
+.bottom .buttons button {
+  border: none;
+  background: #555;
+  height: 40px;
+  width: 80px;
+  color: #fff;
+  font-weight: 600;
+  overflow: hidden;
+}
+
+.outputs {
+  color: #fff;
+  align-items: flex-start;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  overflow: scroll;
+  height: 100%;
+}
