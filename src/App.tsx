@@ -139,13 +139,16 @@ function App() {
           <button
             onClick={() => {
               outputs.splice(0, outputs.length);
-              const [pScopes, pInstructions] = parse(
+              const instructionsToParse =
+                "scope open\n" +
                 (instructions.filter(
                   (i) => i.type !== "emptyInstruction"
                 ) as Instruction[])
                   .map((i) => i.fragments.map((f) => f?.value).join(" "))
-                  .join("\n")
-              );
+                  .join("\n") +
+                "\nscope close";
+              console.log(instructionsToParse);
+              const [pScopes, pInstructions] = parse(instructionsToParse);
               console.log(pScopes, pInstructions);
               const { peakMemory } = execute(
                 pScopes,
@@ -159,7 +162,7 @@ function App() {
                 lineNumber: instructions.length,
                 value: `Execution finished. Peak memory usage: ${
                   peakMemory / 8
-                } bytes.`,
+                } byte${peakMemory / 8 !== 1 ? "s" : ""}.`,
               });
               setOutputs(outputs.slice());
             }}
