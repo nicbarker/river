@@ -23,18 +23,22 @@ function App() {
 
   useEffect(() => {
     const handle = (e: KeyboardEvent) => {
-      e.preventDefault();
-      handleKeyStroke({
-        instruction,
-        instructions,
-        cursorPos,
-        instructionIndex,
-        key: e.key,
-        shiftKey: e.shiftKey,
-        setInstructions,
-        setInstructionIndex,
-        setCursorPos,
-      });
+      if (!e.metaKey) {
+        if (e.key.match(/^[ -~]$/) || e.key.match(/Arrow/)) {
+          e.preventDefault();
+        }
+        handleKeyStroke({
+          instruction,
+          instructions,
+          cursorPos,
+          instructionIndex,
+          key: e.key,
+          shiftKey: e.shiftKey,
+          setInstructions,
+          setInstructionIndex,
+          setCursorPos,
+        });
+      }
     };
     window.addEventListener("keydown", handle);
     return () => window.removeEventListener("keydown", handle);
