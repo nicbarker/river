@@ -16,8 +16,6 @@ export function parse(file) {
   const scopesFinal = [];
   const instructions = [];
 
-  let currentMacro;
-
   DEBUG && console.log("PARSING ------------------------------------");
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
@@ -95,15 +93,15 @@ export function parse(file) {
         instructions.push({ instruction: "void" });
         break;
       }
-      case "set": {
+      case "assign": {
         const scope = scopes[scopes.length - 1];
-        const targetIndex = parseInt(tokens[1], 10);
+        const targetIndex = parseInt(tokens[2], 10);
         const target = scope.variables[targetIndex];
         const size = scope.sizes[targetIndex];
-        const source = tokens[3];
+        const source = tokens[4];
         const instruction = {
-          instruction: "set",
-          action: tokens[2],
+          instruction: "assign",
+          action: tokens[3],
           target,
           source,
           size,
@@ -112,11 +110,11 @@ export function parse(file) {
         };
         switch (source) {
           case "const": {
-            instruction.value = dec2bin(tokens[4], size);
+            instruction.value = dec2bin(tokens[5], size);
             break;
           }
           case "var": {
-            const targetIndex = parseInt(tokens[4], 10);
+            const targetIndex = parseInt(tokens[5], 10);
             instruction.address = scope.variables[targetIndex];
             break;
           }
@@ -136,22 +134,22 @@ export function parse(file) {
       case "compare": {
         const instruction = {
           instruction: "compare",
-          action: tokens[1],
+          action: tokens[3],
           left: {
-            source: tokens[2],
+            source: tokens[1],
           },
           right: {
             source: tokens[4],
           },
         };
         const scope = scopes[scopes.length - 1];
-        switch (tokens[2]) {
+        switch (tokens[1]) {
           case "const": {
-            instruction.left.value = tokens[3];
+            instruction.left.value = tokens[2];
             break;
           }
           case "var": {
-            const targetIndex = parseInt(tokens[3], 10);
+            const targetIndex = parseInt(tokens[2], 10);
             const size = scope.sizes[targetIndex];
             instruction.left.address = scope.variables[targetIndex];
             instruction.left.size = size;
@@ -178,11 +176,11 @@ export function parse(file) {
         instructions.push(instruction);
         break;
       }
-      case "syscall": {
+      case "os": {
         switch (tokens[1]) {
           case "stdout": {
             const instruction = {
-              instruction: "syscall",
+              instruction: "os",
               action: "stdout",
               value: undefined,
               address: undefined,
@@ -239,11 +237,17 @@ export function execute(scopesFinal, instructions, outputCallback) {
     }
   }
 
+  let executionCount = 0;
   for (
     let instructionIndex = 0;
     instructionIndex < instructions.length;
     instructionIndex++
   ) {
+    executionCount++;
+    if (executionCount > 10000) {
+      console.log("Error: possible infinite loop");
+      break;
+    }
     const instruction = instructions[instructionIndex];
     switch (instruction.instruction) {
       case "memory": {
@@ -277,7 +281,7 @@ export function execute(scopesFinal, instructions, outputCallback) {
         }
         break;
       }
-      case "set": {
+      case "assign": {
         let targetValue = parseInt(
           memory
             .slice(instruction.target, instruction.target + instruction.size)
@@ -318,24 +322,28 @@ export function execute(scopesFinal, instructions, outputCallback) {
         }
         let toWrite;
         switch (instruction.action) {
-          case "eq": {
+          case "=": {
             toWrite = sourceValue;
             break;
           }
-          case "add": {
+          case "+": {
             toWrite = targetValue + sourceValue;
             break;
           }
-          case "subtract": {
+          case "-": {
             toWrite = targetValue - sourceValue;
             break;
           }
-          case "multiply": {
+          case "*": {
             toWrite = targetValue * sourceValue;
             break;
           }
-          case "divide": {
+          case "/": {
             toWrite = targetValue / sourceValue;
+            break;
+          }
+          case "%": {
+            toWrite = targetValue % sourceValue;
             break;
           }
           default:
@@ -394,27 +402,27 @@ export function execute(scopesFinal, instructions, outputCallback) {
         }
         let result = true;
         switch (instruction.action) {
-          case "eq": {
+          case "==": {
             result = leftValue === rightValue;
             break;
           }
-          case "ne": {
+          case "!=": {
             result = leftValue !== rightValue;
             break;
           }
-          case "lt": {
+          case "<": {
             result = leftValue < rightValue;
             break;
           }
-          case "lte": {
+          case "<=": {
             result = leftValue <= rightValue;
             break;
           }
-          case "gt": {
+          case ">": {
             result = leftValue > rightValue;
             break;
           }
-          case "gte": {
+          case ">=": {
             result = leftValue >= rightValue;
             break;
           }
@@ -439,7 +447,7 @@ export function execute(scopesFinal, instructions, outputCallback) {
         instructionIndex = newInstructionIndex;
         break;
       }
-      case "syscall": {
+      case "os": {
         switch (instruction.action) {
           case "stdout": {
             let value = parseInt(

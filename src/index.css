@@ -46,38 +46,50 @@ code {
 
 .line {
   display: flex;
+  padding: 2px 0;
 }
 
 .lineNumber {
   color: #aaa;
   margin-right: 16px;
+  user-select: none;
+  width: 30px;
+  text-align: left;
 }
 
-span.cursor,
-span.cursorLeft {
+.instruction {
+  display: flex;
+  align-items: center;
+}
+
+.instruction div {
   position: relative;
 }
 
-span.cursor:after {
+div.highlight:after {
   content: " ";
   position: absolute;
-  right: 0;
-  height: 100%;
-  border-right: 2px solid #0af;
+  width: calc(100% + 8px);
+  height: calc(100% + 8px);
+  left: -4px;
+  top: -4px;
+  border-radius: 2px;
+  background: rgba(0, 170, 255, 0.4);
 }
 
-span.cursorLeft:after {
-  content: " ";
-  position: absolute;
-  left: 0;
-  height: 100%;
-  border-left: 2px solid #0af;
+div.scope {
+  color: #00dffc;
 }
 
-.empty {
-  display: inline-block;
+.empty.highlight {
   content: "\200b";
   height: 19px;
+  min-width: 30px;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.bold-hint {
+  color: rgba(255, 255, 255, 0.7);
 }
 
 .bottom .buttons {
@@ -105,4 +117,12 @@ span.cursorLeft:after {
   padding: 16px;
   overflow: scroll;
   height: 100%;
+}
+
+.outputLine {
+  display: flex;
+}
+
+.outputLine .lineNumber {
+  width: auto;
 }
