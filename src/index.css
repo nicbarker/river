@@ -47,6 +47,17 @@ code {
 .line {
   display: flex;
   padding: 2px 0;
+  position: relative;
+}
+
+.line.selected:after {
+  content: " ";
+  position: absolute;
+  width: calc(100% + 8px);
+  height: calc(100%);
+  left: -4px;
+  top: 0px;
+  background: rgba(0, 240, 210, 0.4);
 }
 
 .lineNumber {

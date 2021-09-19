@@ -16,6 +16,46 @@ export function parse(file) {
   const scopesFinal = [];
   const instructions = [];
 
+  function openScope() {
+    const stackOffset =
+      scopes.length > 0
+        ? scopes[scopes.length - 1].stackOffset +
+          scopes[scopes.length - 1].stackMemory
+        : 0;
+    const instruction = {
+      instruction: "memory",
+      action: "alloc",
+      stackOffset,
+      stackMemory: 0,
+    };
+    instructions.push(instruction);
+    const scope = {
+      name: "_",
+      variables:
+        scopes.length > 0 ? [...scopes[scopes.length - 1].variables] : [],
+      sizes: scopes.length > 0 ? [...scopes[scopes.length - 1].sizes] : [],
+      stackOffset,
+      stackMemory: 0,
+      instruction,
+    };
+    scopes.push(scope);
+    scopesFinal.push(scope);
+  }
+
+  function closeScope() {
+    const popped = scopes.pop();
+    console.log(popped);
+    const instruction = {
+      instruction: "memory",
+      action: "dealloc",
+      stackOffset: popped.stackOffset,
+      stackMemory: popped.stackMemory,
+    };
+    instructions.push(instruction);
+  }
+
+  openScope();
+
   DEBUG && console.log("PARSING ------------------------------------");
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
@@ -25,43 +65,11 @@ export function parse(file) {
       case "scope": {
         switch (tokens[1]) {
           case "open": {
-            const stackOffset =
-              scopes.length > 0
-                ? scopes[scopes.length - 1].stackOffset +
-                  scopes[scopes.length - 1].stackMemory
-                : 0;
-            const instruction = {
-              instruction: "memory",
-              action: "alloc",
-              stackOffset,
-              stackMemory: 0,
-            };
-            instructions.push(instruction);
-            const scope = {
-              name: tokens[2],
-              variables:
-                scopes.length > 0
-                  ? [...scopes[scopes.length - 1].variables]
-                  : [],
-              sizes:
-                scopes.length > 0 ? [...scopes[scopes.length - 1].sizes] : [],
-              stackOffset,
-              stackMemory: 0,
-              instruction,
-            };
-            scopes.push(scope);
-            scopesFinal.push(scope);
+            openScope();
             break;
           }
           case "close": {
-            const popped = scopes.pop();
-            const instruction = {
-              instruction: "memory",
-              action: "dealloc",
-              stackOffset: popped.stackOffset,
-              stackMemory: popped.stackMemory,
-            };
-            instructions.push(instruction);
+            closeScope();
             break;
           }
           default:
@@ -216,11 +224,15 @@ export function parse(file) {
         break;
     }
   }
+
+  closeScope();
+
   console.log(lines);
   for (let i = 0; i < lines.length; i++) {
     DEBUG && console.log(lines[i], instructions[i]);
   }
-  if (lines.length !== instructions.length) {
+  // We add 2 for the automatic outer scope open and scope close
+  if (lines.length + 2 !== instructions.length) {
     throw new Error("Line count and instruction count don't match");
   }
   DEBUG && console.log("scopes:", scopesFinal);
@@ -444,10 +456,10 @@ export function execute(scopesFinal, instructions, outputCallback) {
         break;
       }
       case "jump": {
-        const newInstructionIndex = instruction.target - 1;
+        const newInstructionIndex = instruction.target;
         DEBUG &&
           console.log(
-            `jumping from ${instructionIndex} to ${newInstructionIndex + 1}`
+            `jumping from ${instructionIndex} to ${newInstructionIndex}`
           );
         instructionIndex = newInstructionIndex;
         break;

@@ -304,21 +304,25 @@ export function handleKeyStroke({
   instructions,
   cursorPos,
   instructionIndex,
+  selectedInstructions,
   key,
   shiftKey,
   setInstructions,
   setInstructionIndex,
   setCursorPos,
+  setSelectedInstructions,
 }: {
   instruction: Instruction;
   instructions: Instruction[];
   cursorPos: number;
   instructionIndex: number;
+  selectedInstructions: Instruction[];
   key: string;
   shiftKey: boolean;
   setInstructions: (instructions: Instruction[]) => void;
   setInstructionIndex: (instructionIndex: number) => void;
   setCursorPos: (cursorPos: number) => void;
+  setSelectedInstructions: (instructions: Instruction[]) => void;
 }) {
   let increment: "instruction" | "cursor" | "none" = "none";
   if (instruction.type === "emptyInstruction" || cursorPos === 0) {
@@ -835,8 +839,27 @@ export function handleKeyStroke({
     setCursorPos(cursorPos + 1);
   }
 
+  // ---------------------------------------------
   if (key === "Backspace") {
-    if (cursorPos > 0) {
+    // Delete multiple lines
+    if (selectedInstructions.length > 0) {
+      let earliest = instructions.findIndex(
+        (i) => i === selectedInstructions[0]
+      );
+      console.log(instructions);
+      for (const selected of selectedInstructions) {
+        const index = instructions.findIndex((i) => i === selected);
+        earliest = Math.min(earliest, index);
+        instructions.splice(index, 1);
+      }
+      setSelectedInstructions([]);
+      if (instructions.length === 0) {
+        instructions.push({ type: "emptyInstruction", fragments: [] });
+      }
+      setInstructionIndex(earliest - 1);
+      setInstructions(instructions.slice(0));
+      console.log(instructions, instructionIndex);
+    } else if (cursorPos > 0) {
       if (cursorPos >= instruction.fragments.length) {
         setCursorPos(cursorPos - 1);
       } else {
@@ -875,6 +898,7 @@ export function handleKeyStroke({
       }
       setInstructions(instructions.slice());
     }
+    // ---------------------------------------------
   } else if (key === "ArrowRight" && instruction) {
     if (
       cursorPos < fragmentLength[instruction.type] - 1 &&
@@ -900,12 +924,34 @@ export function handleKeyStroke({
         )
       );
     }
+    // ---------------------------------------------
   } else if (key === "ArrowUp" && instructionIndex > 0) {
     const previousInstruction = instructions[instructionIndex - 1]!;
     if (cursorPos > previousInstruction.fragments.length - 1) {
       setCursorPos(Math.max(previousInstruction.fragments.length - 1, 0));
     }
+    if (shiftKey) {
+      const selectedIndex = selectedInstructions.findIndex(
+        (i) => i === instruction
+      );
+      if (
+        selectedIndex > -1 &&
+        selectedInstructions.includes(previousInstruction)
+      ) {
+        selectedInstructions.splice(selectedIndex, 1);
+      } else {
+        if (!selectedInstructions.includes(instruction)) {
+          selectedInstructions.push(instruction);
+        }
+        selectedInstructions.push(previousInstruction);
+      }
+      setSelectedInstructions(selectedInstructions);
+    } else {
+      selectedInstructions.splice(0, selectedInstructions.length);
+      setSelectedInstructions(selectedInstructions);
+    }
     setInstructionIndex(instructionIndex - 1);
+    // ---------------------------------------------
   } else if (
     key === "ArrowDown" &&
     instructionIndex < instructions.length - 1
@@ -914,7 +960,29 @@ export function handleKeyStroke({
     if (cursorPos > nextInstruction.fragments.length - 1) {
       setCursorPos(Math.max(nextInstruction.fragments.length - 1, 0));
     }
+    if (shiftKey) {
+      const selectedIndex = selectedInstructions.findIndex(
+        (i) => i === instruction
+      );
+      console.log(selectedIndex);
+      if (
+        selectedIndex > -1 &&
+        selectedInstructions.includes(nextInstruction)
+      ) {
+        selectedInstructions.splice(selectedIndex, 1);
+      } else {
+        selectedInstructions.push(nextInstruction);
+        if (!selectedInstructions.includes(instruction)) {
+          selectedInstructions.push(instruction);
+        }
+      }
+      setSelectedInstructions(selectedInstructions);
+    } else {
+      selectedInstructions.splice(0, selectedInstructions.length);
+      setSelectedInstructions(selectedInstructions);
+    }
     setInstructionIndex(instructionIndex + 1);
+    // ---------------------------------------------
   } else if (key === "Enter" && instruction) {
     instructions.splice(instructionIndex + (shiftKey ? 0 : 1), 0, {
       type: "emptyInstruction",

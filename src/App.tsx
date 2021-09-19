@@ -16,6 +16,9 @@ function App() {
   const [instructions, setInstructions] = useState<Instruction[]>([
     { type: "emptyInstruction", fragments: [] },
   ]);
+  const [selectedInstructions, setSelectedInstructions] = useState<
+    Instruction[]
+  >([]);
   const [instructionIndex, setInstructionIndex] = useState(0);
   const [outputs, setOutputs] = useState<Output[]>([]);
 
@@ -32,17 +35,26 @@ function App() {
           instructions,
           cursorPos,
           instructionIndex,
+          selectedInstructions,
           key: e.key,
           shiftKey: e.shiftKey,
           setInstructions,
           setInstructionIndex,
           setCursorPos,
+          setSelectedInstructions,
         });
       }
     };
     window.addEventListener("keydown", handle);
     return () => window.removeEventListener("keydown", handle);
-  }, [instructions, setInstructions, cursorPos, instructionIndex, instruction]);
+  }, [
+    instructions,
+    setInstructions,
+    cursorPos,
+    instructionIndex,
+    instruction,
+    selectedInstructions,
+  ]);
 
   let indent = 0;
   const instructionsRendered = instructions.map((instruction, li) => {
@@ -77,7 +89,12 @@ function App() {
     }
 
     return (
-      <div className="line" key={li}>
+      <div
+        className={classnames("line", {
+          selected: selectedInstructions.includes(instruction),
+        })}
+        key={li}
+      >
         <div className="lineNumber">{li}</div>
         <div className="instruction">
           {indentRendered}
@@ -100,10 +117,10 @@ function App() {
                     </>
                   ))
                   .map((e, i, arr) => (
-                    <>
+                    <React.Fragment key={i}>
                       {e}
                       {i < arr.length - 1 ? " | " : null}
-                    </>
+                    </React.Fragment>
                   ))}
               </div>
             )}
@@ -118,7 +135,7 @@ function App() {
       .map(() => <div className="indent"> </div>);
 
     instructionsRendered.push(
-      <div className="line">
+      <div className="line" key="end">
         <div className="lineNumber">{instructions.length}</div>
         <div className="instruction">
           {indentRendered}
@@ -128,8 +145,8 @@ function App() {
     );
   }
 
-  const outputsRendered = outputs.map((o) => (
-    <code className="outputLine">
+  const outputsRendered = outputs.map((o, index) => (
+    <code className="outputLine" key={index}>
       <div className="lineNumber">main:{o.lineNumber}</div>
       {o.value}
     </code>
@@ -143,14 +160,11 @@ function App() {
           <button
             onClick={() => {
               outputs.splice(0, outputs.length);
-              const instructionsToParse =
-                "scope open\n" +
-                (instructions.filter(
-                  (i) => i.type !== "emptyInstruction"
-                ) as Instruction[])
-                  .map((i) => i.fragments.map((f) => f?.value).join(" "))
-                  .join("\n") +
-                "\nscope close";
+              const instructionsToParse = (instructions.filter(
+                (i) => i.type !== "emptyInstruction"
+              ) as Instruction[])
+                .map((i) => i.fragments.map((f) => f?.value).join(" "))
+                .join("\n");
               console.log(instructionsToParse);
               const [pScopes, pInstructions] = parse(instructionsToParse);
               console.log(pScopes, pInstructions);
