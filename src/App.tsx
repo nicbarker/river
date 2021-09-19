@@ -147,10 +147,21 @@ function App() {
                   .join("\n")
               );
               console.log(pScopes, pInstructions);
-              execute(pScopes, pInstructions, (output: Output) => {
-                outputs.push(output);
-                setOutputs(outputs.slice());
+              const { peakMemory } = execute(
+                pScopes,
+                pInstructions,
+                (output: Output) => {
+                  outputs.push(output);
+                  setOutputs(outputs.slice());
+                }
+              );
+              outputs.push({
+                lineNumber: instructions.length,
+                value: `Execution finished. Peak memory usage: ${
+                  peakMemory / 8
+                } bytes.`,
               });
+              setOutputs(outputs.slice());
             }}
           >
             Run

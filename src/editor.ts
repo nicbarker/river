@@ -277,7 +277,7 @@ export const fragmentLength: { [k in Instruction["type"]]: number } = {
 
 export const fragmentHints: { [k in Instruction["type"]]: string[] } = {
   emptyInstruction: ["scope | def | assign | compare | jump | os"],
-  defInstruction: ["def", "local | parent", "0.. bytes"],
+  defInstruction: ["def", "local | parent", "0.. bits"],
   assignInstruction: [
     "assign",
     "var",

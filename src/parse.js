@@ -238,6 +238,7 @@ export function execute(scopesFinal, instructions, outputCallback) {
   }
 
   let executionCount = 0;
+  let peakMemory = 0;
   for (
     let instructionIndex = 0;
     instructionIndex < instructions.length;
@@ -260,6 +261,10 @@ export function execute(scopesFinal, instructions, outputCallback) {
             writeBinaryToStack(
               Array(instruction.stackMemory).fill(0),
               instruction.stackOffset
+            );
+            peakMemory = Math.max(
+              instruction.stackOffset + instruction.stackMemory,
+              peakMemory
             );
             DOUBLE_DEBUG && console.log(`new memory state:`, memory);
             break;
@@ -471,6 +476,9 @@ export function execute(scopesFinal, instructions, outputCallback) {
         break;
     }
   }
+  return {
+    peakMemory,
+  };
 }
 
 // parse();
