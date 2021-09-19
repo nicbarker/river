@@ -58,14 +58,17 @@ function App() {
 
   let indent = 0;
   const instructionsRendered = instructions.map((instruction, li) => {
-    const fragments = instruction.fragments.map((c, i) => [
+    const fragments = instruction.fragments.map((fragment, i) => [
       <div
         key={i}
-        className={classnames({
-          highlight: instructionIndex === li && cursorPos === i,
+        className={classnames("fragment", fragment?.value, fragment?.type, {
+          highlight:
+            instructionIndex === li &&
+            cursorPos === i &&
+            selectedInstructions.length === 0,
         })}
       >
-        {c?.value}
+        {fragment?.value}
       </div>,
       <div key={i + "-space"}> </div>,
     ]);
@@ -92,6 +95,7 @@ function App() {
       <div
         className={classnames("line", {
           selected: selectedInstructions.includes(instruction),
+          highlight: li === instructionIndex,
         })}
         key={li}
       >
@@ -104,24 +108,27 @@ function App() {
             instruction.type === "emptyInstruction") &&
             instructionIndex === li && (
               <div
-                className={classnames("empty", {
-                  highlight: instructionIndex === li,
+                className={classnames("empty", "fragment", {
+                  highlight:
+                    instructionIndex === li &&
+                    selectedInstructions.length === 0,
                 })}
               >
-                {fragmentHints[instruction.type][cursorPos]
-                  .split(" | ")
-                  .map((h) => (
-                    <>
-                      <b className="bold-hint">{h.slice(0, 1)}</b>
-                      {h.slice(1)}
-                    </>
-                  ))
-                  .map((e, i, arr) => (
-                    <React.Fragment key={i}>
-                      {e}
-                      {i < arr.length - 1 ? " | " : null}
-                    </React.Fragment>
-                  ))}
+                {selectedInstructions.length === 0 &&
+                  fragmentHints[instruction.type][cursorPos]
+                    .split(" | ")
+                    .map((h) => (
+                      <>
+                        <b className="bold-hint">{h.slice(0, 1)}</b>
+                        {h.slice(1)}
+                      </>
+                    ))
+                    .map((e, i, arr) => (
+                      <React.Fragment key={i}>
+                        {e}
+                        {i < arr.length - 1 ? " | " : null}
+                      </React.Fragment>
+                    ))}
               </div>
             )}
         </div>

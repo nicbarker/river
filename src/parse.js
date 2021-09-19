@@ -44,7 +44,6 @@ export function parse(file) {
 
   function closeScope() {
     const popped = scopes.pop();
-    console.log(popped);
     const instruction = {
       instruction: "memory",
       action: "dealloc",
