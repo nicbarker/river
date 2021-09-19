@@ -846,7 +846,6 @@ export function handleKeyStroke({
       let earliest = instructions.findIndex(
         (i) => i === selectedInstructions[0]
       );
-      console.log(instructions);
       for (const selected of selectedInstructions) {
         const index = instructions.findIndex((i) => i === selected);
         earliest = Math.min(earliest, index);
@@ -856,7 +855,7 @@ export function handleKeyStroke({
       if (instructions.length === 0) {
         instructions.push({ type: "emptyInstruction", fragments: [] });
       }
-      setInstructionIndex(earliest - 1);
+      setInstructionIndex(Math.max(earliest - 1, 0));
       setInstructions(instructions.slice(0));
       console.log(instructions, instructionIndex);
     } else if (cursorPos > 0) {
