@@ -26,9 +26,15 @@ code {
 }
 
 .top {
-  padding: 16px;
   height: 70%;
   width: 100%;
+  display: flex;
+}
+
+.code {
+  flex-grow: 1;
+  height: 100%;
+  padding: 16px;
   background: #222;
   color: #fff;
   display: flex;
@@ -152,11 +158,19 @@ code {
 .bottom .buttons button {
   border: none;
   background: #555;
-  height: 40px;
+  height: 44px;
   width: 80px;
   color: #fff;
   font-weight: 600;
   overflow: hidden;
+  cursor: pointer;
+  font-size: 14px;
+  font-family: "Rubik";
+  border-bottom: 4px solid #f77825;
+}
+
+.bottom .buttons button:hover {
+  background: #444;
 }
 
 .outputs {

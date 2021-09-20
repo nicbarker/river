@@ -251,6 +251,11 @@ export type Instruction =
   | JumpInstruction
   | OSInstruction;
 
+export type Macro = {
+  name: string;
+  instructions: Instruction[];
+};
+
 /*
 scope open
 def local 16
@@ -305,25 +310,91 @@ export function handleKeyStroke({
   cursorPos,
   instructionIndex,
   selectedInstructions,
+  macros,
   key,
   shiftKey,
   setInstructions,
   setInstructionIndex,
   setCursorPos,
   setSelectedInstructions,
+  setMacros,
 }: {
   instruction: Instruction;
   instructions: Instruction[];
   cursorPos: number;
   instructionIndex: number;
   selectedInstructions: Instruction[];
+  macros: Macro[];
   key: string;
   shiftKey: boolean;
   setInstructions: (instructions: Instruction[]) => void;
   setInstructionIndex: (instructionIndex: number) => void;
   setCursorPos: (cursorPos: number) => void;
   setSelectedInstructions: (instructions: Instruction[]) => void;
+  setMacros: (macros: Macro[]) => void;
 }) {
+  if (selectedInstructions.length > 0) {
+    if (key === "ArrowUp") {
+      const previousInstruction = instructions[instructionIndex - 1]!;
+      if (shiftKey && instructionIndex > 0) {
+        const selectedIndex = selectedInstructions.findIndex(
+          (i) => i === instruction
+        );
+        if (
+          selectedIndex > -1 &&
+          selectedInstructions.includes(previousInstruction)
+        ) {
+          selectedInstructions.splice(selectedIndex, 1);
+        } else {
+          if (!selectedInstructions.includes(instruction)) {
+            selectedInstructions.push(instruction);
+          }
+          selectedInstructions.push(previousInstruction);
+        }
+        setInstructionIndex(instructionIndex - 1);
+        setSelectedInstructions(selectedInstructions);
+      } else if (!shiftKey) {
+        selectedInstructions.splice(0, selectedInstructions.length);
+        setSelectedInstructions(selectedInstructions.slice());
+        setInstructionIndex(Math.max(instructionIndex - 1, 0));
+      }
+    } else if (key === "ArrowDown") {
+      if (shiftKey && instructionIndex < instructions.length - 1) {
+        const nextInstruction = instructions[instructionIndex + 1]!;
+        const selectedIndex = selectedInstructions.findIndex(
+          (i) => i === instruction
+        );
+        if (
+          selectedIndex > -1 &&
+          selectedInstructions.includes(nextInstruction)
+        ) {
+          selectedInstructions.splice(selectedIndex, 1);
+        } else {
+          selectedInstructions.push(nextInstruction);
+          if (!selectedInstructions.includes(instruction)) {
+            selectedInstructions.push(instruction);
+          }
+        }
+        setSelectedInstructions(selectedInstructions);
+        setInstructionIndex(instructionIndex + 1);
+      } else if (!shiftKey) {
+        selectedInstructions.splice(0, selectedInstructions.length);
+        setSelectedInstructions(selectedInstructions.slice());
+        setInstructionIndex(
+          Math.min(instructionIndex + 1, instructions.length - 1)
+        );
+      }
+    } else if (key === "m") {
+      macros.push({
+        name: "New Macro",
+        instructions: selectedInstructions.slice(),
+      });
+      setMacros(macros.slice());
+      console.log(macros);
+    }
+    return;
+  }
+
   let increment: "instruction" | "cursor" | "none" = "none";
   if (instruction.type === "emptyInstruction" || cursorPos === 0) {
     switch (key) {
@@ -929,27 +1000,12 @@ export function handleKeyStroke({
     if (cursorPos > previousInstruction.fragments.length - 1) {
       setCursorPos(Math.max(previousInstruction.fragments.length - 1, 0));
     }
-    if (shiftKey) {
-      const selectedIndex = selectedInstructions.findIndex(
-        (i) => i === instruction
-      );
-      if (
-        selectedIndex > -1 &&
-        selectedInstructions.includes(previousInstruction)
-      ) {
-        selectedInstructions.splice(selectedIndex, 1);
-      } else {
-        if (!selectedInstructions.includes(instruction)) {
-          selectedInstructions.push(instruction);
-        }
-        selectedInstructions.push(previousInstruction);
-      }
-      setSelectedInstructions(selectedInstructions);
-    } else {
-      selectedInstructions.splice(0, selectedInstructions.length);
-      setSelectedInstructions(selectedInstructions);
-    }
     setInstructionIndex(instructionIndex - 1);
+    if (shiftKey) {
+      selectedInstructions.push(instruction);
+      selectedInstructions.push(previousInstruction);
+      setSelectedInstructions(selectedInstructions.slice());
+    }
     // ---------------------------------------------
   } else if (
     key === "ArrowDown" &&
@@ -959,28 +1015,12 @@ export function handleKeyStroke({
     if (cursorPos > nextInstruction.fragments.length - 1) {
       setCursorPos(Math.max(nextInstruction.fragments.length - 1, 0));
     }
-    if (shiftKey) {
-      const selectedIndex = selectedInstructions.findIndex(
-        (i) => i === instruction
-      );
-      console.log(selectedIndex);
-      if (
-        selectedIndex > -1 &&
-        selectedInstructions.includes(nextInstruction)
-      ) {
-        selectedInstructions.splice(selectedIndex, 1);
-      } else {
-        selectedInstructions.push(nextInstruction);
-        if (!selectedInstructions.includes(instruction)) {
-          selectedInstructions.push(instruction);
-        }
-      }
-      setSelectedInstructions(selectedInstructions);
-    } else {
-      selectedInstructions.splice(0, selectedInstructions.length);
-      setSelectedInstructions(selectedInstructions);
-    }
     setInstructionIndex(instructionIndex + 1);
+    if (shiftKey) {
+      selectedInstructions.push(instruction);
+      selectedInstructions.push(nextInstruction);
+      setSelectedInstructions(selectedInstructions.slice());
+    }
     // ---------------------------------------------
   } else if (key === "Enter" && instruction) {
     instructions.splice(instructionIndex + (shiftKey ? 0 : 1), 0, {

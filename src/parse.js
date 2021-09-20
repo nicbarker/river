@@ -11,7 +11,7 @@ function dec2bin(dec, pad) {
 }
 
 export function parse(file) {
-  const lines = file.split("\n");
+  const lines = file.length === 0 ? [] : file.split("\n");
   const scopes = [];
   const scopesFinal = [];
   const instructions = [];

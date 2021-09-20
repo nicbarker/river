@@ -7,57 +7,19 @@ import {
   fragmentLength,
   handleKeyStroke,
   Instruction,
+  Macro,
 } from "./editor";
 
 type Output = { value: string; lineNumber: number };
 
-function App() {
-  const [cursorPos, setCursorPos] = useState(0);
-  const [instructions, setInstructions] = useState<Instruction[]>([
-    { type: "emptyInstruction", fragments: [] },
-  ]);
-  const [selectedInstructions, setSelectedInstructions] = useState<
-    Instruction[]
-  >([]);
-  const [instructionIndex, setInstructionIndex] = useState(0);
-  const [outputs, setOutputs] = useState<Output[]>([]);
-
-  const instruction: Instruction | null = instructions[instructionIndex];
-
-  useEffect(() => {
-    const handle = (e: KeyboardEvent) => {
-      if (!e.metaKey) {
-        if (e.key.match(/^[ -~]$/) || e.key.match(/Arrow/)) {
-          e.preventDefault();
-        }
-        handleKeyStroke({
-          instruction,
-          instructions,
-          cursorPos,
-          instructionIndex,
-          selectedInstructions,
-          key: e.key,
-          shiftKey: e.shiftKey,
-          setInstructions,
-          setInstructionIndex,
-          setCursorPos,
-          setSelectedInstructions,
-        });
-      }
-    };
-    window.addEventListener("keydown", handle);
-    return () => window.removeEventListener("keydown", handle);
-  }, [
-    instructions,
-    setInstructions,
-    cursorPos,
-    instructionIndex,
-    instruction,
-    selectedInstructions,
-  ]);
-
+function renderInstructions(
+  instructions: Instruction[],
+  selectedInstructions: Instruction[],
+  instructionIndex: number,
+  cursorPos: number
+) {
   let indent = 0;
-  const instructionsRendered = instructions.map((instruction, li) => {
+  return instructions.map((instruction, li) => {
     const fragments = instruction.fragments.map((fragment, i) => [
       <div
         key={i}
@@ -135,22 +97,64 @@ function App() {
       </div>
     );
   });
+}
 
-  if (instructionIndex === instructions.length) {
-    let indentRendered = Array(indent)
-      .fill(0)
-      .map(() => <div className="indent"> </div>);
+function App() {
+  const [cursorPos, setCursorPos] = useState(0);
+  const [instructions, setInstructions] = useState<Instruction[]>([
+    { type: "emptyInstruction", fragments: [] },
+  ]);
+  const [selectedInstructions, setSelectedInstructions] = useState<
+    Instruction[]
+  >([]);
+  const [instructionIndex, setInstructionIndex] = useState(0);
+  const [outputs, setOutputs] = useState<Output[]>([]);
 
-    instructionsRendered.push(
-      <div className="line" key="end">
-        <div className="lineNumber">{instructions.length}</div>
-        <div className="instruction">
-          {indentRendered}
-          <div className={"empty highlight"}></div>
-        </div>
-      </div>
-    );
-  }
+  const [macros, setMacros] = useState<Macro[]>([]);
+
+  const instruction: Instruction | null = instructions[instructionIndex];
+
+  useEffect(() => {
+    const handle = (e: KeyboardEvent) => {
+      if (!e.metaKey) {
+        if (e.key.match(/^[ -~]$/) || e.key.match(/Arrow/)) {
+          e.preventDefault();
+        }
+        handleKeyStroke({
+          instruction,
+          instructions,
+          cursorPos,
+          instructionIndex,
+          selectedInstructions,
+          macros,
+          key: e.key,
+          shiftKey: e.shiftKey,
+          setInstructions,
+          setInstructionIndex,
+          setCursorPos,
+          setSelectedInstructions,
+          setMacros,
+        });
+      }
+    };
+    window.addEventListener("keydown", handle);
+    return () => window.removeEventListener("keydown", handle);
+  }, [
+    instructions,
+    setInstructions,
+    cursorPos,
+    instructionIndex,
+    instruction,
+    selectedInstructions,
+    macros,
+  ]);
+
+  const instructionsRendered = renderInstructions(
+    instructions,
+    selectedInstructions,
+    instructionIndex,
+    cursorPos
+  );
 
   const outputsRendered = outputs.map((o, index) => (
     <code className="outputLine" key={index}>
@@ -159,9 +163,22 @@ function App() {
     </code>
   ));
 
+  const macrosRendered = macros.map((macro) => {
+    const instructions = renderInstructions(macro.instructions, [], 0, 0);
+    return (
+      <>
+        <div>{macro.name}</div>
+        <code className={"code"}>{instructions}</code>
+      </>
+    );
+  });
+
   return (
     <div className="App">
-      <code className="top">{instructionsRendered}</code>
+      <div className={"top"}>
+        <code className="left code">{instructionsRendered}</code>
+        {macros.length > 0 && <div className="right">{macrosRendered}</div>}
+      </div>
       <div className="bottom">
         <div className="buttons">
           <button
