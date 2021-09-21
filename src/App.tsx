@@ -12,11 +12,93 @@ import {
 
 type Output = { value: string; lineNumber: number };
 
+function App() {
+  const [macros, setMacros] = useState<Macro[]>([]);
+  const [instructions, setInstructions] = useState<Instruction[]>([
+    { type: "emptyInstruction", fragments: [] },
+  ]);
+  const [outputs, setOutputs] = useState<Output[]>([]);
+  const [focusIndex, setFocusIndex] = useState<number>(0);
+
+  useEffect(() => {
+    const handle = (e: KeyboardEvent) => {
+      if (e.key === 'Tab') {
+        if (focusIndex < macros.length) {
+          setFocusIndex(focusIndex + 1);
+        } else {
+          setFocusIndex(0);
+        }
+        e.preventDefault();
+      }
+    };
+    window.addEventListener("keydown", handle);
+    return () => window.removeEventListener("keydown", handle);
+  });
+
+  const editor = <Editor hasFocus={focusIndex === 0} isMacro={false} macros={macros} setMacros={setMacros} instructions={instructions} setInstructions={setInstructions} />
+
+  const macrosRendered = macros.map((macro, i) => (
+    <div className={classnames('macroOuter', { hasFocus: focusIndex === i + 1 })}>
+      <div className={'macroTitle'}>{macro.name}</div>
+      <Editor hasFocus={focusIndex === i + 1} isMacro={true} macros={macros} setMacros={setMacros} instructions={macro.instructions} setInstructions={(instructions: Instruction[]) => { macro.instructions = instructions; setMacros(macros.slice()); }} />
+    </div>
+  ));
+
+  const outputsRendered = outputs.map((o, index) => (
+    <code className="outputLine" key={index}>
+      <div className="lineNumber">main:{o.lineNumber}</div>
+      {o.value}
+    </code>
+  ));
+
+  return (<div className="App">
+    <div className={"top"}>
+      <div className={classnames('left', { hasFocus: focusIndex === 0 })}>{editor}</div>
+      <div className={"right"}>{macrosRendered}</div>
+    </div>
+    <div className="bottom">
+      <div className="buttons">
+        <button
+          onClick={() => {
+            outputs.splice(0, outputs.length);
+            const instructionsToParse = (instructions.filter(
+              (i) => i.type !== "emptyInstruction"
+            ) as Instruction[])
+              .map((i) => i.fragments.map((f) => f?.value).join(" "))
+              .join("\n");
+            console.log(instructionsToParse);
+            const [pScopes, pInstructions] = parse(instructionsToParse);
+            console.log(pScopes, pInstructions);
+            const { peakMemory } = execute(
+              pScopes,
+              pInstructions,
+              (output: Output) => {
+                outputs.push(output);
+                setOutputs(outputs.slice());
+              }
+            );
+            outputs.push({
+              lineNumber: instructions.length,
+              value: `Execution finished. Peak memory usage: ${peakMemory / 8
+                } byte${peakMemory / 8 !== 1 ? "s" : ""}.`,
+            });
+            setOutputs(outputs.slice());
+          }}
+        >
+          Run
+        </button>
+      </div>
+      <div className="outputs">{outputsRendered}</div>
+    </div>
+  </div>)
+}
+
 function renderInstructions(
   instructions: Instruction[],
   selectedInstructions: Instruction[],
   instructionIndex: number,
-  cursorPos: number
+  cursorPos: number,
+  hasFocus: boolean
 ) {
   let indent = 0;
   return instructions.map((instruction, li) => {
@@ -27,7 +109,8 @@ function renderInstructions(
           highlight:
             instructionIndex === li &&
             cursorPos === i &&
-            selectedInstructions.length === 0,
+            selectedInstructions.length === 0
+            && hasFocus,
         })}
       >
         {fragment?.value}
@@ -73,7 +156,8 @@ function renderInstructions(
                 className={classnames("empty", "fragment", {
                   highlight:
                     instructionIndex === li &&
-                    selectedInstructions.length === 0,
+                    selectedInstructions.length === 0
+                    && hasFocus,
                 })}
               >
                 {selectedInstructions.length === 0 &&
@@ -99,23 +183,34 @@ function renderInstructions(
   });
 }
 
-function App() {
+function Editor({
+  instructions,
+  macros,
+  isMacro,
+  hasFocus,
+  setMacros,
+  setInstructions,
+}: {
+  instructions: Instruction[]
+  macros: Macro[],
+  isMacro: boolean,
+  hasFocus: boolean,
+  setMacros: (macros: Macro[]) => void
+  setInstructions: (instructions: Instruction[]) => void,
+}) {
   const [cursorPos, setCursorPos] = useState(0);
-  const [instructions, setInstructions] = useState<Instruction[]>([
-    { type: "emptyInstruction", fragments: [] },
-  ]);
   const [selectedInstructions, setSelectedInstructions] = useState<
     Instruction[]
   >([]);
   const [instructionIndex, setInstructionIndex] = useState(0);
-  const [outputs, setOutputs] = useState<Output[]>([]);
-
-  const [macros, setMacros] = useState<Macro[]>([]);
 
   const instruction: Instruction | null = instructions[instructionIndex];
 
   useEffect(() => {
     const handle = (e: KeyboardEvent) => {
+      if (!hasFocus) {
+        return;
+      }
       if (!e.metaKey) {
         if (e.key.match(/^[ -~]$/) || e.key.match(/Arrow/)) {
           e.preventDefault();
@@ -143,6 +238,7 @@ function App() {
     instructions,
     setInstructions,
     cursorPos,
+    hasFocus,
     instructionIndex,
     instruction,
     selectedInstructions,
@@ -153,68 +249,12 @@ function App() {
     instructions,
     selectedInstructions,
     instructionIndex,
-    cursorPos
+    cursorPos,
+    hasFocus
   );
 
-  const outputsRendered = outputs.map((o, index) => (
-    <code className="outputLine" key={index}>
-      <div className="lineNumber">main:{o.lineNumber}</div>
-      {o.value}
-    </code>
-  ));
-
-  const macrosRendered = macros.map((macro) => {
-    const instructions = renderInstructions(macro.instructions, [], 0, 0);
-    return (
-      <>
-        <div>{macro.name}</div>
-        <code className={"code"}>{instructions}</code>
-      </>
-    );
-  });
-
   return (
-    <div className="App">
-      <div className={"top"}>
-        <code className="left code">{instructionsRendered}</code>
-        {macros.length > 0 && <div className="right">{macrosRendered}</div>}
-      </div>
-      <div className="bottom">
-        <div className="buttons">
-          <button
-            onClick={() => {
-              outputs.splice(0, outputs.length);
-              const instructionsToParse = (instructions.filter(
-                (i) => i.type !== "emptyInstruction"
-              ) as Instruction[])
-                .map((i) => i.fragments.map((f) => f?.value).join(" "))
-                .join("\n");
-              console.log(instructionsToParse);
-              const [pScopes, pInstructions] = parse(instructionsToParse);
-              console.log(pScopes, pInstructions);
-              const { peakMemory } = execute(
-                pScopes,
-                pInstructions,
-                (output: Output) => {
-                  outputs.push(output);
-                  setOutputs(outputs.slice());
-                }
-              );
-              outputs.push({
-                lineNumber: instructions.length,
-                value: `Execution finished. Peak memory usage: ${
-                  peakMemory / 8
-                } byte${peakMemory / 8 !== 1 ? "s" : ""}.`,
-              });
-              setOutputs(outputs.slice());
-            }}
-          >
-            Run
-          </button>
-        </div>
-        <div className="outputs">{outputsRendered}</div>
-      </div>
-    </div>
+    <code className={'code'}>{instructionsRendered}</code>
   );
 }
 
