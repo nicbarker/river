@@ -1,8 +1,3 @@
-import { dec2bin } from "./parse";
-
-const DEBUG = false;
-const DOUBLE_DEBUG = false;
-
 function moveAndLabelForSize(instructionSize) {
   let size = "";
   let mov = "";

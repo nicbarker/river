@@ -2,7 +2,6 @@
 // const path = require("path");
 
 const DEBUG = false;
-const DOUBLE_DEBUG = false;
 
 // const file = fs.readFileSync(process.argv[2], "utf8");
 
