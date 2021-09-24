@@ -143,11 +143,16 @@ function App() {
                 .map((i) => i.fragments.map((f) => f?.value).join(" "))
                 .join("\n");
               console.log(instructionsToParse);
-              const [pScopes, pInstructions, pMaxMemory] = parse(
+              const [pScopes, pInstructions, pMaxMemory, jumps] = parse(
                 instructionsToParse
               );
               console.log(pScopes, pInstructions, pMaxMemory);
-              const compiled = compile(pScopes, pInstructions, pMaxMemory);
+              const compiled = compile(
+                pScopes,
+                pInstructions,
+                pMaxMemory,
+                jumps
+              );
               downloadFile(compiled, "output.asm");
             }}
           >

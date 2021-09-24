@@ -24,35 +24,56 @@ function moveAndLabelForSize(instructionSize) {
   return [mov, size];
 }
 
-export function compile(scopesFinal, instructions, maxMemory) {
+function formatOp(instruction, firstOperand, secondOperand) {
+  return `${"".padEnd(10)}${instruction.padEnd(10)}${firstOperand}${
+    secondOperand === undefined ? "" : `, ${secondOperand}`
+  }\n`;
+}
+
+function formatLabel(label) {
+  return `j${label}:\n`;
+}
+
+function formatLineNumber(lineNumber, instruction) {
+  return `${"".padEnd(10)}; ${lineNumber}: ${instruction.serialized}\n`;
+}
+
+function memoryOffset(offset) {
+  return `[r12${offset > 0 ? " + " + offset : ""}]`;
+}
+
+export function compile(scopesFinal, instructions, maxMemory, jumps) {
   let output = `
 ; --------------------------------------------------
 ; Generated with River Compiler 1.0
 ; Targetting assembler nasm 2.3;
 ; --------------------------------------------------
-          global    _main
-          extern    _malloc, _printf
+          global     _main
+          extern     _malloc, _printf
 
           section   .text
 _main:    push      rbx
           lea       rdi, ${maxMemory / 8}
           call      _malloc
           pop       rbx
-          mov       r12, rax`;
+          mov       r12, rax
+`;
   for (
     let instructionIndex = 0;
     instructionIndex < instructions.length;
     instructionIndex++
   ) {
     const instruction = instructions[instructionIndex];
+    if (jumps.includes(instructionIndex)) {
+      output += formatLabel(instructionIndex);
+    }
     switch (instruction.instruction) {
       case "assign": {
-        output += `
-          ; ${instructionIndex}: ${instruction.serialized}`;
+        output += formatLineNumber(instructionIndex, instruction);
         const [mov, size] = moveAndLabelForSize(instruction.size);
         let source = "";
         const target = instruction.target / 8;
-        let operands = "";
+        let operands = [];
         switch (instruction.source) {
           case "const": {
             source = parseInt(instruction.value, 2);
@@ -60,24 +81,23 @@ _main:    push      rbx
               case "=":
               case "+":
               case "-": {
-                operands = `${size} [r12${
-                  target > 0 ? " + " + target : ""
-                }], ${source}`;
+                operands = [
+                  `${size} [r12${target > 0 ? " + " + target : ""}]`,
+                  source,
+                ];
                 break;
               }
               case "*": {
-                output += `
-          ${mov}       r13, [r12 + ${target}]`;
-                operands = `r13, ${source}`;
+                output += formatOp(mov, "r13", memoryOffset(target));
+                operands = ["r13", source];
                 break;
               }
               case "/":
               case "%": {
-                output += `
-          xor       rdx, rdx
-          mov       r13, ${source}
-          ${mov}       rax, [r12 + ${target}]`;
-                operands = "r13";
+                output += formatOp("xor", "rdx", "rdx");
+                output += formatOp("mov", "r13", source);
+                output += formatOp(mov, "rax", memoryOffset(target));
+                operands = ["r13"];
                 break;
               }
               default:
@@ -86,10 +106,12 @@ _main:    push      rbx
             break;
           }
           case "var": {
-            source = `r13`;
-            output += `
-          ${mov}       r13, [r12 + ${instruction.address / 8}]`;
-            operands = `[r12${target > 0 ? " + " + target : ""}], ${source}`;
+            output += formatOp(
+              mov,
+              "r13",
+              memoryOffset(instruction.address / 8)
+            );
+            operands = [memoryOffset(target), "r13"];
             break;
           }
           default:
@@ -97,36 +119,30 @@ _main:    push      rbx
         }
         switch (instruction.action) {
           case "=": {
-            output += `
-          mov       ${operands}`;
+            output += formatOp("mov", operands[0], operands[1]);
             break;
           }
           case "+": {
-            output += `
-          add       ${operands}`;
+            output += formatOp("add", operands[0], operands[1]);
             break;
           }
           case "-": {
-            output += `
-          sub       ${operands}`;
+            output += formatOp("sub", operands[0], operands[1]);
             break;
           }
           case "*": {
-            output += `
-          imul      ${operands}
-          mov       [r12 + ${target}], r13`;
+            output += formatOp("imul", operands[0], operands[1]);
+            output += formatOp("mov", memoryOffset(target), "r13");
             break;
           }
           case "/": {
-            output += `
-          idiv      ${operands}
-          mov       [r12 + ${target}], rax`;
+            output += formatOp("idiv", operands[0]);
+            output += formatOp("mov", memoryOffset(target), "rax");
             break;
           }
           case "%": {
-            output += `
-          idiv      ${operands}
-          mov       [r12 + ${target}], rdx`;
+            output += formatOp("idiv", operands[0]);
+            output += formatOp("mov", memoryOffset(target), "rdx");
             break;
           }
           default:
@@ -134,17 +150,95 @@ _main:    push      rbx
         }
         break;
       }
+      case "jump": {
+        output += formatLineNumber(instructionIndex, instruction);
+        output += formatOp("jmp", `j${instruction.target}`);
+        break;
+      }
+      case "compare": {
+        output += formatLineNumber(instructionIndex, instruction);
+        let jump;
+        switch (instruction.action) {
+          case "=":
+            jump = "jne";
+            break;
+          case "<":
+            jump = "jge";
+            break;
+          case "<=":
+            jump = "jg";
+            break;
+          case ">":
+            jump = "jle";
+            break;
+          case ">=":
+            jump = "jl";
+            break;
+          case "!=":
+            jump = "je";
+            break;
+          default:
+            break;
+        }
+        switch (instruction.left.source) {
+          case "const": {
+            output += formatOp(
+              "mov",
+              "r13",
+              `${parseInt(instruction.left.value, 10)}`
+            );
+            break;
+          }
+          case "var": {
+            output += formatOp(
+              "mov",
+              "r13",
+              memoryOffset(parseInt(instruction.left.value, 10))
+            );
+            break;
+          }
+          default:
+            break;
+        }
+        switch (instruction.right.source) {
+          case "const": {
+            output += formatOp(
+              "mov",
+              "r14",
+              `${parseInt(instruction.right.value, 10)}`
+            );
+            break;
+          }
+          case "var": {
+            output += formatOp(
+              "mov",
+              "r14",
+              memoryOffset(parseInt(instruction.right.value, 10))
+            );
+            break;
+          }
+          default:
+            break;
+        }
+        output += formatOp("cmp", "r13", "r14");
+        output += formatOp(jump, `j${instructionIndex + 2}`);
+        break;
+      }
       case "os": {
+        output += formatLineNumber(instructionIndex, instruction);
         switch (instruction.action) {
           case "stdout": {
             const [mov, size] = moveAndLabelForSize(instruction.size);
-            output += `
-          ; ${instructionIndex}: ${instruction.serialized}
-          push      rbx
-          lea       rdi, [rel message]
-          ${mov}       rsi, ${size} [r12 + ${instruction.address / 8}]
-          call      _printf
-          pop       rbx`;
+            output +=
+              formatOp("push", "rbx") +
+              formatOp("lea", "rdi", "[rel message]") +
+              formatOp(
+                mov,
+                "rsi",
+                `${size} ${memoryOffset(instruction.address / 8)}`
+              ) +
+              formatOp("call", "_printf") +
+              formatOp("pop", "rbx");
             break;
           }
           default:
@@ -157,8 +251,7 @@ _main:    push      rbx
     }
   }
 
-  output += `
-          ret
+  output += `          ret
 
           section   .data
 message:  db        "%d", 0x0a

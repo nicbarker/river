@@ -14,6 +14,7 @@ export function parse(file) {
   const scopes = [];
   const scopesFinal = [];
   const instructions = [];
+  const jumps = [];
   let maxMemory = 0;
 
   function openScope() {
@@ -136,11 +137,13 @@ export function parse(file) {
         break;
       }
       case "jump": {
+        const target = parseInt(tokens[1], 10);
         instructions.push({
           instruction: "jump",
-          target: parseInt(tokens[1], 10),
+          target,
           serialized: line,
         });
+        jumps.push(target);
         break;
       }
       case "compare": {
@@ -187,6 +190,7 @@ export function parse(file) {
             break;
         }
         instructions.push(instruction);
+        jumps.push(i + 3);
         break;
       }
       case "os": {
@@ -243,5 +247,5 @@ export function parse(file) {
   }
   DEBUG && console.log("scopes:", scopesFinal);
 
-  return [scopesFinal, instructions, maxMemory];
+  return [scopesFinal, instructions, maxMemory, jumps];
 }
