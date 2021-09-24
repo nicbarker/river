@@ -94,9 +94,10 @@ _main:    push      rbx
               }
               case "/":
               case "%": {
-                output += formatOp("xor", "rdx", "rdx");
-                output += formatOp("mov", "r13", source);
-                output += formatOp(mov, "rax", memoryOffset(target));
+                output +=
+                  formatOp("xor", "rdx", "rdx") +
+                  formatOp("mov", "r13", source) +
+                  formatOp(mov, "rax", memoryOffset(target));
                 operands = ["r13"];
                 break;
               }
@@ -131,18 +132,21 @@ _main:    push      rbx
             break;
           }
           case "*": {
-            output += formatOp("imul", operands[0], operands[1]);
-            output += formatOp("mov", memoryOffset(target), "r13");
+            output +=
+              formatOp("imul", operands[0], operands[1]) +
+              formatOp("mov", memoryOffset(target), "r13");
             break;
           }
           case "/": {
-            output += formatOp("idiv", operands[0]);
-            output += formatOp("mov", memoryOffset(target), "rax");
+            output +=
+              formatOp("idiv", operands[0]) +
+              formatOp("mov", memoryOffset(target), "rax");
             break;
           }
           case "%": {
-            output += formatOp("idiv", operands[0]);
-            output += formatOp("mov", memoryOffset(target), "rdx");
+            output +=
+              formatOp("idiv", operands[0]) +
+              formatOp("mov", memoryOffset(target), "rdx");
             break;
           }
           default:
@@ -151,8 +155,9 @@ _main:    push      rbx
         break;
       }
       case "jump": {
-        output += formatLineNumber(instructionIndex, instruction);
-        output += formatOp("jmp", `j${instruction.target}`);
+        output +=
+          formatLineNumber(instructionIndex, instruction) +
+          formatOp("jmp", `j${instruction.target}`);
         break;
       }
       case "compare": {
@@ -220,8 +225,9 @@ _main:    push      rbx
           default:
             break;
         }
-        output += formatOp("cmp", "r13", "r14");
-        output += formatOp(jump, `j${instructionIndex + 2}`);
+        output +=
+          formatOp("cmp", "r13", "r14") +
+          formatOp(jump, `j${instructionIndex + 2}`);
         break;
       }
       case "os": {
