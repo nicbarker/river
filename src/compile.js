@@ -79,8 +79,8 @@ _main:    push      rbx
               case "/":
               case "%": {
                 output += `
-          xor      rdx, rdx
-          mov      r13, ${source}
+          xor       rdx, rdx
+          mov       r13, ${source}
           ${mov}       rax, [r12 + ${target}]`;
                 operands = "r13";
                 break;
