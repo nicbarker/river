@@ -282,7 +282,7 @@ export const fragmentLength: { [k in Instruction["type"]]: number } = {
 
 export const fragmentHints: { [k in Instruction["type"]]: string[] } = {
   emptyInstruction: ["scope | def | assign | compare | jump | os"],
-  defInstruction: ["def", "local | parent", "0.. bits"],
+  defInstruction: ["def", "local | parent", "8 | 16 | 32 | 64"],
   assignInstruction: [
     "assign",
     "var",
@@ -518,17 +518,26 @@ export function handleKeyStroke({
             break;
           }
           case 2: {
-            if (!instruction.fragments[2]) {
-              instruction.fragments[2] = {
-                type: "size",
-                value: parseInt(key, 10),
-              };
-            } else {
-              instruction.fragments[2].value = parseInt(
-                instruction.fragments[2].value.toString() + key,
-                10
-              );
+            let value = 8;
+            switch (key) {
+              case "8":
+                break;
+              case "1":
+                value = 16;
+                break;
+              case "3":
+                value = 32;
+                break;
+              case "6":
+                value = 64;
+                break;
+              default:
+                return;
             }
+            instruction.fragments[2] = {
+              type: "size",
+              value,
+            };
             setInstructions(instructions.slice());
             break;
           }

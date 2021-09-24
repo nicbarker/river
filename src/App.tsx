@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import "./App.css";
-import { parse, execute } from "./parse";
+import { parse } from "./parse";
+import { execute } from "./vm";
 import classnames from "classnames";
 import {
   fragmentHints,
@@ -9,8 +10,29 @@ import {
   Instruction,
   Macro,
 } from "./editor";
+import { compile } from "./compile";
 
 type Output = { value: string; lineNumber: number };
+
+function downloadFile(data: string, fileName: string, type = "text/plain") {
+  // Create an invisible A element
+  const a = document.createElement("a");
+  a.style.display = "none";
+  document.body.appendChild(a);
+
+  // Set the HREF to a Blob representation of the data to be downloaded
+  a.href = window.URL.createObjectURL(new Blob([data], { type }));
+
+  // Use download attribute to set set desired file name
+  a.setAttribute("download", fileName);
+
+  // Trigger the download by simulating click
+  a.click();
+
+  // Cleanup
+  window.URL.revokeObjectURL(a.href);
+  document.body.removeChild(a);
+}
 
 function App() {
   const [macros, setMacros] = useState<Macro[]>([]);
@@ -22,7 +44,7 @@ function App() {
 
   useEffect(() => {
     const handle = (e: KeyboardEvent) => {
-      if (e.key === 'Tab') {
+      if (e.key === "Tab") {
         if (focusIndex < macros.length) {
           setFocusIndex(focusIndex + 1);
         } else {
@@ -35,12 +57,33 @@ function App() {
     return () => window.removeEventListener("keydown", handle);
   });
 
-  const editor = <Editor hasFocus={focusIndex === 0} isMacro={false} macros={macros} setMacros={setMacros} instructions={instructions} setInstructions={setInstructions} />
+  const editor = (
+    <Editor
+      hasFocus={focusIndex === 0}
+      isMacro={false}
+      macros={macros}
+      setMacros={setMacros}
+      instructions={instructions}
+      setInstructions={setInstructions}
+    />
+  );
 
   const macrosRendered = macros.map((macro, i) => (
-    <div className={classnames('macroOuter', { hasFocus: focusIndex === i + 1 })}>
-      <div className={'macroTitle'}>{macro.name}</div>
-      <Editor hasFocus={focusIndex === i + 1} isMacro={true} macros={macros} setMacros={setMacros} instructions={macro.instructions} setInstructions={(instructions: Instruction[]) => { macro.instructions = instructions; setMacros(macros.slice()); }} />
+    <div
+      className={classnames("macroOuter", { hasFocus: focusIndex === i + 1 })}
+    >
+      <div className={"macroTitle"}>{macro.name}</div>
+      <Editor
+        hasFocus={focusIndex === i + 1}
+        isMacro={true}
+        macros={macros}
+        setMacros={setMacros}
+        instructions={macro.instructions}
+        setInstructions={(instructions: Instruction[]) => {
+          macro.instructions = instructions;
+          setMacros(macros.slice());
+        }}
+      />
     </div>
   ));
 
@@ -51,46 +94,70 @@ function App() {
     </code>
   ));
 
-  return (<div className="App">
-    <div className={"top"}>
-      <div className={classnames('left', { hasFocus: focusIndex === 0 })}>{editor}</div>
-      <div className={"right"}>{macrosRendered}</div>
-    </div>
-    <div className="bottom">
-      <div className="buttons">
-        <button
-          onClick={() => {
-            outputs.splice(0, outputs.length);
-            const instructionsToParse = (instructions.filter(
-              (i) => i.type !== "emptyInstruction"
-            ) as Instruction[])
-              .map((i) => i.fragments.map((f) => f?.value).join(" "))
-              .join("\n");
-            console.log(instructionsToParse);
-            const [pScopes, pInstructions] = parse(instructionsToParse);
-            console.log(pScopes, pInstructions);
-            const { peakMemory } = execute(
-              pScopes,
-              pInstructions,
-              (output: Output) => {
-                outputs.push(output);
-                setOutputs(outputs.slice());
-              }
-            );
-            outputs.push({
-              lineNumber: instructions.length,
-              value: `Execution finished. Peak memory usage: ${peakMemory / 8
-                } byte${peakMemory / 8 !== 1 ? "s" : ""}.`,
-            });
-            setOutputs(outputs.slice());
-          }}
-        >
-          Run
-        </button>
+  return (
+    <div className="App">
+      <div className={"top"}>
+        <div className={classnames("left", { hasFocus: focusIndex === 0 })}>
+          {editor}
+        </div>
+        <div className={"right"}>{macrosRendered}</div>
       </div>
-      <div className="outputs">{outputsRendered}</div>
+      <div className="bottom">
+        <div className="buttons">
+          <button
+            onClick={() => {
+              outputs.splice(0, outputs.length);
+              const instructionsToParse = (instructions.filter(
+                (i) => i.type !== "emptyInstruction"
+              ) as Instruction[])
+                .map((i) => i.fragments.map((f) => f?.value).join(" "))
+                .join("\n");
+              console.log(instructionsToParse);
+              const [pScopes, pInstructions] = parse(instructionsToParse);
+              console.log(pScopes, pInstructions);
+              const { peakMemory } = execute(
+                pScopes,
+                pInstructions,
+                (output: Output) => {
+                  outputs.push(output);
+                  setOutputs(outputs.slice());
+                }
+              );
+              outputs.push({
+                lineNumber: instructions.length,
+                value: `Execution finished. Peak memory usage: ${
+                  peakMemory / 8
+                } byte${peakMemory / 8 !== 1 ? "s" : ""}.`,
+              });
+              setOutputs(outputs.slice());
+            }}
+          >
+            Run
+          </button>
+          <button
+            onClick={() => {
+              outputs.splice(0, outputs.length);
+              const instructionsToParse = (instructions.filter(
+                (i) => i.type !== "emptyInstruction"
+              ) as Instruction[])
+                .map((i) => i.fragments.map((f) => f?.value).join(" "))
+                .join("\n");
+              console.log(instructionsToParse);
+              const [pScopes, pInstructions, pMaxMemory] = parse(
+                instructionsToParse
+              );
+              console.log(pScopes, pInstructions, pMaxMemory);
+              const compiled = compile(pScopes, pInstructions, pMaxMemory);
+              downloadFile(compiled, "output.asm");
+            }}
+          >
+            Compile
+          </button>
+        </div>
+        <div className="outputs">{outputsRendered}</div>
+      </div>
     </div>
-  </div>)
+  );
 }
 
 function renderInstructions(
@@ -109,8 +176,8 @@ function renderInstructions(
           highlight:
             instructionIndex === li &&
             cursorPos === i &&
-            selectedInstructions.length === 0
-            && hasFocus,
+            selectedInstructions.length === 0 &&
+            hasFocus,
         })}
       >
         {fragment?.value}
@@ -144,7 +211,7 @@ function renderInstructions(
         })}
         key={li}
       >
-        <div className="lineNumber">{li}</div>
+        <div className="lineNumber">{li + 1}</div>
         <div className="instruction">
           {indentRendered}
           {fragments}
@@ -156,8 +223,8 @@ function renderInstructions(
                 className={classnames("empty", "fragment", {
                   highlight:
                     instructionIndex === li &&
-                    selectedInstructions.length === 0
-                    && hasFocus,
+                    selectedInstructions.length === 0 &&
+                    hasFocus,
                 })}
               >
                 {selectedInstructions.length === 0 &&
@@ -191,12 +258,12 @@ function Editor({
   setMacros,
   setInstructions,
 }: {
-  instructions: Instruction[]
-  macros: Macro[],
-  isMacro: boolean,
-  hasFocus: boolean,
-  setMacros: (macros: Macro[]) => void
-  setInstructions: (instructions: Instruction[]) => void,
+  instructions: Instruction[];
+  macros: Macro[];
+  isMacro: boolean;
+  hasFocus: boolean;
+  setMacros: (macros: Macro[]) => void;
+  setInstructions: (instructions: Instruction[]) => void;
 }) {
   const [cursorPos, setCursorPos] = useState(0);
   const [selectedInstructions, setSelectedInstructions] = useState<
@@ -243,6 +310,7 @@ function Editor({
     instruction,
     selectedInstructions,
     macros,
+    setMacros,
   ]);
 
   const instructionsRendered = renderInstructions(
@@ -253,9 +321,7 @@ function Editor({
     hasFocus
   );
 
-  return (
-    <code className={'code'}>{instructionsRendered}</code>
-  );
+  return <code className={"code"}>{instructionsRendered}</code>;
 }
 
 export default App;

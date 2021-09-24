@@ -2,6 +2,7 @@ html,
 #root,
 .App {
   height: 100%;
+  font-family: "Rubik", sans-serif;
 }
 
 .App {
@@ -20,7 +21,7 @@ body {
 }
 
 code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New",
+  font-family: "Source Code Pro", Menlo, Monaco, Consolas, "Courier New",
     monospace;
   white-space: pre;
 }
@@ -181,11 +182,12 @@ code {
   align-items: flex-start;
   width: 100%;
   display: flex;
+  background: #3c3b54;
 }
 
 .bottom .buttons button {
   border: none;
-  background: #555;
+  background: #484665;
   height: 44px;
   width: 80px;
   color: #fff;
@@ -194,7 +196,6 @@ code {
   cursor: pointer;
   font-size: 14px;
   font-family: "Rubik";
-  border-bottom: 4px solid #f77825;
 }
 
 .bottom .buttons button:hover {

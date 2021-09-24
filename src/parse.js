@@ -1,12 +1,12 @@
 // const fs = require("fs");
 // const path = require("path");
 
-const DEBUG = true;
+const DEBUG = false;
 const DOUBLE_DEBUG = false;
 
 // const file = fs.readFileSync(process.argv[2], "utf8");
 
-function dec2bin(dec, pad) {
+export function dec2bin(dec, pad) {
   return (dec >>> 0).toString(2).padStart(pad, "0");
 }
 
@@ -15,6 +15,7 @@ export function parse(file) {
   const scopes = [];
   const scopesFinal = [];
   const instructions = [];
+  let maxMemory = 0;
 
   function openScope() {
     const stackOffset =
@@ -27,6 +28,7 @@ export function parse(file) {
       action: "alloc",
       stackOffset,
       stackMemory: 0,
+      serialized: "scope open",
     };
     instructions.push(instruction);
     const scope = {
@@ -49,6 +51,7 @@ export function parse(file) {
       action: "dealloc",
       stackOffset: popped.stackOffset,
       stackMemory: popped.stackMemory,
+      serialized: "scope close",
     };
     instructions.push(instruction);
   }
@@ -79,6 +82,7 @@ export function parse(file) {
       case "def": {
         const scope = scopes[scopes.length - 1];
         const memory = parseInt(tokens[2], 10);
+        maxMemory += memory;
         const newVarLocation = scope.stackOffset + scope.stackMemory;
         scope.variables.push(newVarLocation);
         scope.sizes.push(memory);
@@ -97,7 +101,7 @@ export function parse(file) {
           scope.instruction.stackMemory = scope.stackMemory;
           scope.instruction.stackOffset = scope.stackOffset;
         }
-        instructions.push({ instruction: "void" });
+        instructions.push({ instruction: "void", serialized: line });
         break;
       }
       case "assign": {
@@ -114,6 +118,7 @@ export function parse(file) {
           size,
           value: undefined,
           address: undefined,
+          serialized: line,
         };
         switch (source) {
           case "const": {
@@ -135,6 +140,7 @@ export function parse(file) {
         instructions.push({
           instruction: "jump",
           target: parseInt(tokens[1], 10),
+          serialized: line,
         });
         break;
       }
@@ -148,6 +154,7 @@ export function parse(file) {
           right: {
             source: tokens[4],
           },
+          serialized: line,
         };
         const scope = scopes[scopes.length - 1];
         switch (tokens[1]) {
@@ -192,6 +199,7 @@ export function parse(file) {
               value: undefined,
               address: undefined,
               size: 0,
+              serialized: line,
             };
             switch (tokens[2]) {
               case "const": {
@@ -236,261 +244,5 @@ export function parse(file) {
   }
   DEBUG && console.log("scopes:", scopesFinal);
 
-  return [scopesFinal, instructions];
+  return [scopesFinal, instructions, maxMemory];
 }
-
-export function execute(scopesFinal, instructions, outputCallback) {
-  const memory = Array(200).fill(undefined);
-
-  function writeBinaryToStack(value, offset) {
-    for (let i = 0; i < value.length; i++) {
-      memory[offset + i] = value[i];
-    }
-  }
-
-  let executionCount = 0;
-  let peakMemory = 0;
-  for (
-    let instructionIndex = 0;
-    instructionIndex < instructions.length;
-    instructionIndex++
-  ) {
-    executionCount++;
-    if (executionCount > 10000) {
-      console.log("Error: possible infinite loop");
-      break;
-    }
-    const instruction = instructions[instructionIndex];
-    switch (instruction.instruction) {
-      case "memory": {
-        switch (instruction.action) {
-          case "alloc": {
-            DEBUG &&
-              console.log(
-                `allocating ${instruction.stackMemory} at offset ${instruction.stackOffset}`
-              );
-            writeBinaryToStack(
-              Array(instruction.stackMemory).fill(0),
-              instruction.stackOffset
-            );
-            peakMemory = Math.max(
-              instruction.stackOffset + instruction.stackMemory,
-              peakMemory
-            );
-            DOUBLE_DEBUG && console.log(`new memory state:`, memory);
-            break;
-          }
-          case "dealloc": {
-            DEBUG &&
-              console.log(
-                `deallocating ${instruction.stackMemory} at offset ${instruction.stackOffset}`
-              );
-            writeBinaryToStack(
-              Array(instruction.stackMemory).fill(undefined),
-              instruction.stackOffset
-            );
-            DOUBLE_DEBUG && console.log(`new memory state:`, memory);
-            break;
-          }
-          default:
-            break;
-        }
-        break;
-      }
-      case "assign": {
-        let targetValue = parseInt(
-          memory
-            .slice(instruction.target, instruction.target + instruction.size)
-            .join(""),
-          2
-        );
-        let sourceValue;
-        switch (instruction.source) {
-          case "const": {
-            DEBUG &&
-              console.log(
-                `set ${
-                  instruction.action
-                } with constant value ${instruction.value.padStart(
-                  instruction.size,
-                  "0"
-                )} at offset ${instruction.target}`
-              );
-            sourceValue = parseInt(instruction.value, 2);
-            break;
-          }
-          case "var": {
-            const value = memory
-              .slice(
-                instruction.address,
-                instruction.address + instruction.size
-              )
-              .join("");
-            DEBUG &&
-              console.log(
-                `set ${instruction.action} with var value ${value} from address ${instruction.address} at offset ${instruction.target}`
-              );
-            sourceValue = parseInt(value, 2);
-            break;
-          }
-          default:
-            break;
-        }
-        let toWrite;
-        switch (instruction.action) {
-          case "=": {
-            toWrite = sourceValue;
-            break;
-          }
-          case "+": {
-            toWrite = targetValue + sourceValue;
-            break;
-          }
-          case "-": {
-            toWrite = targetValue - sourceValue;
-            break;
-          }
-          case "*": {
-            toWrite = targetValue * sourceValue;
-            break;
-          }
-          case "/": {
-            toWrite = targetValue / sourceValue;
-            break;
-          }
-          case "%": {
-            toWrite = targetValue % sourceValue;
-            break;
-          }
-          default:
-            break;
-        }
-        writeBinaryToStack(
-          dec2bin(toWrite, instruction.size),
-          instruction.target
-        );
-        DOUBLE_DEBUG && console.log(`new memory state:`, memory);
-        break;
-      }
-      case "compare": {
-        DEBUG &&
-          console.log(
-            `running compare ${JSON.stringify(instruction.left)} ${
-              instruction.action
-            } ${JSON.stringify(instruction.right)}`
-          );
-        let leftValue, rightValue;
-        switch (instruction.left.source) {
-          case "const": {
-            leftValue = parseInt(instruction.left.value, 10);
-            break;
-          }
-          case "var": {
-            const value = memory
-              .slice(
-                instruction.left.address,
-                instruction.left.address + instruction.left.size
-              )
-              .join("");
-            leftValue = parseInt(value, 2);
-            break;
-          }
-          default:
-            break;
-        }
-        switch (instruction.right.source) {
-          case "const": {
-            rightValue = parseInt(instruction.right.value, 10);
-            break;
-          }
-          case "var": {
-            const value = memory
-              .slice(
-                instruction.right.address,
-                instruction.right.address + instruction.right.size
-              )
-              .join("");
-            rightValue = parseInt(value, 2);
-            break;
-          }
-          default:
-            break;
-        }
-        let result = true;
-        switch (instruction.action) {
-          case "==": {
-            result = leftValue === rightValue;
-            break;
-          }
-          case "!=": {
-            result = leftValue !== rightValue;
-            break;
-          }
-          case "<": {
-            result = leftValue < rightValue;
-            break;
-          }
-          case "<=": {
-            result = leftValue <= rightValue;
-            break;
-          }
-          case ">": {
-            result = leftValue > rightValue;
-            break;
-          }
-          case ">=": {
-            result = leftValue >= rightValue;
-            break;
-          }
-          default:
-            break;
-        }
-        DEBUG &&
-          console.log(
-            `comparing ${leftValue} ${instruction.action} ${rightValue} result ${result}`
-          );
-        if (!result) {
-          instructionIndex += 1;
-        }
-        break;
-      }
-      case "jump": {
-        const newInstructionIndex = instruction.target;
-        DEBUG &&
-          console.log(
-            `jumping from ${instructionIndex} to ${newInstructionIndex}`
-          );
-        instructionIndex = newInstructionIndex;
-        break;
-      }
-      case "os": {
-        switch (instruction.action) {
-          case "stdout": {
-            let value = parseInt(
-              memory
-                .slice(
-                  instruction.address,
-                  instruction.address + instruction.size
-                )
-                .join(""),
-              2
-            );
-            outputCallback({ lineNumber: instructionIndex, value });
-            break;
-          }
-          default:
-            break;
-        }
-        break;
-      }
-      default:
-        break;
-    }
-  }
-  return {
-    peakMemory,
-  };
-}
-
-// parse();
-// execute();
