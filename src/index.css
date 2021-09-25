@@ -3,11 +3,14 @@ html,
 .App {
   height: 100%;
   font-family: "Rubik", sans-serif;
+  overflow: hidden;
 }
 
 .App {
   display: flex;
-  flex-direction: column;
+  padding: 12px;
+  box-sizing: border-box;
+  background: #222;
 }
 
 body {
@@ -26,23 +29,61 @@ code {
   white-space: pre;
 }
 
-.top {
-  height: 70%;
-  width: 100%;
-  display: flex;
-}
-
 .left {
   flex-grow: 1;
-  background: #222;
-  border-top: 4px solid rgba(255, 255, 255, 0.1);
+  background: #414b4d;
+  border-radius: 8px 0 0 8px;
+  overflow: hidden;
+}
+
+.header {
+  display: flex;
+  height: 40px;
+}
+
+.header button {
+  height: 40px;
+  padding: 0 16px;
+  border: none;
+  font-family: "Rubik";
+  color: #fff;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.left .header {
+  background: #282e2f;
+}
+
+.left .header button {
+  background: #2e3637;
+}
+
+.left .header button.active {
+  background: #414b4d;
+}
+
+.right .header {
+  background: #36354b;
+}
+
+.right .header button {
+  background: #42405c;
+}
+
+.right .header button.active {
+  background: #4f4d6f;
 }
 
 .right {
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
-  background: #272727;
+  background: #495557;
+  min-width: 500px;
+  border-radius: 0 8px 8px 0;
+  overflow: hidden;
+  height: 100%;
 }
 
 .code {
@@ -68,15 +109,7 @@ code {
 }
 
 .hasFocus {
-  border-top: 4px solid #f77825;
-}
-
-.bottom {
-  height: 30%;
-  background: #333;
-  width: 100%;
-  display: flex;
-  flex-direction: column;
+  /* border-top: 4px solid #f77825; */
 }
 
 .line {
@@ -178,14 +211,14 @@ code {
   color: rgba(255, 255, 255, 0.7);
 }
 
-.bottom .buttons {
+.right .buttons {
   align-items: flex-start;
   width: 100%;
   display: flex;
   background: #3c3b54;
 }
 
-.bottom .buttons button {
+.right .buttons button {
   border: none;
   background: #484665;
   height: 44px;
@@ -198,7 +231,7 @@ code {
   font-family: "Rubik";
 }
 
-.bottom .buttons button:hover {
+.right .buttons button:hover {
   background: #444;
 }
 
@@ -219,4 +252,18 @@ code {
 
 .outputLine .lineNumber {
   width: auto;
+}
+
+.asm {
+  text-align: left;
+  background: none;
+  border: none;
+  font-family: "Source Code Pro";
+  width: 500px;
+  height: 100%;
+  resize: none;
+  color: #fff;
+  padding: 0 16px;
+  box-sizing: border-box;
+  font-size: 14px;
 }

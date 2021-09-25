@@ -5,15 +5,89 @@ const DEBUG = false;
 
 // const file = fs.readFileSync(process.argv[2], "utf8");
 
-export function dec2bin(dec, pad) {
+export function dec2bin(dec: number, pad: number) {
   return (dec >>> 0).toString(2).padStart(pad, "0");
 }
 
-export function parse(file) {
+export type CompiledInstructionMemory = {
+  instruction: "memory";
+  action: "alloc" | "dealloc";
+  stackOffset: number;
+  stackMemory: number;
+  serialized: string;
+};
+
+export type CompiledInstructionAssign = {
+  instruction: "assign";
+  action: string;
+  target: number;
+  source: string;
+  size: number;
+  value?: number;
+  address?: number;
+  serialized: string;
+};
+
+export type CompiledInstructionCompare = {
+  instruction: "compare";
+  action: string;
+  left: {
+    source: string;
+    size: number;
+    value?: number;
+    address?: number;
+  };
+  right: {
+    source: string;
+    size: number;
+    value?: number;
+    address?: number;
+  };
+  serialized: string;
+};
+
+export type CompiledInstructionJump = {
+  instruction: "jump";
+  target: number;
+  serialized: string;
+};
+
+export type CompiledInstructionVoid = {
+  instruction: "void";
+  serialized: string;
+};
+
+export type CompiledInstructionOs = {
+  instruction: "os";
+  action: string;
+  value?: number;
+  address?: number;
+  size: number;
+  serialized: string;
+};
+
+export type CompiledInstruction =
+  | CompiledInstructionMemory
+  | CompiledInstructionAssign
+  | CompiledInstructionCompare
+  | CompiledInstructionJump
+  | CompiledInstructionOs
+  | CompiledInstructionVoid;
+
+export type Scope = {
+  name: string;
+  variables: number[];
+  sizes: number[];
+  stackOffset: number;
+  stackMemory: number;
+  instruction: CompiledInstructionMemory;
+};
+
+export function parse(file: string) {
   const lines = file.length === 0 ? [] : file.split("\n");
-  const scopes = [];
-  const scopesFinal = [];
-  const instructions = [];
+  const scopes: Scope[] = [];
+  const scopesFinal: Scope[] = [];
+  const instructions: CompiledInstruction[] = [];
   const jumps = [];
   let maxMemory = 0;
 
@@ -23,7 +97,7 @@ export function parse(file) {
         ? scopes[scopes.length - 1].stackOffset +
           scopes[scopes.length - 1].stackMemory
         : 0;
-    const instruction = {
+    const instruction: CompiledInstructionMemory = {
       instruction: "memory",
       action: "alloc",
       stackOffset,
@@ -46,14 +120,16 @@ export function parse(file) {
 
   function closeScope() {
     const popped = scopes.pop();
-    const instruction = {
-      instruction: "memory",
-      action: "dealloc",
-      stackOffset: popped.stackOffset,
-      stackMemory: popped.stackMemory,
-      serialized: "scope close",
-    };
-    instructions.push(instruction);
+    if (popped) {
+      const instruction: CompiledInstructionMemory = {
+        instruction: "memory",
+        action: "dealloc",
+        stackOffset: popped.stackOffset,
+        stackMemory: popped.stackMemory,
+        serialized: "scope close",
+      };
+      instructions.push(instruction);
+    }
   }
 
   openScope();
@@ -110,19 +186,17 @@ export function parse(file) {
         const target = scope.variables[targetIndex];
         const size = scope.sizes[targetIndex];
         const source = tokens[4];
-        const instruction = {
+        const instruction: CompiledInstructionAssign = {
           instruction: "assign",
           action: tokens[3],
           target,
           source,
           size,
-          value: undefined,
-          address: undefined,
           serialized: line,
         };
         switch (source) {
           case "const": {
-            instruction.value = dec2bin(tokens[5], size);
+            instruction.value = parseInt(tokens[5], 10);
             break;
           }
           case "var": {
@@ -142,33 +216,39 @@ export function parse(file) {
           instruction: "jump",
           target,
           serialized: line,
-        });
+        } as CompiledInstructionJump);
         jumps.push(target);
         break;
       }
       case "compare": {
-        const instruction = {
+        const instruction: CompiledInstructionCompare = {
           instruction: "compare",
           action: tokens[3],
           left: {
             source: tokens[1],
+            size: 64,
           },
           right: {
             source: tokens[4],
+            size: 64,
           },
           serialized: line,
         };
         const scope = scopes[scopes.length - 1];
         switch (tokens[1]) {
           case "const": {
-            instruction.left.value = tokens[2];
+            if (instruction.left) {
+              instruction.left.value = parseInt(tokens[2], 10);
+            }
             break;
           }
           case "var": {
             const targetIndex = parseInt(tokens[2], 10);
             const size = scope.sizes[targetIndex];
-            instruction.left.address = scope.variables[targetIndex];
-            instruction.left.size = size;
+            if (instruction.left) {
+              instruction.left.address = scope.variables[targetIndex];
+              instruction.left.size = size;
+            }
             break;
           }
           default:
@@ -176,14 +256,18 @@ export function parse(file) {
         }
         switch (tokens[4]) {
           case "const": {
-            instruction.right.value = tokens[5];
+            if (instruction.right) {
+              instruction.right.value = parseInt(tokens[5], 10);
+            }
             break;
           }
           case "var": {
             const targetIndex = parseInt(tokens[5], 10);
             const size = scope.sizes[targetIndex];
-            instruction.right.address = scope.variables[targetIndex];
-            instruction.right.size = size;
+            if (instruction.right) {
+              instruction.right.address = scope.variables[targetIndex];
+              instruction.right.size = size;
+            }
             break;
           }
           default:
@@ -196,18 +280,16 @@ export function parse(file) {
       case "os": {
         switch (tokens[1]) {
           case "stdout": {
-            const instruction = {
+            const instruction: CompiledInstructionOs = {
               instruction: "os",
               action: "stdout",
-              value: undefined,
-              address: undefined,
               size: 0,
               serialized: line,
             };
             switch (tokens[2]) {
               case "const": {
                 // TODO: fix handling of primitives in stdout
-                instruction.value = dec2bin(tokens[3], 32);
+                instruction.value = parseInt(tokens[3]);
                 instruction.size = 32;
                 break;
               }
@@ -247,5 +329,5 @@ export function parse(file) {
   }
   DEBUG && console.log("scopes:", scopesFinal);
 
-  return [scopesFinal, instructions, maxMemory, jumps];
+  return [scopesFinal, instructions, maxMemory, jumps] as const;
 }

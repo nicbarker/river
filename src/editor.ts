@@ -242,14 +242,17 @@ export type EmptyInstruction = {
   fragments: [];
 };
 
-export type Instruction =
+export type Instruction = (
   | EmptyInstruction
   | DefInstruction
   | AssignInstruction
   | ScopeInstruction
   | CompareInstruction
   | JumpInstruction
-  | OSInstruction;
+  | OSInstruction
+) & {
+  valid?: boolean;
+};
 
 export type Macro = {
   name: string;
@@ -913,10 +916,19 @@ export function handleKeyStroke({
     if (instructionIndex === instructions.length - 1) {
       instructions.push({ type: "emptyInstruction", fragments: [] });
     }
+    // TODO: proper validation / type checking
+    if (instruction.fragments.length === fragmentLength[instruction.type]) {
+      instruction.valid = true;
+    }
     setInstructionIndex(instructionIndex + 1);
     setCursorPos(0);
   } else if (increment === "cursor") {
     setCursorPos(cursorPos + 1);
+  }
+
+  // TODO: proper validation / type checking
+  if (instruction.fragments.length === fragmentLength[instruction.type]) {
+    instruction.valid = true;
   }
 
   // ---------------------------------------------

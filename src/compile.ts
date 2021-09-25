@@ -1,4 +1,6 @@
-function moveAndLabelForSize(instructionSize) {
+import { CompiledInstruction, Scope } from "./parse";
+
+function moveAndLabelForSize(instructionSize: number) {
   let size = "";
   let mov = "";
   switch (instructionSize) {
@@ -24,25 +26,37 @@ function moveAndLabelForSize(instructionSize) {
   return [mov, size];
 }
 
-function formatOp(instruction, firstOperand, secondOperand) {
+function formatOp(
+  instruction: string,
+  firstOperand: string,
+  secondOperand?: string
+) {
   return `${"".padEnd(10)}${instruction.padEnd(10)}${firstOperand}${
     secondOperand === undefined ? "" : `, ${secondOperand}`
   }\n`;
 }
 
-function formatLabel(label) {
+function formatLabel(label: string) {
   return `j${label}:\n`;
 }
 
-function formatLineNumber(lineNumber, instruction) {
+function formatLineNumber(
+  lineNumber: number,
+  instruction: CompiledInstruction
+) {
   return `${"".padEnd(10)}; ${lineNumber}: ${instruction.serialized}\n`;
 }
 
-function memoryOffset(offset) {
+function memoryOffset(offset: number) {
   return `[r12${offset > 0 ? " + " + offset : ""}]`;
 }
 
-export function compile(scopesFinal, instructions, maxMemory, jumps) {
+export function compile(
+  scopesFinal: Scope[],
+  instructions: CompiledInstruction[],
+  maxMemory: number,
+  jumps: number[]
+) {
   let output = `
 ; --------------------------------------------------
 ; Generated with River Compiler 1.0
@@ -65,7 +79,7 @@ _main:    push      rbx
   ) {
     const instruction = instructions[instructionIndex];
     if (jumps.includes(instructionIndex)) {
-      output += formatLabel(instructionIndex);
+      output += formatLabel(instructionIndex.toString());
     }
     switch (instruction.instruction) {
       case "assign": {
@@ -73,10 +87,10 @@ _main:    push      rbx
         const [mov, size] = moveAndLabelForSize(instruction.size);
         let source = "";
         const target = instruction.target / 8;
-        let operands = [];
+        let operands: string[] = [];
         switch (instruction.source) {
           case "const": {
-            source = parseInt(instruction.value, 2);
+            source = instruction.value?.toString() || "0";
             switch (instruction.action) {
               case "=":
               case "+":
@@ -110,7 +124,7 @@ _main:    push      rbx
             output += formatOp(
               mov,
               "r13",
-              memoryOffset(instruction.address / 8)
+              memoryOffset(instruction.address! / 8)
             );
             operands = [memoryOffset(target), "r13"];
             break;
@@ -162,7 +176,7 @@ _main:    push      rbx
       }
       case "compare": {
         output += formatLineNumber(instructionIndex, instruction);
-        let jump;
+        let jump = "";
         switch (instruction.action) {
           case "=":
             jump = "jne";
@@ -187,18 +201,14 @@ _main:    push      rbx
         }
         switch (instruction.left.source) {
           case "const": {
-            output += formatOp(
-              "mov",
-              "r13",
-              `${parseInt(instruction.left.value, 10)}`
-            );
+            output += formatOp("mov", "r13", `${instruction.left.value}`);
             break;
           }
           case "var": {
             output += formatOp(
               "mov",
               "r13",
-              memoryOffset(parseInt(instruction.left.value, 10))
+              memoryOffset(instruction.left.value!)
             );
             break;
           }
@@ -207,18 +217,14 @@ _main:    push      rbx
         }
         switch (instruction.right.source) {
           case "const": {
-            output += formatOp(
-              "mov",
-              "r14",
-              `${parseInt(instruction.right.value, 10)}`
-            );
+            output += formatOp("mov", "r14", `${instruction.right.value}`);
             break;
           }
           case "var": {
             output += formatOp(
               "mov",
               "r14",
-              memoryOffset(parseInt(instruction.right.value, 10))
+              memoryOffset(instruction.right.value!)
             );
             break;
           }
@@ -241,7 +247,7 @@ _main:    push      rbx
               formatOp(
                 mov,
                 "rsi",
-                `${size} ${memoryOffset(instruction.address / 8)}`
+                `${size} ${memoryOffset(instruction.address! / 8)}`
               ) +
               formatOp("call", "_printf") +
               formatOp("pop", "rbx");

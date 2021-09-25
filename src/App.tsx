@@ -34,6 +34,19 @@ function downloadFile(data: string, fileName: string, type = "text/plain") {
   document.body.removeChild(a);
 }
 
+function compileAsm(instructions: Instruction[]) {
+  const instructionsToParse = (instructions.filter(
+    (i) => i.type !== "emptyInstruction" && i.valid
+  ) as Instruction[])
+    .map((i) => i.fragments.map((f) => f?.value).join(" "))
+    .join("\n");
+  const [pScopes, pInstructions, pMaxMemory, jumps] = parse(
+    instructionsToParse
+  );
+  const compiled = compile(pScopes, pInstructions, pMaxMemory, jumps);
+  return compiled;
+}
+
 function App() {
   const [macros, setMacros] = useState<Macro[]>([]);
   const [instructions, setInstructions] = useState<Instruction[]>([
@@ -41,6 +54,10 @@ function App() {
   ]);
   const [outputs, setOutputs] = useState<Output[]>([]);
   const [focusIndex, setFocusIndex] = useState<number>(0);
+  const [activeRightTab, setActiveRightTab] = useState<"build" | "asm">(
+    "build"
+  );
+  const [asm, setAsm] = useState("");
 
   useEffect(() => {
     const handle = (e: KeyboardEvent) => {
@@ -56,6 +73,10 @@ function App() {
     window.addEventListener("keydown", handle);
     return () => window.removeEventListener("keydown", handle);
   });
+
+  useEffect(() => {
+    setAsm(compileAsm(instructions));
+  }, [instructions]);
 
   const editor = (
     <Editor
@@ -94,72 +115,61 @@ function App() {
     </code>
   ));
 
+  function runInInterpreter() {
+    outputs.splice(0, outputs.length);
+    const instructionsToParse = (instructions.filter(
+      (i) => i.type !== "emptyInstruction"
+    ) as Instruction[])
+      .map((i) => i.fragments.map((f) => f?.value).join(" "))
+      .join("\n");
+    const [pScopes, pInstructions] = parse(instructionsToParse);
+    const { peakMemory } = execute(pScopes, pInstructions, (output: Output) => {
+      outputs.push(output);
+      setOutputs(outputs.slice());
+    });
+    outputs.push({
+      lineNumber: instructions.length,
+      value: `Execution finished. Peak memory usage: ${peakMemory / 8} byte${
+        peakMemory / 8 !== 1 ? "s" : ""
+      }.`,
+    });
+    setOutputs(outputs.slice());
+  }
+
   return (
     <div className="App">
-      <div className={"top"}>
-        <div className={classnames("left", { hasFocus: focusIndex === 0 })}>
-          {editor}
+      <div className={classnames("left", { hasFocus: focusIndex === 0 })}>
+        <div className="header">
+          <button className="active">untitled.rvr</button>
         </div>
-        <div className={"right"}>{macrosRendered}</div>
+        {editor}
       </div>
-      <div className="bottom">
-        <div className="buttons">
+      <div className="right">
+        <div className="macros">{macrosRendered}</div>
+        <div className="header">
           <button
+            className={activeRightTab === "build" ? "active" : ""}
             onClick={() => {
-              outputs.splice(0, outputs.length);
-              const instructionsToParse = (instructions.filter(
-                (i) => i.type !== "emptyInstruction"
-              ) as Instruction[])
-                .map((i) => i.fragments.map((f) => f?.value).join(" "))
-                .join("\n");
-              console.log(instructionsToParse);
-              const [pScopes, pInstructions] = parse(instructionsToParse);
-              console.log(pScopes, pInstructions);
-              const { peakMemory } = execute(
-                pScopes,
-                pInstructions,
-                (output: Output) => {
-                  outputs.push(output);
-                  setOutputs(outputs.slice());
-                }
-              );
-              outputs.push({
-                lineNumber: instructions.length,
-                value: `Execution finished. Peak memory usage: ${
-                  peakMemory / 8
-                } byte${peakMemory / 8 !== 1 ? "s" : ""}.`,
-              });
-              setOutputs(outputs.slice());
+              setActiveRightTab("build");
             }}
           >
-            Run
+            Run / Build
           </button>
           <button
+            className={activeRightTab === "asm" ? "active" : ""}
             onClick={() => {
-              outputs.splice(0, outputs.length);
-              const instructionsToParse = (instructions.filter(
-                (i) => i.type !== "emptyInstruction"
-              ) as Instruction[])
-                .map((i) => i.fragments.map((f) => f?.value).join(" "))
-                .join("\n");
-              console.log(instructionsToParse);
-              const [pScopes, pInstructions, pMaxMemory, jumps] = parse(
-                instructionsToParse
-              );
-              console.log(pScopes, pInstructions, pMaxMemory);
-              const compiled = compile(
-                pScopes,
-                pInstructions,
-                pMaxMemory,
-                jumps
-              );
-              downloadFile(compiled, "output.asm");
+              setActiveRightTab("asm");
             }}
           >
-            Compile
+            Assembly
           </button>
         </div>
-        <div className="outputs">{outputsRendered}</div>
+        {activeRightTab === "build" && (
+          <div className="outputs">{outputsRendered}</div>
+        )}
+        {activeRightTab === "asm" && (
+          <textarea readOnly className="asm" value={asm} />
+        )}
       </div>
     </div>
   );
