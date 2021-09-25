@@ -59,8 +59,9 @@ export function compile(
 ) {
   let output = `
 ; --------------------------------------------------
-; Generated with River Compiler 1.0
-; Targetting assembler nasm 2.3;
+; Generated with river compiler 1.0
+; Targeting OSX x64 with assembler nasm 2.15.05
+; nasm -fmacho64 malloc.asm && gcc malloc.o
 ; --------------------------------------------------
           global     _main
           extern     _malloc, _printf

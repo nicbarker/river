@@ -254,6 +254,18 @@ code {
   width: auto;
 }
 
+.assemblyContainer {
+  height: 100%;
+}
+
+.assemblyContainer .header {
+  background: #4f4d6f;
+}
+
+.assemblyContainer .header button {
+  background: #4f4d6f;
+}
+
 .asm {
   text-align: left;
   background: none;

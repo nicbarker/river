@@ -168,7 +168,14 @@ function App() {
           <div className="outputs">{outputsRendered}</div>
         )}
         {activeRightTab === "asm" && (
-          <textarea readOnly className="asm" value={asm} />
+          <div className="assemblyContainer">
+            <div className="header">
+              <button onClick={() => downloadFile(asm, "untitled.asm")}>
+                Download
+              </button>
+            </div>
+            <textarea readOnly className="asm" value={asm} />
+          </div>
         )}
       </div>
     </div>
