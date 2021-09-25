@@ -153,7 +153,7 @@ function App() {
               setActiveRightTab("build");
             }}
           >
-            Run / Build
+            Run
           </button>
           <button
             className={activeRightTab === "asm" ? "active" : ""}
