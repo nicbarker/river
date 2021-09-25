@@ -271,11 +271,12 @@ code {
   background: none;
   border: none;
   font-family: "Source Code Pro";
+  font-weight: 600;
   width: 500px;
   height: 100%;
   resize: none;
-  color: #fff;
-  padding: 0 16px;
+  color: #eee;
+  padding: 12px 16px;
   box-sizing: border-box;
   font-size: 14px;
 }

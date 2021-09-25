@@ -57,8 +57,7 @@ export function compile(
   maxMemory: number,
   jumps: number[]
 ) {
-  let output = `
-; --------------------------------------------------
+  let output = `; --------------------------------------------------
 ; Generated with river compiler 1.0
 ; Targeting OSX x64 with assembler nasm 2.15.05
 ; nasm -fmacho64 malloc.asm && gcc malloc.o
