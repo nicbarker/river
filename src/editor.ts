@@ -356,7 +356,6 @@ export function handleKeyStroke({
     } else {
       switch (key) {
         case "Enter": {
-          console.log(found[0]);
           instructions.splice(
             instructionIndex,
             1,
@@ -366,6 +365,7 @@ export function handleKeyStroke({
             instructionIndex + found[0].instructions.length - 1
           );
           setMacroSearchString(undefined);
+          setInstructions(instructions.slice());
           break;
         }
         case "Backspace": {

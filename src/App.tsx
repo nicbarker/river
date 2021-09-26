@@ -12,7 +12,7 @@ import {
 } from "./editor";
 import { compile } from "./compile";
 
-type Output = { value: string; lineNumber: number };
+export type Output = { value: string; lineNumber: number };
 
 function downloadFile(data: string, fileName: string, type = "text/plain") {
   // Create an invisible A element
@@ -127,26 +127,26 @@ function App() {
     </code>
   ));
 
-  // function runInInterpreter() {
-  //   outputs.splice(0, outputs.length);
-  //   const instructionsToParse = (instructions.filter(
-  //     (i) => i.type !== "emptyInstruction"
-  //   ) as Instruction[])
-  //     .map((i) => i.fragments.map((f) => f?.value).join(" "))
-  //     .join("\n");
-  //   const [pScopes, pInstructions] = parse(instructionsToParse);
-  //   const { peakMemory } = execute(pScopes, pInstructions, (output: Output) => {
-  //     outputs.push(output);
-  //     setOutputs(outputs.slice());
-  //   });
-  //   outputs.push({
-  //     lineNumber: instructions.length,
-  //     value: `Execution finished. Peak memory usage: ${peakMemory / 8} byte${
-  //       peakMemory / 8 !== 1 ? "s" : ""
-  //     }.`,
-  //   });
-  //   setOutputs(outputs.slice());
-  // }
+  function runInInterpreter() {
+    outputs.splice(0, outputs.length);
+    const instructionsToParse = (instructions.filter(
+      (i) => i.type !== "emptyInstruction"
+    ) as Instruction[])
+      .map((i) => i.fragments.map((f) => f?.value).join(" "))
+      .join("\n");
+    const [pScopes, pInstructions] = parse(instructionsToParse);
+    const { peakMemory } = execute(pScopes, pInstructions, (output: Output) => {
+      outputs.push(output);
+      setOutputs(outputs.slice());
+    });
+    outputs.push({
+      lineNumber: instructions.length,
+      value: `Execution finished. Peak memory usage: ${peakMemory / 8} byte${
+        peakMemory / 8 !== 1 ? "s" : ""
+      }.`,
+    });
+    setOutputs(outputs.slice());
+  }
 
   return (
     <div className="App">
@@ -164,7 +164,7 @@ function App() {
               setActiveRightTab("build");
             }}
           >
-            Run
+            VM
           </button>
           <button
             className={activeRightTab === "asm" ? "active" : ""}
@@ -184,7 +184,12 @@ function App() {
           </button>
         </div>
         {activeRightTab === "build" && (
-          <div className="outputs">{outputsRendered}</div>
+          <div className="buildContainer">
+            <div className="header subheader">
+              <button onClick={() => runInInterpreter()}>Run</button>
+            </div>
+            <div className="outputs">{outputsRendered}</div>
+          </div>
         )}
         {activeRightTab === "asm" && (
           <div className="assemblyContainer">

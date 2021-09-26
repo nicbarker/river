@@ -1,12 +1,17 @@
-import { dec2bin } from "./parse";
+import { Output } from "./App";
+import { CompiledInstruction, dec2bin, Scope } from "./parse";
 
-const DEBUG = false;
-const DOUBLE_DEBUG = false;
+const DEBUG = true;
+const DOUBLE_DEBUG = true;
 
-export function execute(scopesFinal, instructions, outputCallback) {
+export function execute(
+  scopesFinal: Scope[],
+  instructions: CompiledInstruction[],
+  outputCallback: (output: Output) => void
+) {
   const memory = Array(200).fill(undefined);
 
-  function writeBinaryToStack(value, offset) {
+  function writeBinaryToStack(value: number[], offset: number) {
     for (let i = 0; i < value.length; i++) {
       memory[offset + i] = value[i];
     }
@@ -68,26 +73,27 @@ export function execute(scopesFinal, instructions, outputCallback) {
             .join(""),
           2
         );
-        let sourceValue;
+        let sourceValue: number = 0;
         switch (instruction.source) {
           case "const": {
             DEBUG &&
               console.log(
                 `set ${
                   instruction.action
-                } with constant value ${instruction.value.padStart(
-                  instruction.size,
-                  "0"
-                )} at offset ${instruction.target}`
+                } with constant value ${instruction.value
+                  ?.toString()
+                  .padStart(instruction.size, "0")} at offset ${
+                  instruction.target
+                }`
               );
-            sourceValue = parseInt(instruction.value, 2);
+            sourceValue = instruction.value!;
             break;
           }
           case "var": {
             const value = memory
               .slice(
                 instruction.address,
-                instruction.address + instruction.size
+                instruction.address! + instruction.size
               )
               .join("");
             DEBUG &&
@@ -100,7 +106,7 @@ export function execute(scopesFinal, instructions, outputCallback) {
           default:
             break;
         }
-        let toWrite;
+        let toWrite = 0;
         switch (instruction.action) {
           case "=": {
             toWrite = sourceValue;
@@ -130,7 +136,9 @@ export function execute(scopesFinal, instructions, outputCallback) {
             break;
         }
         writeBinaryToStack(
-          dec2bin(toWrite, instruction.size),
+          dec2bin(toWrite, instruction.size)
+            .split("")
+            .map((v) => parseInt(v, 10)),
           instruction.target
         );
         DOUBLE_DEBUG && console.log(`new memory state:`, memory);
@@ -143,17 +151,18 @@ export function execute(scopesFinal, instructions, outputCallback) {
               instruction.action
             } ${JSON.stringify(instruction.right)}`
           );
-        let leftValue, rightValue;
+        let leftValue = 0,
+          rightValue = 0;
         switch (instruction.left.source) {
           case "const": {
-            leftValue = parseInt(instruction.left.value, 10);
+            leftValue = instruction.left.value!;
             break;
           }
           case "var": {
             const value = memory
               .slice(
                 instruction.left.address,
-                instruction.left.address + instruction.left.size
+                instruction.left.address! + instruction.left.size
               )
               .join("");
             leftValue = parseInt(value, 2);
@@ -164,14 +173,14 @@ export function execute(scopesFinal, instructions, outputCallback) {
         }
         switch (instruction.right.source) {
           case "const": {
-            rightValue = parseInt(instruction.right.value, 10);
+            rightValue = instruction.right.value!;
             break;
           }
           case "var": {
             const value = memory
               .slice(
                 instruction.right.address,
-                instruction.right.address + instruction.right.size
+                instruction.right.address! + instruction.right.size
               )
               .join("");
             rightValue = parseInt(value, 2);
@@ -234,12 +243,15 @@ export function execute(scopesFinal, instructions, outputCallback) {
               memory
                 .slice(
                   instruction.address,
-                  instruction.address + instruction.size
+                  instruction.address! + instruction.size
                 )
                 .join(""),
               2
             );
-            outputCallback({ lineNumber: instructionIndex, value });
+            outputCallback({
+              lineNumber: instructionIndex,
+              value: value.toString(),
+            });
             break;
           }
           default:
