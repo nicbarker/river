@@ -31,9 +31,13 @@ code {
 
 .left {
   flex-grow: 1;
-  background: #414b4d;
   border-radius: 8px 0 0 8px;
   overflow: hidden;
+  background: #373f41;
+}
+
+.left.hasFocus {
+  background: #414b4d;
 }
 
 .header {
@@ -97,15 +101,26 @@ code {
 }
 
 .macroOuter {
+  display: flex;
+  flex-direction: column;
   border-top: 4px solid rgba(255, 255, 255, 0.1);
+}
+
+.macroOuter.hasFocus {
+  border-top-color: #f77825;
+  background: #505d60;
 }
 
 .macroTitle {
   color: #fff;
-  font-weight: bold;
-  font-size: 14px;
+  background: #5f7174;
+  font-size: 15px;
   text-align: left;
-  padding: 4px 12px;
+  padding: 8px 12px;
+  margin: 12px 0 0 12px;
+  display: flex;
+  align-self: flex-start;
+  border-radius: 5px;
 }
 
 .hasFocus {
@@ -258,11 +273,11 @@ code {
   height: 100%;
 }
 
-.assemblyContainer .header {
+.header.subheader {
   background: #4f4d6f;
 }
 
-.assemblyContainer .header button {
+.header.subheader button {
   background: #4f4d6f;
 }
 

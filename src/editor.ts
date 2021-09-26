@@ -284,7 +284,7 @@ export const fragmentLength: { [k in Instruction["type"]]: number } = {
 };
 
 export const fragmentHints: { [k in Instruction["type"]]: string[] } = {
-  emptyInstruction: ["scope | def | assign | compare | jump | os"],
+  emptyInstruction: ["scope | def | assign | compare | jump | os | macro"],
   defInstruction: ["def", "local | parent", "8 | 16 | 32 | 64"],
   assignInstruction: [
     "assign",
@@ -314,6 +314,7 @@ export function handleKeyStroke({
   instructionIndex,
   selectedInstructions,
   macros,
+  macroSearchString,
   key,
   shiftKey,
   setInstructions,
@@ -321,6 +322,9 @@ export function handleKeyStroke({
   setCursorPos,
   setSelectedInstructions,
   setMacros,
+  setMacroSearchString,
+  setActiveRightTab,
+  setFocusIndex,
 }: {
   instruction: Instruction;
   instructions: Instruction[];
@@ -328,6 +332,7 @@ export function handleKeyStroke({
   instructionIndex: number;
   selectedInstructions: Instruction[];
   macros: Macro[];
+  macroSearchString?: string;
   key: string;
   shiftKey: boolean;
   setInstructions: (instructions: Instruction[]) => void;
@@ -335,7 +340,45 @@ export function handleKeyStroke({
   setCursorPos: (cursorPos: number) => void;
   setSelectedInstructions: (instructions: Instruction[]) => void;
   setMacros: (macros: Macro[]) => void;
+  setMacroSearchString: (macroSearchString?: string) => void;
+  setActiveRightTab: (rightTab: "build" | "asm" | "macros") => void;
+  setFocusIndex: (focusIndex: number) => void;
 }) {
+  if (typeof macroSearchString !== "undefined") {
+    const found = macros.filter((m) =>
+      m.name
+        .toLocaleLowerCase()
+        .startsWith(macroSearchString.toLocaleLowerCase())
+    );
+    console.log(found);
+    if (key.match(/^[ -~]$/)) {
+      setMacroSearchString(macroSearchString + key);
+    } else {
+      switch (key) {
+        case "Enter": {
+          console.log(found[0]);
+          instructions.splice(
+            instructionIndex,
+            1,
+            ...JSON.parse(JSON.stringify(found[0].instructions))
+          );
+          setInstructionIndex(
+            instructionIndex + found[0].instructions.length - 1
+          );
+          setMacroSearchString(undefined);
+          break;
+        }
+        case "Backspace": {
+          setMacroSearchString(
+            macroSearchString.slice(0, macroSearchString.length - 1)
+          );
+          break;
+        }
+      }
+    }
+    return;
+  }
+
   if (selectedInstructions.length > 0) {
     if (key === "ArrowUp") {
       const previousInstruction = instructions[instructionIndex - 1]!;
@@ -389,11 +432,12 @@ export function handleKeyStroke({
       }
     } else if (key === "m") {
       macros.push({
-        name: "New Macro",
-        instructions: selectedInstructions.slice(),
+        name: "Untitled",
+        instructions: JSON.parse(JSON.stringify(selectedInstructions)),
       });
       setMacros(macros.slice());
-      console.log(macros);
+      setActiveRightTab("macros");
+      setFocusIndex(macros.length);
     }
     return;
   }
@@ -465,6 +509,10 @@ export function handleKeyStroke({
           fragments: [{ type: "instruction", value: "os" }],
         };
         increment = "cursor";
+        break;
+      }
+      case "m": {
+        setMacroSearchString("");
         break;
       }
       default:
@@ -955,10 +1003,11 @@ export function handleKeyStroke({
         setCursorPos(cursorPos - 1);
       } else {
         instruction.fragments.splice(cursorPos, 1);
+        instruction.valid = false;
         setInstructions(instructions.slice());
       }
     } else if (cursorPos === 0) {
-      if (instructionIndex === 0 && instruction.fragments.length === 1) {
+      if (instructionIndex === 0 && instructions.length === 1) {
         instructions[instructionIndex] = {
           type: "emptyInstruction",
           fragments: [],
