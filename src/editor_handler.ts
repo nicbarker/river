@@ -317,6 +317,7 @@ export function handleKeyStroke({
   macroSearchString,
   key,
   shiftKey,
+  onCursorUnderflow,
   setInstructions,
   setInstructionIndex,
   setCursorPos,
@@ -335,6 +336,7 @@ export function handleKeyStroke({
   macroSearchString?: string;
   key: string;
   shiftKey: boolean;
+  onCursorUnderflow?: () => void;
   setInstructions: (instructions: Instruction[]) => void;
   setInstructionIndex: (instructionIndex: number) => void;
   setCursorPos: (cursorPos: number) => void;
@@ -350,7 +352,6 @@ export function handleKeyStroke({
         .toLocaleLowerCase()
         .startsWith(macroSearchString.toLocaleLowerCase())
     );
-    console.log(found);
     if (key.match(/^[ -~]$/)) {
       setMacroSearchString(macroSearchString + key);
     } else {
@@ -997,7 +998,6 @@ export function handleKeyStroke({
       }
       setInstructionIndex(Math.max(earliest - 1, 0));
       setInstructions(instructions.slice(0));
-      console.log(instructions, instructionIndex);
     } else if (cursorPos > 0) {
       if (cursorPos >= instruction.fragments.length) {
         setCursorPos(cursorPos - 1);
@@ -1065,16 +1065,20 @@ export function handleKeyStroke({
       );
     }
     // ---------------------------------------------
-  } else if (key === "ArrowUp" && instructionIndex > 0) {
-    const previousInstruction = instructions[instructionIndex - 1]!;
-    if (cursorPos > previousInstruction.fragments.length - 1) {
-      setCursorPos(Math.max(previousInstruction.fragments.length - 1, 0));
-    }
-    setInstructionIndex(instructionIndex - 1);
-    if (shiftKey) {
-      selectedInstructions.push(instruction);
-      selectedInstructions.push(previousInstruction);
-      setSelectedInstructions(selectedInstructions.slice());
+  } else if (key === "ArrowUp") {
+    if (onCursorUnderflow && instructionIndex === 0) {
+      onCursorUnderflow();
+    } else if (instructionIndex > 0) {
+      const previousInstruction = instructions[instructionIndex - 1]!;
+      if (cursorPos > previousInstruction.fragments.length - 1) {
+        setCursorPos(Math.max(previousInstruction.fragments.length - 1, 0));
+      }
+      setInstructionIndex(instructionIndex - 1);
+      if (shiftKey) {
+        selectedInstructions.push(instruction);
+        selectedInstructions.push(previousInstruction);
+        setSelectedInstructions(selectedInstructions.slice());
+      }
     }
     // ---------------------------------------------
   } else if (

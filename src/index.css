@@ -123,8 +123,8 @@ code {
   border-radius: 5px;
 }
 
-.hasFocus {
-  /* border-top: 4px solid #f77825; */
+.macroTitle.hasFocus {
+  background: rgba(0, 240, 210, 0.4);
 }
 
 .line {
@@ -270,7 +270,9 @@ code {
 }
 
 .assemblyContainer {
-  height: 100%;
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
 }
 
 .header.subheader {
@@ -281,17 +283,44 @@ code {
   background: #4f4d6f;
 }
 
-.asm {
-  text-align: left;
-  background: none;
-  border: none;
+.asmInner {
   font-family: "Source Code Pro";
   font-weight: 600;
   width: 500px;
-  height: 100%;
-  resize: none;
   color: #eee;
   padding: 12px 16px;
   box-sizing: border-box;
   font-size: 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  flex-grow: 1;
+  height: 0;
+  overflow: auto;
+}
+
+.asmBlock {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.asmBlock.highlight {
+  background: #5b6d71;
+}
+
+.asmLine {
+  white-space: pre-line;
+}
+
+.asmLine .red {
+  color: #f25975;
+}
+
+.asmLine .blue {
+  color: #1bcee6;
+}
+
+.asmLine .purple {
+  color: #bc89e8;
 }

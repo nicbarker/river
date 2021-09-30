@@ -1,4 +1,316 @@
+/* eslint-disable no-sparse-arrays */
 import { CompiledInstruction, Scope } from "./parse";
+
+function registerWithSize(reg: string, size: number) {
+  let output = "";
+  switch (reg) {
+    case "rax": {
+      switch (size) {
+        case 8:
+          output = "al";
+          break;
+        case 16:
+          output = "ax";
+          break;
+        case 32:
+          output = "eax";
+          break;
+        case 64:
+          output = "rax";
+          break;
+        default:
+          break;
+      }
+      break;
+    }
+    case "rcx": {
+      switch (size) {
+        case 8:
+          output = "cl";
+          break;
+        case 16:
+          output = "cx";
+          break;
+        case 32:
+          output = "ecx";
+          break;
+        case 64:
+          output = "rcx";
+          break;
+        default:
+          break;
+      }
+      break;
+    }
+    case "rdx": {
+      switch (size) {
+        case 8:
+          output = "dl";
+          break;
+        case 16:
+          output = "dx";
+          break;
+        case 32:
+          output = "edx";
+          break;
+        case 64:
+          output = "rdx";
+          break;
+        default:
+          break;
+      }
+      break;
+    }
+    case "rbx": {
+      switch (size) {
+        case 8:
+          output = "bl";
+          break;
+        case 16:
+          output = "bx";
+          break;
+        case 32:
+          output = "ebx";
+          break;
+        case 64:
+          output = "rbx";
+          break;
+        default:
+          break;
+      }
+      break;
+    }
+    case "rsi": {
+      switch (size) {
+        case 8:
+          output = "sil";
+          break;
+        case 16:
+          output = "si";
+          break;
+        case 32:
+          output = "esi";
+          break;
+        case 64:
+          output = "rsi";
+          break;
+        default:
+          break;
+      }
+      break;
+    }
+    case "rdi": {
+      switch (size) {
+        case 8:
+          output = "dil";
+          break;
+        case 16:
+          output = "di";
+          break;
+        case 32:
+          output = "edi";
+          break;
+        case 64:
+          output = "rdi";
+          break;
+        default:
+          break;
+      }
+      break;
+    }
+    case "rsp": {
+      switch (size) {
+        case 8:
+          output = "spl";
+          break;
+        case 16:
+          output = "sp";
+          break;
+        case 32:
+          output = "esp";
+          break;
+        case 64:
+          output = "rsp";
+          break;
+        default:
+          break;
+      }
+      break;
+    }
+    case "rbp": {
+      switch (size) {
+        case 8:
+          output = "bpl";
+          break;
+        case 16:
+          output = "bp";
+          break;
+        case 32:
+          output = "ebp";
+          break;
+        case 64:
+          output = "rbp";
+          break;
+        default:
+          break;
+      }
+      break;
+    }
+    case "r8": {
+      switch (size) {
+        case 8:
+          output = "r8b";
+          break;
+        case 16:
+          output = "r8w";
+          break;
+        case 32:
+          output = "r8d";
+          break;
+        case 64:
+          output = "r8";
+          break;
+        default:
+          break;
+      }
+      break;
+    }
+    case "r9": {
+      switch (size) {
+        case 8:
+          output = "r9b";
+          break;
+        case 16:
+          output = "r9w";
+          break;
+        case 32:
+          output = "r9d";
+          break;
+        case 64:
+          output = "r9";
+          break;
+        default:
+          break;
+      }
+      break;
+    }
+    case "r10": {
+      switch (size) {
+        case 8:
+          output = "r10b";
+          break;
+        case 16:
+          output = "r10w";
+          break;
+        case 32:
+          output = "r10d";
+          break;
+        case 64:
+          output = "r10";
+          break;
+        default:
+          break;
+      }
+      break;
+    }
+    case "r11": {
+      switch (size) {
+        case 8:
+          output = "r11b";
+          break;
+        case 16:
+          output = "r11w";
+          break;
+        case 32:
+          output = "r11d";
+          break;
+        case 64:
+          output = "r11";
+          break;
+        default:
+          break;
+      }
+      break;
+    }
+    case "r12": {
+      switch (size) {
+        case 8:
+          output = "r12b";
+          break;
+        case 16:
+          output = "r12w";
+          break;
+        case 32:
+          output = "r12d";
+          break;
+        case 64:
+          output = "r12";
+          break;
+        default:
+          break;
+      }
+      break;
+    }
+    case "r13": {
+      switch (size) {
+        case 8:
+          output = "r13b";
+          break;
+        case 16:
+          output = "r13w";
+          break;
+        case 32:
+          output = "r13d";
+          break;
+        case 64:
+          output = "r13";
+          break;
+        default:
+          break;
+      }
+      break;
+    }
+    case "r14": {
+      switch (size) {
+        case 8:
+          output = "r14b";
+          break;
+        case 16:
+          output = "r14w";
+          break;
+        case 32:
+          output = "r14d";
+          break;
+        case 64:
+          output = "r14";
+          break;
+        default:
+          break;
+      }
+      break;
+    }
+    case "r15": {
+      switch (size) {
+        case 8:
+          output = "r15b";
+          break;
+        case 16:
+          output = "r15w";
+          break;
+        case 32:
+          output = "r15d";
+          break;
+        case 64:
+          output = "r15";
+          break;
+        default:
+          break;
+      }
+      break;
+    }
+  }
+  return output;
+}
 
 function moveAndLabelForSize(instructionSize: number) {
   let size = "";
@@ -26,30 +338,17 @@ function moveAndLabelForSize(instructionSize: number) {
   return [mov, size];
 }
 
-function formatOp(
-  instruction: string,
-  firstOperand: string,
-  secondOperand?: string
-) {
-  return `${"".padEnd(10)}${instruction.padEnd(10)}${firstOperand}${
+function formatOp(firstOperand: string, secondOperand?: string) {
+  return `${firstOperand}${
     secondOperand === undefined ? "" : `, ${secondOperand}`
-  }\n`;
-}
-
-function formatLabel(label: string) {
-  return `j${label}:\n`;
-}
-
-function formatLineNumber(
-  lineNumber: number,
-  instruction: CompiledInstruction
-) {
-  return `${"".padEnd(10)}; ${lineNumber}: ${instruction.serialized}\n`;
+  }`;
 }
 
 function memoryOffset(offset: number) {
   return `[r12${offset > 0 ? " + " + offset : ""}]`;
 }
+
+export type ASMBlock = [number, [string?, string?, string?][]];
 
 export function compile(
   scopesFinal: Scope[],
@@ -57,33 +356,46 @@ export function compile(
   maxMemory: number,
   jumps: number[]
 ) {
-  let output = `; --------------------------------------------------
-; Generated with river compiler 1.0
-; Targeting OSX x64 with assembler nasm 2.15.05
-; nasm -fmacho64 malloc.asm && gcc malloc.o
-; --------------------------------------------------
-          global     _main
-          extern     _malloc, _printf
-
-          section   .text
-_main:    push      rbx
-          lea       rdi, ${maxMemory / 8}
-          call      _malloc
-          pop       rbx
-          mov       r12, rax
-`;
+  const output: ASMBlock[] = [
+    [
+      -1,
+      [
+        ["; --------------------------------------------------"],
+        ["; Generated with river compiler 1.0"],
+        ["; Targeting OSX x64 with assembler nasm 2.15.05"],
+        ["; nasm -fmacho64 malloc.asm && gcc malloc.o"],
+        ["; --------------------------------------------------"],
+        [, "global", "_main"],
+        [, "extern", "_malloc, _printf"],
+        [],
+        [, "section", ".text"],
+        ["_main:", "push", "rbx"],
+        [, "mov", `rdi, ${maxMemory / 8}`],
+        [, "call", "_malloc"],
+        [, "pop", "rbx"],
+        [, "mov", "r12, rax"],
+      ],
+    ],
+  ];
   for (
     let instructionIndex = 0;
     instructionIndex < instructions.length;
     instructionIndex++
   ) {
     const instruction = instructions[instructionIndex];
+    const instructionOutputs: ASMBlock = [
+      instruction.originalInstructionIndex,
+      [],
+    ];
     if (jumps.includes(instructionIndex)) {
-      output += formatLabel(instructionIndex.toString());
+      instructionOutputs[1].push([`j${instructionIndex.toString()}:`]);
     }
     switch (instruction.instruction) {
       case "assign": {
-        output += formatLineNumber(instructionIndex, instruction);
+        instructionOutputs[1].push([
+          ,
+          `; ${instructionIndex}: ${instruction.serialized}`,
+        ]);
         const [mov, size] = moveAndLabelForSize(instruction.size);
         let source = "";
         const target = instruction.target / 8;
@@ -102,16 +414,23 @@ _main:    push      rbx
                 break;
               }
               case "*": {
-                output += formatOp(mov, "r13", memoryOffset(target));
+                instructionOutputs[1].push([
+                  ,
+                  mov,
+                  formatOp("r13", memoryOffset(target)),
+                ]);
                 operands = ["r13", source];
                 break;
               }
               case "/":
               case "%": {
-                output +=
-                  formatOp("xor", "rdx", "rdx") +
-                  formatOp("mov", "r13", source) +
-                  formatOp(mov, "rax", memoryOffset(target));
+                instructionOutputs[1].push([, "xor", "rdx, rdx"]);
+                instructionOutputs[1].push([, mov, formatOp("r13", source)]);
+                instructionOutputs[1].push([
+                  ,
+                  mov,
+                  formatOp("rax", memoryOffset(target)),
+                ]);
                 operands = ["r13"];
                 break;
               }
@@ -121,12 +440,18 @@ _main:    push      rbx
             break;
           }
           case "var": {
-            output += formatOp(
+            instructionOutputs[1].push([
+              ,
               mov,
-              "r13",
-              memoryOffset(instruction.address! / 8)
-            );
-            operands = [memoryOffset(target), "r13"];
+              formatOp(
+                "r13",
+                `${size} ${memoryOffset(instruction.address! / 8)}`
+              ),
+            ]);
+            operands = [
+              memoryOffset(target),
+              registerWithSize("r13", instruction.size),
+            ];
             break;
           }
           default:
@@ -134,33 +459,67 @@ _main:    push      rbx
         }
         switch (instruction.action) {
           case "=": {
-            output += formatOp("mov", operands[0], operands[1]);
+            instructionOutputs[1].push([
+              ,
+              "mov",
+              formatOp(operands[0], operands[1]),
+            ]);
             break;
           }
           case "+": {
-            output += formatOp("add", operands[0], operands[1]);
+            instructionOutputs[1].push([
+              ,
+              "add",
+              formatOp(operands[0], operands[1]),
+            ]);
             break;
           }
           case "-": {
-            output += formatOp("sub", operands[0], operands[1]);
+            instructionOutputs[1].push([
+              ,
+              "sub",
+              formatOp(operands[0], operands[1]),
+            ]);
             break;
           }
           case "*": {
-            output +=
-              formatOp("imul", operands[0], operands[1]) +
-              formatOp("mov", memoryOffset(target), "r13");
+            instructionOutputs[1].push([
+              ,
+              "imul",
+              formatOp(operands[0], operands[1]),
+            ]);
+            instructionOutputs[1].push([
+              ,
+              "mov",
+              formatOp(
+                memoryOffset(target),
+                registerWithSize("r13", instruction.size)
+              ),
+            ]);
             break;
           }
           case "/": {
-            output +=
-              formatOp("idiv", operands[0]) +
-              formatOp("mov", memoryOffset(target), "rax");
+            instructionOutputs[1].push([, "idiv", operands[0]]);
+            instructionOutputs[1].push([
+              ,
+              "mov",
+              formatOp(
+                memoryOffset(target),
+                registerWithSize("rax", instruction.size)
+              ),
+            ]);
             break;
           }
           case "%": {
-            output +=
-              formatOp("idiv", operands[0]) +
-              formatOp("mov", memoryOffset(target), "rdx");
+            instructionOutputs[1].push([, "idiv", operands[0]]);
+            instructionOutputs[1].push([
+              ,
+              "mov",
+              formatOp(
+                memoryOffset(target),
+                registerWithSize("rdx", instruction.size)
+              ),
+            ]);
             break;
           }
           default:
@@ -169,16 +528,21 @@ _main:    push      rbx
         break;
       }
       case "jump": {
-        output +=
-          formatLineNumber(instructionIndex, instruction) +
-          formatOp("jmp", `j${instruction.target}`);
+        instructionOutputs[1].push([
+          ,
+          `; ${instructionIndex}: ${instruction.serialized}`,
+        ]);
+        instructionOutputs[1].push([, "jmp", `j${instruction.target}`]);
         break;
       }
       case "compare": {
-        output += formatLineNumber(instructionIndex, instruction);
+        instructionOutputs[1].push([
+          ,
+          `; ${instructionIndex}: ${instruction.serialized}`,
+        ]);
         let jump = "";
         switch (instruction.action) {
-          case "=":
+          case "==":
             jump = "jne";
             break;
           case "<":
@@ -201,15 +565,19 @@ _main:    push      rbx
         }
         switch (instruction.left.source) {
           case "const": {
-            output += formatOp("mov", "r13", `${instruction.left.value}`);
+            instructionOutputs[1].push([
+              ,
+              "mov",
+              formatOp("r13", `${instruction.left.value}`),
+            ]);
             break;
           }
           case "var": {
-            output += formatOp(
+            instructionOutputs[1].push([
+              ,
               "mov",
-              "r13",
-              memoryOffset(instruction.left.value!)
-            );
+              formatOp("r13", memoryOffset(instruction.left.address! / 8)),
+            ]);
             break;
           }
           default:
@@ -217,40 +585,45 @@ _main:    push      rbx
         }
         switch (instruction.right.source) {
           case "const": {
-            output += formatOp("mov", "r14", `${instruction.right.value}`);
+            instructionOutputs[1].push([
+              ,
+              "mov",
+              formatOp("r14", `${instruction.right.value}`),
+            ]);
             break;
           }
           case "var": {
-            output += formatOp(
+            instructionOutputs[1].push([
+              ,
               "mov",
-              "r14",
-              memoryOffset(instruction.right.value!)
-            );
+              formatOp("r14", memoryOffset(instruction.right.address! / 8)),
+            ]);
             break;
           }
           default:
             break;
         }
-        output +=
-          formatOp("cmp", "r13", "r14") +
-          formatOp(jump, `j${instructionIndex + 2}`);
+        instructionOutputs[1].push([, "cmp", formatOp("r13", "r14")]);
+        instructionOutputs[1].push([, jump, `j${instructionIndex + 2}`]);
         break;
       }
       case "os": {
-        output += formatLineNumber(instructionIndex, instruction);
+        instructionOutputs[1].push([
+          ,
+          `; ${instructionIndex}: ${instruction.serialized}`,
+        ]);
         switch (instruction.action) {
           case "stdout": {
             const [mov, size] = moveAndLabelForSize(instruction.size);
-            output +=
-              formatOp("push", "rbx") +
-              formatOp("lea", "rdi", "[rel message]") +
-              formatOp(
-                mov,
-                "rsi",
-                `${size} ${memoryOffset(instruction.address! / 8)}`
-              ) +
-              formatOp("call", "_printf") +
-              formatOp("pop", "rbx");
+            instructionOutputs[1].push([, "push", "rbx"]);
+            instructionOutputs[1].push([, "lea", "rdi, [rel message]"]);
+            instructionOutputs[1].push([
+              ,
+              mov,
+              `rsi, ${size} ${memoryOffset(instruction.address! / 8)}`,
+            ]);
+            instructionOutputs[1].push([, "call", "_printf"]);
+            instructionOutputs[1].push([, "pop", "rbx"]);
             break;
           }
           default:
@@ -261,13 +634,32 @@ _main:    push      rbx
       default:
         break;
     }
+    if (instructionOutputs[1].length > 0) {
+      output.push(instructionOutputs);
+    }
   }
 
-  output += `          ret
-
-          section   .data
-message:  db        "%d", 0x0a
-`;
-
+  output.push([
+    -1,
+    [[, "ret"], [], [, "section", ".data"], ["message:", "db", `"%d", 0x0a`]],
+  ]);
   return output;
+}
+
+export function formatASM(blocks: ASMBlock[], width = 10) {
+  return (
+    blocks
+      .map((block) =>
+        block[1]
+          .map(
+            (line) =>
+              `${(line[0] || "").padEnd(width, " ")}${(line[1] || " ").padEnd(
+                width,
+                " "
+              )}${line[2] || ""}`
+          )
+          .join("\n")
+      )
+      .join("\n") + "\n"
+  );
 }

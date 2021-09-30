@@ -1,51 +1,14 @@
 import React, { useEffect, useState } from "react";
-import "./App.css";
+import "./app.css";
 import { parse } from "./parse";
 import { execute } from "./vm";
 import classnames from "classnames";
-import {
-  fragmentHints,
-  fragmentLength,
-  handleKeyStroke,
-  Instruction,
-  Macro,
-} from "./editor";
-import { compile } from "./compile";
+import { Editor } from "./editor";
+import { Instruction, Macro } from "./editor_handler";
+import { MacroEditor } from "./macro_editor";
+import { ASMTab } from "./asm_tab";
 
 export type Output = { value: string; lineNumber: number };
-
-function downloadFile(data: string, fileName: string, type = "text/plain") {
-  // Create an invisible A element
-  const a = document.createElement("a");
-  a.style.display = "none";
-  document.body.appendChild(a);
-
-  // Set the HREF to a Blob representation of the data to be downloaded
-  a.href = window.URL.createObjectURL(new Blob([data], { type }));
-
-  // Use download attribute to set set desired file name
-  a.setAttribute("download", fileName);
-
-  // Trigger the download by simulating click
-  a.click();
-
-  // Cleanup
-  window.URL.revokeObjectURL(a.href);
-  document.body.removeChild(a);
-}
-
-function compileAsm(instructions: Instruction[]) {
-  const instructionsToParse = (instructions.filter(
-    (i) => i.type !== "emptyInstruction" && i.valid
-  ) as Instruction[])
-    .map((i) => i.fragments.map((f) => f?.value).join(" "))
-    .join("\n");
-  const [pScopes, pInstructions, pMaxMemory, jumps] = parse(
-    instructionsToParse
-  );
-  const compiled = compile(pScopes, pInstructions, pMaxMemory, jumps);
-  return compiled;
-}
 
 function App() {
   const [macros, setMacros] = useState<Macro[]>([]);
@@ -57,7 +20,7 @@ function App() {
   const [activeRightTab, setActiveRightTab] = useState<
     "build" | "asm" | "macros"
   >("build");
-  const [asm, setAsm] = useState("");
+  const [instructionIndex, setInstructionIndex] = useState(0);
 
   useEffect(() => {
     const handle = (e: KeyboardEvent) => {
@@ -82,10 +45,6 @@ function App() {
     return () => window.removeEventListener("keydown", handle);
   });
 
-  useEffect(() => {
-    setAsm(compileAsm(instructions));
-  }, [instructions]);
-
   const editor = (
     <Editor
       hasFocus={focusIndex === 0}
@@ -96,28 +55,21 @@ function App() {
       setInstructions={setInstructions}
       setActiveRightTab={setActiveRightTab}
       setFocusIndex={setFocusIndex}
+      setInstructionIndex={setInstructionIndex}
     />
   );
 
   const macrosRendered = macros.map((macro, i) => (
-    <div
-      className={classnames("macroOuter", { hasFocus: focusIndex === i + 1 })}
-    >
-      <div className={"macroTitle"}>{macro.name}</div>
-      <Editor
-        hasFocus={focusIndex === i + 1}
-        isMacro={true}
-        macros={macros}
-        setMacros={setMacros}
-        instructions={macro.instructions}
-        setInstructions={(instructions: Instruction[]) => {
-          macro.instructions = instructions;
-          setMacros(macros.slice());
-        }}
-        setActiveRightTab={setActiveRightTab}
-        setFocusIndex={setFocusIndex}
-      />
-    </div>
+    <MacroEditor
+      key={i}
+      macro={macro}
+      macros={macros}
+      hasFocus={focusIndex === i + 1}
+      focusIndex={focusIndex}
+      setMacros={setMacros}
+      setActiveRightTab={setActiveRightTab}
+      setFocusIndex={setFocusIndex}
+    />
   ));
 
   const outputsRendered = outputs.map((o, index) => (
@@ -192,14 +144,10 @@ function App() {
           </div>
         )}
         {activeRightTab === "asm" && (
-          <div className="assemblyContainer">
-            <div className="header subheader">
-              <button onClick={() => downloadFile(asm, "untitled.asm")}>
-                Download
-              </button>
-            </div>
-            <textarea readOnly className="asm" value={asm} />
-          </div>
+          <ASMTab
+            instructions={instructions}
+            instructionIndex={instructionIndex}
+          />
         )}
         {activeRightTab === "macros" && (
           <div className="macros">
@@ -212,223 +160,6 @@ function App() {
       </div>
     </div>
   );
-}
-
-function renderInstructions(
-  instructions: Instruction[],
-  selectedInstructions: Instruction[],
-  instructionIndex: number,
-  cursorPos: number,
-  hasFocus: boolean,
-  macros: Macro[],
-  macroSearchString: string | undefined
-) {
-  let indent = 0;
-  return instructions.map((instruction, li) => {
-    const fragments = instruction.fragments.map((fragment, i) => [
-      <div
-        key={i}
-        className={classnames("fragment", fragment?.value, fragment?.type, {
-          highlight:
-            instructionIndex === li &&
-            cursorPos === i &&
-            selectedInstructions.length === 0 &&
-            hasFocus,
-        })}
-      >
-        {fragment?.value}
-      </div>,
-      <div key={i + "-space"}> </div>,
-    ]);
-
-    if (
-      instruction.type === "scopeInstruction" &&
-      instruction.fragments[1]?.value === "close"
-    ) {
-      indent -= 2;
-    }
-
-    let indentRendered = Array(indent)
-      .fill(0)
-      .map(() => <div className="indent"> </div>);
-
-    if (
-      instruction.type === "scopeInstruction" &&
-      instruction.fragments[1]?.value === "open"
-    ) {
-      indent += 2;
-    }
-
-    let contents: React.ReactElement;
-
-    if (typeof macroSearchString !== "undefined" && instructionIndex === li) {
-      const found = macros
-        .filter((m) =>
-          m.name
-            .toLocaleLowerCase()
-            .startsWith(macroSearchString.toLocaleLowerCase())
-        )
-        .map((m) => (
-          <>
-            <b className="bold-hint">
-              {m.name.slice(0, macroSearchString.length)}
-            </b>
-            {m.name.slice(macroSearchString.length)}
-          </>
-        ))
-        .map((e, i, arr) => (
-          <React.Fragment key={i}>
-            {e}
-            {i < arr.length - 1 ? " | " : null}
-          </React.Fragment>
-        ));
-      contents = (
-        <>
-          {indentRendered}
-          <div className={"empty fragment highlight"}>{found}</div>
-        </>
-      );
-    } else {
-      contents = (
-        <>
-          {indentRendered}
-          {fragments}
-          {((cursorPos >= instruction.fragments.length &&
-            cursorPos < fragmentLength[instruction.type]) ||
-            instruction.type === "emptyInstruction") &&
-            instructionIndex === li && (
-              <div
-                className={classnames("empty", "fragment", {
-                  highlight:
-                    instructionIndex === li &&
-                    selectedInstructions.length === 0 &&
-                    hasFocus,
-                })}
-              >
-                {selectedInstructions.length === 0 &&
-                  fragmentHints[instruction.type][cursorPos]
-                    .split(" | ")
-                    .map((h) => (
-                      <>
-                        <b className="bold-hint">{h.slice(0, 1)}</b>
-                        {h.slice(1)}
-                      </>
-                    ))
-                    .map((e, i, arr) => (
-                      <React.Fragment key={i}>
-                        {e}
-                        {i < arr.length - 1 ? " | " : null}
-                      </React.Fragment>
-                    ))}
-              </div>
-            )}
-        </>
-      );
-    }
-
-    return (
-      <div
-        className={classnames("line", {
-          selected: selectedInstructions.includes(instruction),
-          highlight: li === instructionIndex,
-        })}
-        key={li}
-      >
-        <div className="lineNumber">{li + 1}</div>
-        <div className="instruction">{contents}</div>
-      </div>
-    );
-  });
-}
-
-function Editor({
-  instructions,
-  macros,
-  isMacro,
-  hasFocus,
-  setMacros,
-  setInstructions,
-  setActiveRightTab,
-  setFocusIndex,
-}: {
-  instructions: Instruction[];
-  macros: Macro[];
-  isMacro: boolean;
-  hasFocus: boolean;
-  setMacros: (macros: Macro[]) => void;
-  setInstructions: (instructions: Instruction[]) => void;
-  setActiveRightTab: (rightTab: "build" | "asm" | "macros") => void;
-  setFocusIndex: (focusIndex: number) => void;
-}) {
-  const [cursorPos, setCursorPos] = useState(0);
-  const [selectedInstructions, setSelectedInstructions] = useState<
-    Instruction[]
-  >([]);
-  const [instructionIndex, setInstructionIndex] = useState(0);
-  const [macroSearchString, setMacroSearchString] = useState<
-    string | undefined
-  >(undefined);
-
-  const instruction: Instruction | null = instructions[instructionIndex];
-
-  useEffect(() => {
-    const handle = (e: KeyboardEvent) => {
-      if (!hasFocus) {
-        return;
-      }
-      if (!e.metaKey) {
-        if (e.key.match(/^[ -~]$/) || e.key.match(/Arrow/)) {
-          e.preventDefault();
-        }
-        handleKeyStroke({
-          instruction,
-          instructions,
-          cursorPos,
-          instructionIndex,
-          selectedInstructions,
-          macros,
-          macroSearchString,
-          key: e.key,
-          shiftKey: e.shiftKey,
-          setInstructions,
-          setInstructionIndex,
-          setCursorPos,
-          setSelectedInstructions,
-          setMacros,
-          setMacroSearchString,
-          setActiveRightTab,
-          setFocusIndex,
-        });
-      }
-    };
-    window.addEventListener("keydown", handle);
-    return () => window.removeEventListener("keydown", handle);
-  }, [
-    instructions,
-    setInstructions,
-    cursorPos,
-    hasFocus,
-    instructionIndex,
-    instruction,
-    selectedInstructions,
-    macros,
-    setMacros,
-    macroSearchString,
-    setActiveRightTab,
-    setFocusIndex,
-  ]);
-
-  const instructionsRendered = renderInstructions(
-    instructions,
-    selectedInstructions,
-    instructionIndex,
-    cursorPos,
-    hasFocus,
-    macros,
-    macroSearchString
-  );
-
-  return <code className={"code"}>{instructionsRendered}</code>;
 }
 
 export default App;

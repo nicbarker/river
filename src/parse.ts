@@ -14,8 +14,7 @@ export type CompiledInstructionMemory = {
   action: "alloc" | "dealloc";
   stackOffset: number;
   stackMemory: number;
-  serialized: string;
-};
+} & CompiledInstructionSharedAttributes;
 
 export type CompiledInstructionAssign = {
   instruction: "assign";
@@ -25,8 +24,7 @@ export type CompiledInstructionAssign = {
   size: number;
   value?: number;
   address?: number;
-  serialized: string;
-};
+} & CompiledInstructionSharedAttributes;
 
 export type CompiledInstructionCompare = {
   instruction: "compare";
@@ -43,19 +41,16 @@ export type CompiledInstructionCompare = {
     value?: number;
     address?: number;
   };
-  serialized: string;
-};
+} & CompiledInstructionSharedAttributes;
 
 export type CompiledInstructionJump = {
   instruction: "jump";
   target: number;
-  serialized: string;
-};
+} & CompiledInstructionSharedAttributes;
 
 export type CompiledInstructionVoid = {
   instruction: "void";
-  serialized: string;
-};
+} & CompiledInstructionSharedAttributes;
 
 export type CompiledInstructionOs = {
   instruction: "os";
@@ -63,7 +58,11 @@ export type CompiledInstructionOs = {
   value?: number;
   address?: number;
   size: number;
+} & CompiledInstructionSharedAttributes;
+
+export type CompiledInstructionSharedAttributes = {
   serialized: string;
+  originalInstructionIndex: number;
 };
 
 export type CompiledInstruction =
@@ -91,7 +90,7 @@ export function parse(file: string) {
   const jumps = [];
   let maxMemory = 0;
 
-  function openScope() {
+  function openScope(originalInstructionIndex: number) {
     const stackOffset =
       scopes.length > 0
         ? scopes[scopes.length - 1].stackOffset +
@@ -103,6 +102,7 @@ export function parse(file: string) {
       stackOffset,
       stackMemory: 0,
       serialized: "scope open",
+      originalInstructionIndex,
     };
     instructions.push(instruction);
     const scope = {
@@ -118,7 +118,7 @@ export function parse(file: string) {
     scopesFinal.push(scope);
   }
 
-  function closeScope() {
+  function closeScope(originalInstructionIndex: number) {
     const popped = scopes.pop();
     if (popped) {
       const instruction: CompiledInstructionMemory = {
@@ -127,12 +127,13 @@ export function parse(file: string) {
         stackOffset: popped.stackOffset,
         stackMemory: popped.stackMemory,
         serialized: "scope close",
+        originalInstructionIndex,
       };
       instructions.push(instruction);
     }
   }
 
-  openScope();
+  openScope(-1);
 
   DEBUG && console.log("PARSING ------------------------------------");
   for (let i = 0; i < lines.length; i++) {
@@ -143,11 +144,11 @@ export function parse(file: string) {
       case "scope": {
         switch (tokens[1]) {
           case "open": {
-            openScope();
+            openScope(i);
             break;
           }
           case "close": {
-            closeScope();
+            closeScope(i);
             break;
           }
           default:
@@ -177,7 +178,11 @@ export function parse(file: string) {
           scope.instruction.stackMemory = scope.stackMemory;
           scope.instruction.stackOffset = scope.stackOffset;
         }
-        instructions.push({ instruction: "void", serialized: line });
+        instructions.push({
+          instruction: "void",
+          serialized: line,
+          originalInstructionIndex: scope.instruction.originalInstructionIndex,
+        });
         break;
       }
       case "assign": {
@@ -193,6 +198,7 @@ export function parse(file: string) {
           source,
           size,
           serialized: line,
+          originalInstructionIndex: i,
         };
         switch (source) {
           case "const": {
@@ -216,7 +222,8 @@ export function parse(file: string) {
           instruction: "jump",
           target,
           serialized: line,
-        } as CompiledInstructionJump);
+          originalInstructionIndex: i,
+        });
         jumps.push(target);
         break;
       }
@@ -233,6 +240,7 @@ export function parse(file: string) {
             size: 64,
           },
           serialized: line,
+          originalInstructionIndex: i,
         };
         const scope = scopes[scopes.length - 1];
         switch (tokens[1]) {
@@ -285,6 +293,7 @@ export function parse(file: string) {
               action: "stdout",
               size: 0,
               serialized: line,
+              originalInstructionIndex: i,
             };
             switch (tokens[2]) {
               case "const": {
@@ -317,9 +326,8 @@ export function parse(file: string) {
     }
   }
 
-  closeScope();
+  closeScope(-1);
 
-  console.log(lines);
   for (let i = 0; i < lines.length; i++) {
     DEBUG && console.log(lines[i], instructions[i]);
   }
