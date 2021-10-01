@@ -257,7 +257,7 @@ code {
   display: flex;
   flex-direction: column;
   padding: 16px;
-  overflow: scroll;
+  overflow-y: scroll;
   height: 100%;
 }
 
@@ -283,6 +283,36 @@ code {
   background: #4f4d6f;
 }
 
+.header.subheader button.active {
+  background: #6cbcc7;
+}
+
+.dropdownOuter {
+  position: relative;
+}
+
+.dropdownOuter > button {
+  width: 210px;
+  text-align: left;
+}
+
+.divider {
+  flex-grow: 1;
+}
+
+.targetDropdown {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  width: 100%;
+}
+
+.dropdownOuter .targetDropdown .item {
+  text-align: left;
+  background: #6cbcc7;
+}
+
 .asmInner {
   font-family: "Source Code Pro";
   font-weight: 600;
@@ -296,7 +326,7 @@ code {
   align-items: stretch;
   flex-grow: 1;
   height: 0;
-  overflow: auto;
+  overflow-y: auto;
 }
 
 .asmBlock {

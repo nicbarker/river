@@ -1,5 +1,6 @@
 /* eslint-disable no-sparse-arrays */
-import { CompiledInstruction, Scope } from "./parse";
+import { CompiledInstruction } from "../parse";
+import { ASMBlock, ASMLine } from "./compiler";
 
 function registerWithSize(reg: string, size: number) {
   let output = "";
@@ -339,40 +340,71 @@ function moveAndLabelForSize(instructionSize: number) {
 }
 
 function formatOp(firstOperand: string, secondOperand?: string) {
-  return `${firstOperand}${
-    secondOperand === undefined ? "" : `, ${secondOperand}`
-  }`;
+  return `${firstOperand}${secondOperand === undefined ? "" : `, ${secondOperand}`
+    }`;
 }
 
 function memoryOffset(offset: number) {
   return `[r12${offset > 0 ? " + " + offset : ""}]`;
 }
 
-export type ASMBlock = [number, [string?, string?, string?][]];
+type x64Flavour = 'x64_OSX' | 'x64_win';
 
-export function compile(
-  scopesFinal: Scope[],
+const nasmInstructions = (target: x64Flavour, fileName: string) => {
+  switch (target) {
+    case 'x64_OSX': return `nasm -fmacho64 ${fileName}.asm && gcc ${fileName}.o`;
+    case 'x64_win': return `nasm -fwin64 ${fileName}.asm && gcc ${fileName}.obj`;
+  }
+}
+
+function syscallArgumentRegisters(target: x64Flavour, index: number) {
+  const isMac = target === 'x64_OSX'
+  switch (index) {
+    case 0: return isMac ? 'rdi' : 'rcx';
+    case 1: return isMac ? 'rsi' : 'rdx';
+    case 2: return isMac ? 'rdx' : 'r8';
+    case 3: return isMac ? 'r10' : 'r9';
+  }
+}
+
+export function compileX64(
+  target: x64Flavour,
+  fileName: string,
   instructions: CompiledInstruction[],
   maxMemory: number,
   jumps: number[]
 ) {
+  const isMac = target === 'x64_OSX'
+  const mainLabel = `${isMac ? '_' : ''}main`;
+  const mallocLabel = `${isMac ? '_' : ''}malloc`;
+  const printfLabel = `${isMac ? '_' : ''}printf`;
+  /* OSX and windows have different conventions for syscalls.
+  * OSX requires a 16 byte call stack alignment, with 8 bytes being used for the return
+  * value, hence we push the default pointer size (8 bytes) onto the stack before calling.
+  * Windows requires us to allocate 32 bytes of "shadow space", which added to our 8 byte alignment
+  * gives us 40 bytes (hex value 28h).
+  * See https://stackoverflow.com/questions/30190132/what-is-the-shadow-space-in-x64-assembly/30191127#30191127
+  */
+  const preSysCall: ASMLine = isMac ? [, "push", "rbx"] : [, 'sub', 'rsp, 28h'];
+  const postSysCall: ASMLine = isMac ? [, "pop", "rbx"] : [, 'add', 'rsp, 28h'];
   const output: ASMBlock[] = [
     [
       -1,
       [
         ["; --------------------------------------------------"],
         ["; Generated with river compiler 1.0"],
-        ["; Targeting OSX x64 with assembler nasm 2.15.05"],
-        ["; nasm -fmacho64 malloc.asm && gcc malloc.o"],
+        [`; Targeting ${target} with assembler nasm 2.15.05`],
+        [`; ${nasmInstructions(target, fileName)}`],
         ["; --------------------------------------------------"],
-        [, "global", "_main"],
-        [, "extern", "_malloc, _printf"],
+        [, "global", mainLabel],
+        [, "extern", `${mallocLabel}, ${printfLabel}`],
         [],
         [, "section", ".text"],
-        ["_main:", "push", "rbx"],
-        [, "mov", `rdi, ${maxMemory / 8}`],
-        [, "call", "_malloc"],
-        [, "pop", "rbx"],
+        [`${mainLabel}:`],
+        preSysCall,
+        [, "mov", `${syscallArgumentRegisters(target, 0)}, ${maxMemory / 8}`],
+        [, "call", `${mallocLabel}`],
+        postSysCall,
         [, "mov", "r12, rax"],
       ],
     ],
@@ -615,15 +647,15 @@ export function compile(
         switch (instruction.action) {
           case "stdout": {
             const [mov, size] = moveAndLabelForSize(instruction.size);
-            instructionOutputs[1].push([, "push", "rbx"]);
-            instructionOutputs[1].push([, "lea", "rdi, [rel message]"]);
+            instructionOutputs[1].push(preSysCall);
+            instructionOutputs[1].push([, "lea", `${syscallArgumentRegisters(target, 0)}, [rel message]`]);
             instructionOutputs[1].push([
               ,
               mov,
-              `rsi, ${size} ${memoryOffset(instruction.address! / 8)}`,
+              `${syscallArgumentRegisters(target, 1)}, ${size} ${memoryOffset(instruction.address! / 8)}`,
             ]);
-            instructionOutputs[1].push([, "call", "_printf"]);
-            instructionOutputs[1].push([, "pop", "rbx"]);
+            instructionOutputs[1].push([, "call", printfLabel]);
+            instructionOutputs[1].push(postSysCall);
             break;
           }
           default:
@@ -646,20 +678,3 @@ export function compile(
   return output;
 }
 
-export function formatASM(blocks: ASMBlock[], width = 10) {
-  return (
-    blocks
-      .map((block) =>
-        block[1]
-          .map(
-            (line) =>
-              `${(line[0] || "").padEnd(width, " ")}${(line[1] || " ").padEnd(
-                width,
-                " "
-              )}${line[2] || ""}`
-          )
-          .join("\n")
-      )
-      .join("\n") + "\n"
-  );
-}
