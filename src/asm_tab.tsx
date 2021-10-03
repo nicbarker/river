@@ -1,6 +1,11 @@
 import classNames from "classnames";
 import { useEffect, useState } from "react";
-import { ASMBlock, BackendTarget, compile, formatASM } from "./compiler/compiler";
+import {
+  ASMBlock,
+  BackendTarget,
+  compile,
+  formatASM,
+} from "./compiler/compiler";
 import { Instruction } from "./editor_handler";
 import { parse } from "./parse";
 
@@ -24,20 +29,25 @@ function downloadFile(data: string, fileName: string, type = "text/plain") {
   document.body.removeChild(a);
 }
 
-function compileAsm(instructions: Instruction[], target: BackendTarget, fileName: string) {
+function compileAsm(
+  instructions: Instruction[],
+  target: BackendTarget,
+  fileName: string
+) {
   const instructionsToParse = (instructions.filter(
     (i) => i.type !== "emptyInstruction" && i.valid
   ) as Instruction[])
     .map((i) => i.fragments.map((f) => f?.value).join(" "))
     .join("\n");
-  const [pScopes, pInstructions, pMaxMemory, jumps] = parse(
-    instructionsToParse
-  );
+  const [, pInstructions, pMaxMemory, jumps] = parse(instructionsToParse);
   const compiled = compile(target, fileName, pInstructions, pMaxMemory, jumps);
   return compiled;
 }
 
-const targetValues: [BackendTarget, string][] = [['x64_OSX', 'Mac OSX (64 bit)'], ['x64_win', 'Windows (64 bit)']];
+const targetValues: [BackendTarget, string][] = [
+  ["x64_OSX", "Mac OSX (64 bit)"],
+  ["x64_win", "Windows (64 bit)"],
+];
 
 export function ASMTab(props: {
   instructions: Instruction[];
@@ -45,10 +55,12 @@ export function ASMTab(props: {
 }) {
   const [asm, setAsm] = useState<ASMBlock[]>([]);
   const [targetDropdownVisible, setTargetDropdownVisible] = useState(false);
-  const [targetPlatform, setTargetPlatform] = useState<BackendTarget>('x64_OSX');
+  const [targetPlatform, setTargetPlatform] = useState<BackendTarget>(
+    "x64_OSX"
+  );
 
   useEffect(() => {
-    setAsm(compileAsm(props.instructions, targetPlatform, 'untitled'));
+    setAsm(compileAsm(props.instructions, targetPlatform, "untitled"));
   }, [props.instructions, targetPlatform]);
 
   const renderedBlocks = asm.map((block) => {
@@ -56,7 +68,7 @@ export function ASMTab(props: {
       const columns: React.ReactNode[] = [];
       for (let i = 0; i < 3; i++) {
         const column = line[i];
-        if (line[0]?.charAt(0) === ';' && i > 0) {
+        if (line[0]?.charAt(0) === ";" && i > 0) {
           continue;
         }
         columns.push(
@@ -89,22 +101,37 @@ export function ASMTab(props: {
     );
   });
 
-  const targets = targetValues.map(platform => (
-    <button className={'item'} onClick={() => { setTargetPlatform(platform[0]); setTargetDropdownVisible(false); }}>{platform[1]}</button>
-  ))
+  const targets = targetValues.map((platform) => (
+    <button
+      className={"item"}
+      onClick={() => {
+        setTargetPlatform(platform[0]);
+        setTargetDropdownVisible(false);
+      }}
+    >
+      {platform[1]}
+    </button>
+  ));
 
   return (
     <div className="assemblyContainer">
       <div className="header subheader">
-        <div className={'dropdownOuter'}>
-          <button className={classNames({ active: targetDropdownVisible })} onClick={() => setTargetDropdownVisible(true)}>{targetDropdownVisible ? 'Select Target' : `Target: ${targetValues.find(t => t[0] === targetPlatform)![1]}`}</button>
+        <div className={"dropdownOuter"}>
+          <button
+            className={classNames({ active: targetDropdownVisible })}
+            onClick={() => setTargetDropdownVisible(true)}
+          >
+            {targetDropdownVisible
+              ? "Select Target"
+              : `Target: ${
+                  targetValues.find((t) => t[0] === targetPlatform)![1]
+                }`}
+          </button>
           {targetDropdownVisible && (
-            <div className={'targetDropdown'}>
-              {targets}
-            </div>
+            <div className={"targetDropdown"}>{targets}</div>
           )}
         </div>
-        <div className={'divider'} />
+        <div className={"divider"} />
         <button onClick={() => downloadFile(formatASM(asm), "untitled.asm")}>
           Download
         </button>
