@@ -1,4 +1,4 @@
-import { Output } from "./something";
+import { Output } from "./application";
 import { CompiledInstruction, dec2bin, Scope } from "./parse";
 
 const DEBUG = true;
