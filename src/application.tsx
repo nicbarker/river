@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import "./app.css";
+import "./application.css";
 import { parse } from "./parse";
 import { execute } from "./vm";
 import classnames from "classnames";
