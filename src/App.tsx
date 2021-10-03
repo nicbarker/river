@@ -10,7 +10,7 @@ import { ASMTab } from "./asm_tab";
 
 export type Output = { value: string; lineNumber: number };
 
-function App() {
+export function App() {
   const [macros, setMacros] = useState<Macro[]>([]);
   const [instructions, setInstructions] = useState<Instruction[]>([
     { type: "emptyInstruction", fragments: [] },
@@ -161,5 +161,3 @@ function App() {
     </div>
   );
 }
-
-export default App;
