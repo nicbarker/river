@@ -23,6 +23,10 @@ export type InstructionOS = {
   type: "instruction";
   value: "os";
 };
+export type InstructionPlaceholder = {
+  type: "instruction";
+  value: "_";
+};
 
 export type InstructionFragment =
   | InstructionAssign
@@ -30,7 +34,8 @@ export type InstructionFragment =
   | InstructionScope
   | InstructionJump
   | InstructionCompare
-  | InstructionOS;
+  | InstructionOS
+  | InstructionPlaceholder;
 
 // SCOPE ---------------------------------
 export type ScopeOpen = {
@@ -55,6 +60,13 @@ export type DefParent = {
   type: "defLocation";
   value: "parent";
 };
+
+export type DefPlaceholder = {
+  type: "defLocation";
+  value: "_";
+};
+
+export type DefLocationFragment = DefLocal | DefParent | DefPlaceholder;
 
 // SET ----------------------------------
 export type AssignEq = {
@@ -81,6 +93,10 @@ export type AssignMod = {
   type: "assignAction";
   value: "%";
 };
+export type AssignPlaceholder = {
+  type: "assignAction";
+  value: "_";
+};
 
 export type AssignActionFragment =
   | AssignEq
@@ -88,42 +104,47 @@ export type AssignActionFragment =
   | AssignSubtract
   | AssignDivide
   | AssignMultiply
-  | AssignMod;
-
-export type DefLocationFragment = DefLocal | DefParent;
+  | AssignMod
+  | AssignPlaceholder;
 
 // VAR TYPES ----------------------------------
 export type VarTypeVar = {
   type: "varType";
   value: "var";
+  stackPosition?: number;
 };
 export type VarTypeConst = {
   type: "varType";
   value: "const";
+  constValue?: number;
+};
+export type VarTypePlaceholder = {
+  type: "varType";
+  value: "_";
 };
 
-export type VarTypeFragment = VarTypeVar | VarTypeConst;
+export type VarTypeFragment = VarTypeVar | VarTypeConst | VarTypePlaceholder;
 
 // VAR SIZES / POSITIONS ----------------------------------
-export type VarSizeFragment = {
-  type: "size";
-  value: number;
-};
+export type VarSizeFragment =
+  | {
+      type: "size";
+      value: number;
+    }
+  | {
+      type: "size";
+      value: "_";
+    };
 
-export type StackPositionFragment = {
-  type: "stackPosition";
-  value: number;
-};
-
-export type ConstValueFragment = {
-  type: "constValue";
-  value: number;
-};
-
-export type InstructionNumberFragment = {
-  type: "instructionNumber";
-  value: number;
-};
+export type InstructionNumberFragment =
+  | {
+      type: "instructionNumber";
+      value: number;
+    }
+  | {
+      type: "instructionNumber";
+      value: "_";
+    };
 
 // COMPARATOR ----------------------------------
 export type ComparatorEq = {
@@ -150,6 +171,10 @@ export type ComparatorGte = {
   type: "comparator";
   value: ">=";
 };
+export type ComparatorPlaceholder = {
+  type: "comparator";
+  value: "_";
+};
 
 export type ComparatorFragment =
   | ComparatorEq
@@ -157,7 +182,8 @@ export type ComparatorFragment =
   | ComparatorLt
   | ComparatorLte
   | ComparatorGt
-  | ComparatorGte;
+  | ComparatorGte
+  | ComparatorPlaceholder;
 
 export type OSActionFragment = {
   type: "OSAction";
@@ -171,9 +197,7 @@ export type Fragment =
   | AssignActionFragment
   | VarTypeFragment
   | VarSizeFragment
-  | StackPositionFragment
   | ComparatorFragment
-  | ConstValueFragment
   | InstructionNumberFragment
   | OSActionFragment;
 
@@ -196,11 +220,9 @@ export type AssignInstruction = {
   fragments: Partial<
     [
       InstructionAssign,
-      VarTypeFragment,
-      StackPositionFragment,
+      VarTypeVar | VarTypePlaceholder,
       AssignActionFragment,
-      VarTypeFragment,
-      StackPositionFragment | ConstValueFragment // This technically allows invalid combinations but it's ok :)
+      VarTypeFragment
     ]
   >;
 };
@@ -209,14 +231,7 @@ export type AssignInstruction = {
 export type CompareInstruction = {
   type: "compareInstruction";
   fragments: Partial<
-    [
-      InstructionCompare,
-      VarTypeFragment,
-      StackPositionFragment | ConstValueFragment,
-      ComparatorFragment,
-      VarTypeFragment,
-      StackPositionFragment | ConstValueFragment
-    ]
+    [InstructionCompare, VarTypeFragment, ComparatorFragment, VarTypeFragment]
   >;
 };
 
@@ -227,19 +242,17 @@ export type JumpInstruction = {
 
 export type OSInstruction = {
   type: "OSInstruction";
-  fragments: Partial<
-    [
-      InstructionOS,
-      OSActionFragment,
-      VarTypeFragment,
-      StackPositionFragment | ConstValueFragment
-    ]
-  >;
+  fragments: Partial<[InstructionOS, OSActionFragment, VarTypeFragment]>;
 };
 
 export type EmptyInstruction = {
   type: "emptyInstruction";
   fragments: [];
+};
+
+export type PlaceholderInstruction = {
+  type: "placeholderInstruction";
+  fragments: [InstructionPlaceholder];
 };
 
 export type Instruction = (
@@ -250,6 +263,7 @@ export type Instruction = (
   | CompareInstruction
   | JumpInstruction
   | OSInstruction
+  | PlaceholderInstruction
 ) & {
   valid?: boolean;
 };
@@ -276,35 +290,28 @@ scope close
 export const fragmentLength: { [k in Instruction["type"]]: number } = {
   emptyInstruction: 0,
   defInstruction: 3,
-  assignInstruction: 6,
+  assignInstruction: 4,
   scopeInstruction: 2,
-  compareInstruction: 6,
+  compareInstruction: 4,
   jumpInstruction: 2,
-  OSInstruction: 4,
+  OSInstruction: 3,
+  placeholderInstruction: 1,
 };
 
 export const fragmentHints: { [k in Instruction["type"]]: string[] } = {
   emptyInstruction: ["scope | def | assign | compare | jump | os | macro"],
+  placeholderInstruction: [],
   defInstruction: ["def", "local | parent", "8 | 16 | 32 | 64"],
-  assignInstruction: [
-    "assign",
-    "var",
-    "0.. variable",
-    "= | + | - | * | / | %",
-    "var | const",
-    "0.. variable",
-  ],
+  assignInstruction: ["assign", "var", "= | + | - | * | / | %", "var | const"],
   scopeInstruction: ["scope", "open | close"],
   compareInstruction: [
     "compare",
     "var | const",
-    "0.. variable",
     "= | != | < | <= | > | >=",
     "var | const",
-    "0.. variable",
   ],
   jumpInstruction: ["jump", "0.. instruction number"],
-  OSInstruction: ["os", "stdout", "var | const", "0.. variable"],
+  OSInstruction: ["os", "stdout", "var | const"],
 };
 
 export function handleKeyStroke({
@@ -313,6 +320,7 @@ export function handleKeyStroke({
   cursorPos,
   instructionIndex,
   selectedInstructions,
+  isMacro,
   macros,
   macroSearchString,
   key,
@@ -332,6 +340,7 @@ export function handleKeyStroke({
   cursorPos: number;
   instructionIndex: number;
   selectedInstructions: Instruction[];
+  isMacro: boolean;
   macros: Macro[];
   macroSearchString?: string;
   key: string;
@@ -444,6 +453,68 @@ export function handleKeyStroke({
   }
 
   let increment: "instruction" | "cursor" | "none" = "none";
+
+  function parseVarType(
+    fragment?: VarTypeVar | VarTypeConst | VarTypePlaceholder,
+    disableConst?: boolean
+  ) {
+    let newFragment = fragment;
+    if (typeof newFragment === "undefined") {
+      switch (key) {
+        case "c": {
+          if (!disableConst) {
+            newFragment = {
+              type: "varType",
+              value: "const",
+            };
+          }
+          break;
+        }
+        case "v": {
+          newFragment = {
+            type: "varType",
+            value: "var",
+          };
+          break;
+        }
+        case "_": {
+          if (isMacro) {
+            newFragment = {
+              type: "varType",
+              value: "_",
+            };
+          }
+          break;
+        }
+      }
+    } else if (newFragment.value === "var") {
+      if (key === " " || key.match(/[a-z]/)) {
+        increment = "cursor";
+      }
+      if (typeof newFragment.stackPosition === "undefined") {
+        newFragment.stackPosition = parseInt(key, 10);
+      } else {
+        newFragment.stackPosition = parseInt(
+          newFragment.stackPosition.toString() + key,
+          10
+        );
+      }
+    } else if (newFragment.value === "const") {
+      if (key === " " || key.match(/[a-z]/)) {
+        increment = "cursor";
+      }
+      if (typeof newFragment?.constValue === "undefined") {
+        newFragment.constValue = parseInt(key, 10);
+      } else {
+        newFragment.constValue = parseInt(
+          newFragment.constValue.toString() + key,
+          10
+        );
+      }
+    }
+    return newFragment;
+  }
+
   if (instruction.type === "emptyInstruction" || cursorPos === 0) {
     switch (key) {
       case "s": {
@@ -516,6 +587,16 @@ export function handleKeyStroke({
         setMacroSearchString("");
         break;
       }
+      case "_": {
+        if (isMacro) {
+          instructions[instructionIndex] = {
+            type: "placeholderInstruction",
+            fragments: [{ type: "instruction", value: "_" }],
+          };
+        }
+        increment = "instruction";
+        break;
+      }
       default:
         break;
     }
@@ -566,74 +647,71 @@ export function handleKeyStroke({
                 increment = "cursor";
                 break;
               }
-            }
-            break;
-          }
-          case 2: {
-            let value = 8;
-            switch (key) {
-              case "8":
-                break;
-              case "1":
-                value = 16;
-                break;
-              case "3":
-                value = 32;
-                break;
-              case "6":
-                value = 64;
-                break;
-              default:
-                return;
-            }
-            instruction.fragments[2] = {
-              type: "size",
-              value,
-            };
-            setInstructions(instructions.slice());
-            break;
-          }
-        }
-        break;
-      }
-      case "assignInstruction": {
-        switch (cursorPos) {
-          case 1: {
-            switch (key) {
-              case "v": {
-                instruction.fragments[1] = {
-                  type: "varType",
-                  value: "var",
-                };
-                increment = "cursor";
+              case "_": {
+                if (isMacro) {
+                  instruction.fragments[1] = {
+                    type: "defLocation",
+                    value: "_",
+                  };
+                  instruction.fragments[2] = {
+                    type: "size",
+                    value: "_",
+                  };
+                  increment = "cursor";
+                }
                 break;
               }
             }
             break;
           }
           case 2: {
-            if (key === " " || key.match(/[a-z]/)) {
-              increment = "cursor";
+            if (isMacro && key === "_") {
+              instruction.fragments[2] = {
+                type: "size",
+                value: "_",
+              };
+              increment = "instruction";
+            } else {
+              let value = 8;
+              switch (key) {
+                case "8":
+                  break;
+                case "1":
+                  value = 16;
+                  break;
+                case "3":
+                  value = 32;
+                  break;
+                case "6":
+                  value = 64;
+                  break;
+                default:
+                  return;
+              }
+              instruction.fragments[2] = {
+                type: "size",
+                value,
+              };
+              setInstructions(instructions.slice());
               break;
             }
-            if (!instruction.fragments[2]) {
-              instruction.fragments[2] = {
-                type: "stackPosition",
-                value: parseInt(key, 10),
-              };
-            } else {
-              instruction.fragments[2].value = parseInt(
-                instruction.fragments[2].value.toString() + key,
-                10
-              );
-            }
+          }
+        }
+        break;
+      }
+      case "assignInstruction": {
+        switch (cursorPos) {
+          case 1:
+            instruction.fragments[1] = parseVarType(
+              instruction.fragments[1],
+              true
+            ) as VarTypeVar;
             setInstructions(instructions.slice());
             break;
-          }
-          case 3: {
+          case 2: {
             switch (key) {
               case "=": {
-                instruction.fragments[3] = {
+                instruction.fragments[2] = {
                   type: "assignAction",
                   value: "=",
                 };
@@ -641,7 +719,7 @@ export function handleKeyStroke({
                 break;
               }
               case "+": {
-                instruction.fragments[3] = {
+                instruction.fragments[2] = {
                   type: "assignAction",
                   value: "+",
                 };
@@ -649,7 +727,7 @@ export function handleKeyStroke({
                 break;
               }
               case "-": {
-                instruction.fragments[3] = {
+                instruction.fragments[2] = {
                   type: "assignAction",
                   value: "-",
                 };
@@ -657,7 +735,7 @@ export function handleKeyStroke({
                 break;
               }
               case "*": {
-                instruction.fragments[3] = {
+                instruction.fragments[2] = {
                   type: "assignAction",
                   value: "*",
                 };
@@ -665,7 +743,7 @@ export function handleKeyStroke({
                 break;
               }
               case "/": {
-                instruction.fragments[3] = {
+                instruction.fragments[2] = {
                   type: "assignAction",
                   value: "/",
                 };
@@ -673,53 +751,28 @@ export function handleKeyStroke({
                 break;
               }
               case "%": {
-                instruction.fragments[3] = {
+                instruction.fragments[2] = {
                   type: "assignAction",
                   value: "%",
                 };
                 increment = "cursor";
                 break;
               }
-            }
-            break;
-          }
-          case 4: {
-            switch (key) {
-              case "c": {
-                instruction.fragments[4] = {
-                  type: "varType",
-                  value: "const",
-                };
-                increment = "cursor";
-                break;
-              }
-              case "v": {
-                instruction.fragments[4] = {
-                  type: "varType",
-                  value: "var",
-                };
-                increment = "cursor";
+              case "_": {
+                if (isMacro) {
+                  instruction.fragments[2] = {
+                    type: "assignAction",
+                    value: "_",
+                  };
+                  increment = "cursor";
+                }
                 break;
               }
             }
             break;
           }
-          case 5: {
-            const type =
-              instruction.fragments[4]?.value === "const"
-                ? "constValue"
-                : "stackPosition";
-            if (!instruction.fragments[5]) {
-              instruction.fragments[5] = {
-                type,
-                value: parseInt(key, 10),
-              };
-            } else {
-              instruction.fragments[5].value = parseInt(
-                instruction.fragments[5].value.toString() + key,
-                10
-              );
-            }
+          case 3: {
+            instruction.fragments[3] = parseVarType(instruction.fragments[3]);
             setInstructions(instructions.slice());
             break;
           }
@@ -728,154 +781,87 @@ export function handleKeyStroke({
       }
       case "compareInstruction": {
         switch (cursorPos) {
-          case 1: {
-            switch (key) {
-              case "c": {
-                instruction.fragments[1] = {
-                  type: "varType",
-                  value: "const",
-                };
-                increment = "cursor";
-                break;
-              }
-              case "v": {
-                instruction.fragments[1] = {
-                  type: "varType",
-                  value: "var",
-                };
-                increment = "cursor";
-                break;
-              }
-            }
+          case 1:
+            instruction.fragments[1] = parseVarType(instruction.fragments[1]);
+            setInstructions(instructions.slice());
             break;
-          }
           case 2: {
-            const type =
-              instruction.fragments[1]?.value === "const"
-                ? "constValue"
-                : "stackPosition";
-            if (key === " " || key.match(/[a-z]/)) {
+            if (isMacro && key === "_") {
+              instruction.fragments[2] = {
+                type: "comparator",
+                value: "_",
+              };
               increment = "cursor";
               break;
-            }
-            if (!instruction.fragments[2]) {
-              instruction.fragments[2] = {
-                type,
-                value: parseInt(key, 10),
-              };
             } else {
-              instruction.fragments[2].value = parseInt(
-                instruction.fragments[2].value.toString() + key,
-                10
-              );
+              if (
+                instruction.fragments[2] &&
+                (key === " " || key.match(/[a-z]/))
+              ) {
+                increment = "cursor";
+                break;
+              }
+              switch (key) {
+                case "=": {
+                  if (!instruction.fragments[2]) {
+                    instruction.fragments[2] = {
+                      type: "comparator",
+                      value: "==",
+                    };
+                  } else {
+                    switch (instruction.fragments[2].value) {
+                      case "<": {
+                        instruction.fragments[2] = {
+                          type: "comparator",
+                          value: "<=",
+                        };
+                        increment = "cursor";
+                        break;
+                      }
+                      case ">": {
+                        instruction.fragments[2] = {
+                          type: "comparator",
+                          value: ">=",
+                        };
+                        increment = "cursor";
+                        break;
+                      }
+                    }
+                  }
+                  increment = "cursor";
+                  break;
+                }
+                case "!": {
+                  instruction.fragments[2] = {
+                    type: "comparator",
+                    value: "!=",
+                  };
+                  increment = "cursor";
+                  break;
+                }
+                case "<": {
+                  instruction.fragments[2] = {
+                    type: "comparator",
+                    value: "<",
+                  };
+                  setInstructions(instructions.slice());
+                  break;
+                }
+                case ">": {
+                  instruction.fragments[2] = {
+                    type: "comparator",
+                    value: ">",
+                  };
+                  setInstructions(instructions.slice());
+                  break;
+                }
+              }
             }
-            setInstructions(instructions.slice());
             break;
           }
           case 3: {
-            if (
-              instruction.fragments[3] &&
-              (key === " " || key.match(/[a-z]/))
-            ) {
-              increment = "cursor";
-              break;
-            }
-            switch (key) {
-              case "=": {
-                if (!instruction.fragments[3]) {
-                  instruction.fragments[3] = {
-                    type: "comparator",
-                    value: "==",
-                  };
-                } else {
-                  switch (instruction.fragments[3].value) {
-                    case "<": {
-                      instruction.fragments[3] = {
-                        type: "comparator",
-                        value: "<=",
-                      };
-                      increment = "cursor";
-                      break;
-                    }
-                    case ">": {
-                      instruction.fragments[3] = {
-                        type: "comparator",
-                        value: ">=",
-                      };
-                      increment = "cursor";
-                      break;
-                    }
-                  }
-                }
-                increment = "cursor";
-                break;
-              }
-              case "!": {
-                instruction.fragments[3] = {
-                  type: "comparator",
-                  value: "!=",
-                };
-                increment = "cursor";
-                break;
-              }
-              case "<": {
-                instruction.fragments[3] = {
-                  type: "comparator",
-                  value: "<",
-                };
-                setInstructions(instructions.slice());
-                break;
-              }
-              case ">": {
-                instruction.fragments[3] = {
-                  type: "comparator",
-                  value: ">",
-                };
-                setInstructions(instructions.slice());
-                break;
-              }
-            }
-            break;
-          }
-          case 4: {
-            switch (key) {
-              case "c": {
-                instruction.fragments[4] = {
-                  type: "varType",
-                  value: "const",
-                };
-                increment = "cursor";
-                break;
-              }
-              case "v": {
-                instruction.fragments[4] = {
-                  type: "varType",
-                  value: "var",
-                };
-                increment = "cursor";
-                break;
-              }
-            }
-            break;
-          }
-          case 5: {
-            const type =
-              instruction.fragments[4]?.value === "const"
-                ? "constValue"
-                : "stackPosition";
-            if (!instruction.fragments[5]) {
-              instruction.fragments[5] = {
-                type,
-                value: parseInt(key, 10),
-              };
-            } else {
-              instruction.fragments[5].value = parseInt(
-                instruction.fragments[5].value.toString() + key,
-                10
-              );
-            }
+            instruction.fragments[3] = parseVarType(instruction.fragments[3]);
             setInstructions(instructions.slice());
-
             break;
           }
         }
@@ -884,16 +870,26 @@ export function handleKeyStroke({
       case "jumpInstruction": {
         switch (cursorPos) {
           case 1: {
-            if (!instruction.fragments[1]) {
-              instruction.fragments[1] = {
-                type: "instructionNumber",
-                value: parseInt(key, 10),
-              };
+            if (isMacro && key === "_") {
+              if (isMacro) {
+                instruction.fragments[1] = {
+                  type: "instructionNumber",
+                  value: "_",
+                };
+              }
+              break;
             } else {
-              instruction.fragments[1].value = parseInt(
-                instruction.fragments[1].value.toString() + key,
-                10
-              );
+              if (!instruction.fragments[1]) {
+                instruction.fragments[1] = {
+                  type: "instructionNumber",
+                  value: parseInt(key, 10),
+                };
+              } else {
+                instruction.fragments[1].value = parseInt(
+                  instruction.fragments[1].value.toString() + key,
+                  10
+                );
+              }
             }
             setInstructions(instructions.slice());
             break;
@@ -917,42 +913,10 @@ export function handleKeyStroke({
             break;
           }
           case 2: {
-            switch (key) {
-              case "c": {
-                instruction.fragments[2] = {
-                  type: "varType",
-                  value: "const",
-                };
-                increment = "cursor";
-                break;
-              }
-              case "v": {
-                instruction.fragments[2] = {
-                  type: "varType",
-                  value: "var",
-                };
-                increment = "cursor";
-                break;
-              }
-            }
-            break;
-          }
-          case 3: {
-            const type =
-              instruction.fragments[2]?.value === "const"
-                ? "constValue"
-                : "stackPosition";
-            if (!instruction.fragments[3]) {
-              instruction.fragments[3] = {
-                type,
-                value: parseInt(key, 10),
-              };
-            } else {
-              instruction.fragments[3].value = parseInt(
-                instruction.fragments[3].value.toString() + key,
-                10
-              );
-            }
+            instruction.fragments[2] = parseVarType(
+              instruction.fragments[2],
+              true
+            );
             setInstructions(instructions.slice());
             break;
           }

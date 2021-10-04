@@ -7,7 +7,7 @@ import {
   formatASM,
 } from "./compiler/compiler";
 import { Instruction } from "./editor_handler";
-import { parse } from "./parse";
+import { instructionsToText, parse } from "./parse";
 
 function downloadFile(data: string, fileName: string, type = "text/plain") {
   // Create an invisible A element
@@ -34,12 +34,9 @@ function compileAsm(
   target: BackendTarget,
   fileName: string
 ) {
-  const instructionsToParse = (instructions.filter(
-    (i) => i.type !== "emptyInstruction" && i.valid
-  ) as Instruction[])
-    .map((i) => i.fragments.map((f) => f?.value).join(" "))
-    .join("\n");
-  const [, pInstructions, pMaxMemory, jumps] = parse(instructionsToParse);
+  const [, pInstructions, pMaxMemory, jumps] = parse(
+    instructionsToText(instructions)
+  );
   const compiled = compile(target, fileName, pInstructions, pMaxMemory, jumps);
   return compiled;
 }

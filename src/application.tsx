@@ -1,17 +1,18 @@
 import React, { useEffect, useState } from "react";
 import "./application.css";
-import { parse } from "./parse";
+import { instructionsToText, parse } from "./parse";
 import { execute } from "./vm";
 import classnames from "classnames";
 import { Editor } from "./editor";
 import { Instruction, Macro } from "./editor_handler";
 import { MacroEditor } from "./macro_editor";
 import { ASMTab } from "./asm_tab";
+import { standardMacros } from "./standard_macros";
 
 export type Output = { value: string; lineNumber: number };
 
 export function App() {
-  const [macros, setMacros] = useState<Macro[]>([]);
+  const [macros, setMacros] = useState<Macro[]>(standardMacros);
   const [instructions, setInstructions] = useState<Instruction[]>([
     { type: "emptyInstruction", fragments: [] },
   ]);
@@ -81,12 +82,7 @@ export function App() {
 
   function runInInterpreter() {
     outputs.splice(0, outputs.length);
-    const instructionsToParse = (instructions.filter(
-      (i) => i.type !== "emptyInstruction"
-    ) as Instruction[])
-      .map((i) => i.fragments.map((f) => f?.value).join(" "))
-      .join("\n");
-    const [pScopes, pInstructions] = parse(instructionsToParse);
+    const [pScopes, pInstructions] = parse(instructionsToText(instructions));
     const { peakMemory } = execute(pScopes, pInstructions, (output: Output) => {
       outputs.push(output);
       setOutputs(outputs.slice());

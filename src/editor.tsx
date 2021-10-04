@@ -15,26 +15,53 @@ function renderInstructions(
   instructionIndex: number,
   cursorPos: number,
   hasFocus: boolean,
+  isMacro: boolean,
   macros: Macro[],
   macroSearchString: string | undefined
 ) {
   let indent = 0;
   return instructions.map((instruction, li) => {
-    const fragments = instruction.fragments.map((fragment, i) => [
-      <div
-        key={i}
-        className={classnames("fragment", fragment?.value, fragment?.type, {
-          highlight:
-            instructionIndex === li &&
-            cursorPos === i &&
-            selectedInstructions.length === 0 &&
-            hasFocus,
-        })}
-      >
-        {fragment?.value}
-      </div>,
-      <div key={i + "-space"}> </div>,
-    ]);
+    const fragments = instruction.fragments.map((fragment, i) => {
+      let fragmentContent: React.ReactNode;
+      if (fragment?.type === "varType") {
+        switch (fragment?.value) {
+          case "_":
+            fragmentContent = "_";
+            break;
+          case "var":
+            fragmentContent = `var ${
+              typeof fragment.stackPosition === "undefined"
+                ? "0.. variable"
+                : fragment.stackPosition
+            }`;
+            break;
+          case "const":
+            fragmentContent = `const ${
+              typeof fragment.constValue === "undefined"
+                ? "0.. value"
+                : fragment.constValue
+            }`;
+            break;
+        }
+      } else {
+        fragmentContent = fragment?.value;
+      }
+      return [
+        <div
+          key={i}
+          className={classnames("fragment", fragment?.value, fragment?.type, {
+            highlight:
+              instructionIndex === li &&
+              cursorPos === i &&
+              selectedInstructions.length === 0 &&
+              hasFocus,
+          })}
+        >
+          {fragmentContent}
+        </div>,
+        <div key={i + "-space"}> </div>,
+      ];
+    });
 
     if (
       instruction.type === "scopeInstruction" &&
@@ -103,6 +130,7 @@ function renderInstructions(
                 {selectedInstructions.length === 0 &&
                   fragmentHints[instruction.type][cursorPos]
                     .split(" | ")
+                    .concat(isMacro ? ["_"] : [])
                     .map((h) => (
                       <>
                         <b className="bold-hint">{h.slice(0, 1)}</b>
@@ -185,6 +213,7 @@ export function Editor({
           cursorPos,
           instructionIndex,
           selectedInstructions,
+          isMacro,
           macros,
           macroSearchString,
           key: e.key,
@@ -222,6 +251,7 @@ export function Editor({
     setFocusIndex,
     onCursorUnderflow,
     setParentInstructionIndex,
+    isMacro,
   ]);
 
   const instructionsRendered = renderInstructions(
@@ -230,6 +260,7 @@ export function Editor({
     instructionIndex,
     cursorPos,
     hasFocus,
+    isMacro,
     macros,
     macroSearchString
   );

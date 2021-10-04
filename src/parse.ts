@@ -1,6 +1,8 @@
 // const fs = require("fs");
 // const path = require("path");
 
+import { Instruction } from "./editor_handler";
+
 const DEBUG = false;
 
 // const file = fs.readFileSync(process.argv[2], "utf8");
@@ -338,4 +340,28 @@ export function parse(file: string) {
   DEBUG && console.log("scopes:", scopesFinal);
 
   return [scopesFinal, instructions, maxMemory, jumps] as const;
+}
+
+export function instructionsToText(instructions: Instruction[]) {
+  return (instructions.filter(
+    (i) => i.type !== "emptyInstruction" && i.valid
+  ) as Instruction[])
+    .map((i) =>
+      i.fragments
+        .map((f) => {
+          if (f?.type === "varType") {
+            switch (f.value) {
+              case "var":
+                return `var ${f.stackPosition}`;
+              case "const":
+                return `const ${f.constValue}`;
+              case "_":
+                return "_";
+            }
+          }
+          return f?.value;
+        })
+        .join(" ")
+    )
+    .join("\n");
 }
