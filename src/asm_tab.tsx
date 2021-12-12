@@ -42,8 +42,8 @@ function compileAsm(
 }
 
 const targetValues: [BackendTarget, string][] = [
-  ["x64_OSX", "Mac OSX (64 bit)"],
-  ["x64_win", "Windows (64 bit)"],
+  ["x64_OSX", "Mac OSX (x64)"],
+  ["x64_win", "Windows (x64)"],
 ];
 
 export function ASMTab(props: {

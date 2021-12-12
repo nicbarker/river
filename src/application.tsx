@@ -14,7 +14,7 @@ export type Output = { value: string; lineNumber: number };
 export function App() {
   const [macros, setMacros] = useState<Macro[]>(standardMacros);
   const [instructions, setInstructions] = useState<Instruction[]>([
-    { type: "emptyInstruction", fragments: [] },
+    { type: "emptyInstruction", fragments: [undefined] },
   ]);
   const [outputs, setOutputs] = useState<Output[]>([]);
   const [focusIndex, setFocusIndex] = useState<number>(0);
@@ -22,6 +22,7 @@ export function App() {
     "build" | "asm" | "macros"
   >("build");
   const [instructionIndex, setInstructionIndex] = useState(0);
+  const [macrosExpanded, setMacrosExpanded] = useState(false);
 
   useEffect(() => {
     const handle = (e: KeyboardEvent) => {
@@ -41,6 +42,9 @@ export function App() {
         }
         e.preventDefault();
       }
+      if (e.key === "Escape") {
+        setMacrosExpanded(!macrosExpanded);
+      }
     };
     window.addEventListener("keydown", handle);
     return () => window.removeEventListener("keydown", handle);
@@ -49,10 +53,10 @@ export function App() {
   const editor = (
     <Editor
       hasFocus={focusIndex === 0}
-      isMacro={false}
       macros={macros}
       setMacros={setMacros}
       instructions={instructions}
+      macrosExpanded={macrosExpanded}
       setInstructions={setInstructions}
       setActiveRightTab={setActiveRightTab}
       setFocusIndex={setFocusIndex}

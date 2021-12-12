@@ -228,7 +228,7 @@ export function execute(
         break;
       }
       case "jump": {
-        const newInstructionIndex = instruction.target;
+        const newInstructionIndex = instruction.target - 1;
         DEBUG &&
           console.log(
             `jumping from ${instructionIndex} to ${newInstructionIndex}`

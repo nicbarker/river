@@ -55,10 +55,11 @@ export function MacroEditor({
       <Editor
         onCursorUnderflow={() => setInternalFocus(0)}
         hasFocus={hasFocus && internalFocus === 1}
-        isMacro={true}
+        sourceMacro={macro}
         macros={macros}
         setMacros={setMacros}
         instructions={macro.instructions}
+        macrosExpanded={false}
         setInstructions={(instructions: Instruction[]) => {
           macro.instructions = instructions;
           setMacros(macros.slice());

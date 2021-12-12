@@ -1,33 +1,21 @@
-import { Macro, ScopeInstruction } from "./editor_handler";
-
-const scopeOpen: ScopeInstruction = {
-  type: "scopeInstruction",
-  fragments: [
-    { type: "instruction", value: "scope" },
-    { type: "scopeAction", value: "open" },
-  ],
-};
-
-const scopeClose: ScopeInstruction = {
-  type: "scopeInstruction",
-  partner: scopeOpen,
-  fragments: [
-    { type: "instruction", value: "scope" },
-    { type: "scopeAction", value: "close" },
-  ],
-};
-
-scopeOpen.partner = scopeClose;
+import { Macro } from "./editor_handler";
 
 export const standardMacros: Macro[] = [
   {
     name: "for",
     instructions: [
-      scopeOpen,
+      {
+        type: "scopeInstruction",
+        fragments: [
+          { type: "instruction", value: "scope" },
+          { type: "scopeAction", value: "open" },
+        ],
+      },
       {
         type: "defInstruction",
         fragments: [
           { type: "instruction", value: "def" },
+          { type: "defName", value: "index" },
           { type: "defLocation", value: "local" },
           { type: "size", value: 64 },
         ],
@@ -39,7 +27,7 @@ export const standardMacros: Macro[] = [
           { type: "instruction", value: "assign" },
           { type: "varType", value: "var", stackPosition: 0 },
           { type: "assignAction", value: "=" },
-          { type: "varType", value: "const", constValue: 0 },
+          { type: "varType", value: "_" },
         ],
         valid: true,
       },
@@ -54,7 +42,7 @@ export const standardMacros: Macro[] = [
           { type: "instruction", value: "assign" },
           { type: "varType", value: "var", stackPosition: 0 },
           { type: "assignAction", value: "+" },
-          { type: "varType", value: "const", constValue: 1 },
+          { type: "varType", value: "_" },
         ],
         valid: true,
       },
@@ -64,7 +52,7 @@ export const standardMacros: Macro[] = [
           { type: "instruction", value: "compare" },
           { type: "varType", value: "var", stackPosition: 0 },
           { type: "comparator", value: "<" },
-          { type: "varType", value: "const", constValue: 10 },
+          { type: "varType", value: "_" },
         ],
         valid: true,
       },
@@ -76,7 +64,14 @@ export const standardMacros: Macro[] = [
         ],
         valid: true,
       },
-      scopeClose,
+      {
+        type: "scopeInstruction",
+        fragments: [
+          { type: "instruction", value: "scope" },
+          { type: "scopeAction", value: "close" },
+        ],
+      },
     ],
+    placeholders: ["initial", "increment", "max"],
   },
 ];

@@ -175,6 +175,36 @@ code {
   background: rgba(0, 170, 255, 0.4);
 }
 
+.fragment:not(.highlight).placeholder:after {
+  content: " ";
+  position: absolute;
+  width: calc(100% + 8px);
+  height: calc(100% + 4px);
+  left: -4px;
+  top: -2px;
+  border-radius: 2px;
+  background: rgba(165, 62, 210, 0.4);
+}
+
+.fragment.macroName {
+  color: #e976d8;
+}
+
+.macro-param-label {
+  color: #aaa;
+  display: inline;
+}
+
+.macro-block-braces {
+  display: flex;
+  margin-left: 46px;
+  color: #aaa;
+}
+
+.fragment {
+  display: flex;
+}
+
 .fragment.scope {
   color: #00dffc;
 }
@@ -183,12 +213,12 @@ code {
   color: #fe4365;
 }
 
-.fragment.const {
-  color: #ccc;
-}
-
 .fragment.parent {
   color: #fc9d9a;
+}
+
+.fragment.local {
+  color: #fcc49a;
 }
 
 .fragment.assign {
@@ -196,7 +226,7 @@ code {
 }
 
 .fragment.compare {
-  color: #5aedba;
+  color: #7cdab9;
 }
 
 .fragment.assignAction {
@@ -215,7 +245,7 @@ code {
   color: #fae571;
 }
 
-.empty.highlight {
+.empty {
   content: "\200b";
   height: 19px;
   min-width: 30px;
