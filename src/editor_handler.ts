@@ -439,7 +439,9 @@ export function handleKeyStroke({
                 case "compareInstruction":
                 case "assignInstruction": {
                   const toReturn = { ...inst };
-                  const target = toReturn.fragments[1];
+                  const target = toReturn.fragments[1] && {
+                    ...toReturn.fragments[1],
+                  };
                   if (
                     target &&
                     target.value === "var" &&
@@ -459,7 +461,9 @@ export function handleKeyStroke({
                 }
                 case "jumpInstruction": {
                   const toReturn = { ...inst };
-                  const target = toReturn.fragments[1];
+                  const target = toReturn.fragments[1] && {
+                    ...toReturn.fragments[1],
+                  };
                   if (target && target.value !== "_") {
                     target.value += collapsedIndex;
                   }
