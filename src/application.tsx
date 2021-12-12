@@ -20,7 +20,7 @@ export function App() {
   const [focusIndex, setFocusIndex] = useState<number>(0);
   const [activeRightTab, setActiveRightTab] = useState<
     "build" | "asm" | "macros"
-  >("build");
+  >("asm");
   const [instructionIndex, setInstructionIndex] = useState(0);
   const [macrosExpanded, setMacrosExpanded] = useState(false);
 

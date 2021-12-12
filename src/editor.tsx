@@ -1,5 +1,5 @@
 import classnames from "classnames";
-import React, { useMemo } from "react";
+import React from "react";
 import { useState, useEffect } from "react";
 import {
   CollapsedInstruction,
