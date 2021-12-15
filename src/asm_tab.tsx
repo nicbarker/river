@@ -8,6 +8,7 @@ import {
 } from "./compiler/compiler";
 import { Instruction } from "./editor_handler";
 import { instructionsToText, parse } from "./parse";
+import { validate } from "./validate";
 
 function downloadFile(data: string, fileName: string, type = "text/plain") {
   // Create an invisible A element
@@ -57,7 +58,9 @@ export function ASMTab(props: {
   );
 
   useEffect(() => {
-    setAsm(compileAsm(props.instructions, targetPlatform, "untitled"));
+    if (validate(props.instructions)) {
+      setAsm(compileAsm(props.instructions, targetPlatform, "untitled"));
+    }
   }, [props.instructions, targetPlatform]);
 
   const renderedBlocks = asm.map((block) => {

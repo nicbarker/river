@@ -344,7 +344,7 @@ export function parse(file: string) {
 
 export function instructionsToText(instructions: Instruction[]) {
   return (instructions.filter(
-    (i) => i.type !== "emptyInstruction" && i.valid
+    (i) => i.type !== "emptyInstruction"
   ) as Instruction[])
     .map((i) =>
       i.fragments

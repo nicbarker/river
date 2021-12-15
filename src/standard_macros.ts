@@ -19,7 +19,6 @@ export const standardMacros: Macro[] = [
           { type: "defLocation", value: "local" },
           { type: "size", value: 64 },
         ],
-        valid: true,
       },
       {
         type: "assignInstruction",
@@ -29,12 +28,10 @@ export const standardMacros: Macro[] = [
           { type: "assignAction", value: "=" },
           { type: "varType", value: "_" },
         ],
-        valid: true,
       },
       {
         type: "placeholderInstruction",
         fragments: [{ type: "instruction", value: "_" }],
-        valid: true,
       },
       {
         type: "assignInstruction",
@@ -44,7 +41,6 @@ export const standardMacros: Macro[] = [
           { type: "assignAction", value: "+" },
           { type: "varType", value: "_" },
         ],
-        valid: true,
       },
       {
         type: "compareInstruction",
@@ -54,7 +50,6 @@ export const standardMacros: Macro[] = [
           { type: "comparator", value: "<" },
           { type: "varType", value: "_" },
         ],
-        valid: true,
       },
       {
         type: "jumpInstruction",
@@ -62,7 +57,6 @@ export const standardMacros: Macro[] = [
           { type: "instruction", value: "jump" },
           { type: "instructionNumber", value: 4 },
         ],
-        valid: true,
       },
       {
         type: "scopeInstruction",

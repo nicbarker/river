@@ -270,7 +270,7 @@ export type PlaceholderInstruction = {
   fragments: [InstructionPlaceholder];
 };
 
-export type Instruction = (
+export type Instruction =
   | EmptyInstruction
   | DefInstruction
   | AssignInstruction
@@ -278,17 +278,13 @@ export type Instruction = (
   | CompareInstruction
   | JumpInstruction
   | OSInstruction
-  | PlaceholderInstruction
-) & {
-  valid?: boolean;
-};
+  | PlaceholderInstruction;
 
 export type MacroInstruction = {
   type: "macroInstruction";
   fragments: Fragment[];
   macro: Macro;
   blockRanges: [number, number][];
-  valid?: boolean;
 };
 
 export type CollapsedInstruction = (Instruction | MacroInstruction) & {
@@ -431,7 +427,6 @@ export function handleKeyStroke({
                   return [
                     {
                       type: "emptyInstruction",
-                      valid: true,
                       fragments: [undefined],
                     },
                   ];
@@ -1126,19 +1121,10 @@ export function handleKeyStroke({
     if (instructionIndex === collapsedInstructions.length - 1) {
       instructions.push({ type: "emptyInstruction", fragments: [undefined] });
     }
-    // TODO: proper validation / type checking
-    if (instruction.fragments.length === getFragmentLength(instruction)) {
-      instructions[collapsedIndex].valid = true;
-    }
     setInstructionIndex(instructionIndex + 1);
     setCursorPos(0);
   } else if (increment === "cursor") {
     setCursorPos(cursorPos + 1);
-  }
-
-  // TODO: proper validation / type checking
-  if (instruction.fragments.length === getFragmentLength(instruction)) {
-    instructions[collapsedIndex].valid = true;
   }
 
   // ---------------------------------------------
@@ -1165,10 +1151,8 @@ export function handleKeyStroke({
       } else {
         if (instruction.type === "macroInstruction") {
           instruction.fragments[cursorPos].value = "_";
-          instruction.valid = false;
         } else {
           instruction.fragments[cursorPos] = undefined;
-          instruction.valid = false;
         }
         setInstructions(instructions.slice());
       }

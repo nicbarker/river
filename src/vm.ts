@@ -1,8 +1,8 @@
 import { Output } from "./application";
 import { CompiledInstruction, dec2bin, Scope } from "./parse";
 
-const DEBUG = true;
-const DOUBLE_DEBUG = true;
+const DEBUG = false;
+const DOUBLE_DEBUG = false;
 
 export function execute(
   scopesFinal: Scope[],
@@ -25,7 +25,7 @@ export function execute(
     instructionIndex++
   ) {
     executionCount++;
-    if (executionCount > 10000) {
+    if (executionCount > 100000) {
       console.log("Error: possible infinite loop");
       break;
     }
