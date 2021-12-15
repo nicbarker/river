@@ -358,6 +358,53 @@ export const fragmentPlaceholderMessage: { [k: string]: string } = {
   instructionNumber: "_instructions",
 };
 
+export function getStackPositionAtInstructionIndex(
+  index: number,
+  instructions: Instruction[]
+) {
+  const scopedPositions: number[] = [0];
+  for (let i = 0; i < index; i++) {
+    const instruction = instructions[i];
+    if (instruction.type === "scopeInstruction") {
+      if (instruction.fragments[1]?.value === "open") {
+        scopedPositions.push(scopedPositions[scopedPositions.length - 1]);
+      } else if (instruction.fragments[1]?.value === "close") {
+        scopedPositions.pop();
+      }
+      // TODO: validate this in a less ugly way
+    } else if (
+      instruction.type === "defInstruction" &&
+      instruction.fragments[1] &&
+      instruction.fragments[2] &&
+      instruction.fragments[3]
+    ) {
+      scopedPositions[scopedPositions.length - 1]++;
+    }
+  }
+  return scopedPositions[scopedPositions.length - 1];
+}
+
+export function modifyStackPositionsAfter(
+  amount: number,
+  index: number,
+  instructions: Instruction[]
+) {
+  const stackPosition = getStackPositionAtInstructionIndex(index, instructions);
+  for (let i = 0; i < instructions.length; i++) {
+    for (let j = 0; j < instructions[i].fragments.length; j++) {
+      const fragment = instructions[i].fragments[j];
+      if (
+        fragment?.type === "varType" &&
+        fragment.value === "var" &&
+        typeof fragment.stackPosition !== "undefined" &&
+        fragment.stackPosition >= stackPosition
+      ) {
+        fragment.stackPosition += amount;
+      }
+    }
+  }
+}
+
 export function handleKeyStroke({
   instruction,
   instructions,
@@ -862,6 +909,8 @@ export function handleKeyStroke({
                 type: "size",
                 value,
               };
+              modifyStackPositionsAfter(1, collapsedIndex, instructions);
+              increment = "cursor";
               setInstructions(instructions.slice());
               break;
             }
@@ -1163,9 +1212,6 @@ export function handleKeyStroke({
           fragments: [undefined],
         };
       } else {
-        if (instructions.length === 1) {
-          return;
-        }
         instructions.splice(collapsedIndex, 1);
         if (instruction.type === "scopeInstruction") {
           let numOpen = 0;
@@ -1191,6 +1237,8 @@ export function handleKeyStroke({
               }
             }
           }
+        } else if (instruction.type === "defInstruction") {
+          modifyStackPositionsAfter(-1, collapsedIndex, instructions);
         } else {
           setInstructionIndex(
             Math.min(

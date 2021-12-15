@@ -3,6 +3,7 @@ import {
   Fragment,
   Macro,
   CollapsedInstruction,
+  getStackPositionAtInstructionIndex,
 } from "./editor_handler";
 
 type CollapsedMacro = Macro & {
@@ -10,29 +11,33 @@ type CollapsedMacro = Macro & {
 };
 
 function instructionsAreEqual(
-  instructionOne?: Instruction,
-  instructionTwo?: Instruction
+  macroInstruction?: Instruction,
+  programInstruction?: Instruction,
+  stackPositionOffset: number = 0
 ) {
-  if (!instructionOne || !instructionTwo) {
+  if (!macroInstruction || !programInstruction) {
     return false;
   }
-  if (instructionOne.type !== instructionTwo.type) {
+  if (macroInstruction.type !== programInstruction.type) {
     return false;
   }
-  if (instructionOne.fragments.length !== instructionTwo.fragments.length) {
+  if (
+    macroInstruction.fragments.length !== programInstruction.fragments.length
+  ) {
     return false;
   }
   for (
     let j = 0;
-    j < instructionOne.fragments.length || j < instructionTwo.fragments.length;
+    j < macroInstruction.fragments.length ||
+    j < programInstruction.fragments.length;
     j++
   ) {
-    const fragment = instructionOne.fragments[j];
-    const fragmentTwo = instructionTwo.fragments[j];
+    const fragment = programInstruction.fragments[j];
+    const macroFragment = macroInstruction.fragments[j];
     if (
       fragment?.value !== "_" &&
-      fragmentTwo?.value !== "_" &&
-      fragment?.value !== fragmentTwo?.value
+      macroFragment?.value !== "_" &&
+      fragment?.value !== macroFragment?.value
     ) {
       return false;
     }
@@ -43,18 +48,21 @@ function instructionsAreEqual(
     // assign var 1 + var 2
     if (
       fragment?.type === "varType" &&
-      fragmentTwo?.type === "varType" &&
+      macroFragment?.type === "varType" &&
       ((fragment.value === "var" &&
-        fragmentTwo?.value === "var" &&
-        fragment.stackPosition !== fragmentTwo.stackPosition) ||
+        macroFragment.value === "var" &&
+        fragment.stackPosition !==
+          (typeof macroFragment.stackPosition === "undefined"
+            ? undefined
+            : macroFragment.stackPosition + stackPositionOffset)) ||
         (fragment.value === "const" &&
-          fragmentTwo?.value === "const" &&
-          fragment.constValue !== fragmentTwo.constValue))
+          macroFragment.value === "const" &&
+          fragment.constValue !== macroFragment.constValue))
     ) {
       return false;
     }
 
-    if (!fragment || !instructionTwo.fragments[j]) {
+    if (!fragment || !programInstruction.fragments[j]) {
       return false;
     }
   }
@@ -76,15 +84,17 @@ function macroRanges(
   let placeholderFragments: Fragment[] = [];
   let ranges: [number, number][] = [[0, macro.instructions.length + 1]];
   let blockRanges: [number, number][] = [];
+  let stackPositionOffset = getStackPositionAtInstructionIndex(
+    instructionIndex,
+    instructions
+  );
   for (
     let i = 0;
     i < macro.instructions.length && newInstructionIndex < instructions.length;
     i++, newInstructionIndex++
   ) {
     const macroInstruction = macro.instructions[i];
-    console.log(macroInstruction.type);
     if (macroInstruction.type === "placeholderInstruction") {
-      console.log("outside");
       ranges[ranges.length - 1][1] = newInstructionIndex;
       blockRanges.push([newInstructionIndex, newInstructionIndex + 1]);
       const nextInstruction = macro.instructions[i + 1];
@@ -93,15 +103,10 @@ function macroRanges(
         if (
           instructionsAreEqual(
             nextInstruction,
-            instructions[newInstructionIndex]
+            instructions[newInstructionIndex],
+            stackPositionOffset
           )
         ) {
-          console.log(
-            nextInstruction,
-            "and",
-            instructions[newInstructionIndex],
-            "are equal"
-          );
           newInstructionIndex--;
           break;
         }
@@ -112,13 +117,12 @@ function macroRanges(
         newInstructionIndex + macro.instructions.length - i,
       ]);
     } else if (
-      !instructionsAreEqual(macroInstruction, instructions[newInstructionIndex])
-    ) {
-      console.log(
-        "not equal",
+      !instructionsAreEqual(
         macroInstruction,
-        instructions[newInstructionIndex]
-      );
+        instructions[newInstructionIndex],
+        stackPositionOffset
+      )
+    ) {
       return;
     }
     for (let j = 0; j < macroInstruction.fragments.length; j++) {
