@@ -1,11 +1,6 @@
-// const fs = require("fs");
-// const path = require("path");
-
 import { Instruction } from "./editor_handler";
 
-const DEBUG = true;
-
-// const file = fs.readFileSync(process.argv[2], "utf8");
+const DEBUG = false;
 
 export function dec2bin(dec: number, pad: number) {
   return (dec >>> 0).toString(2).padStart(pad, "0");
@@ -83,6 +78,7 @@ export type Scope = {
   stackMemory: number;
   instruction: CompiledInstructionMemory;
   openIndex: number;
+  jumpsEnd: CompiledInstructionJump[];
 };
 
 export function parse(file: string) {
@@ -90,7 +86,7 @@ export function parse(file: string) {
   const scopes: Scope[] = [];
   const scopesFinal: Scope[] = [];
   const instructions: CompiledInstruction[] = [];
-  const jumps = [];
+  const jumps: number[] = [];
   let maxMemory = 0;
 
   function openScope(originalInstructionIndex: number) {
@@ -108,7 +104,7 @@ export function parse(file: string) {
       originalInstructionIndex,
     };
     instructions.push(instruction);
-    const scope = {
+    const scope: Scope = {
       name: "_",
       variables:
         scopes.length > 0 ? [...scopes[scopes.length - 1].variables] : [],
@@ -117,6 +113,7 @@ export function parse(file: string) {
       stackMemory: 0,
       instruction,
       openIndex: originalInstructionIndex,
+      jumpsEnd: [],
     };
     scopes.push(scope);
     scopesFinal.push(scope);
@@ -125,6 +122,13 @@ export function parse(file: string) {
   function closeScope(originalInstructionIndex: number) {
     const popped = scopes.pop();
     if (popped) {
+      console.log(popped);
+      for (const jump of popped.jumpsEnd) {
+        jump.target = originalInstructionIndex + 1;
+        if (!jumps.includes(originalInstructionIndex + 1)) {
+          jumps.push(originalInstructionIndex + 1);
+        }
+      }
       const instruction: CompiledInstructionMemory = {
         instruction: "memory",
         action: "dealloc",
@@ -210,18 +214,19 @@ export function parse(file: string) {
       }
       case "jump": {
         const jumpPosition = tokens[1];
-        let target = 0;
-        if (jumpPosition === "start") {
-          target = scopes[scopes.length - 1].openIndex + 1;
-        } else {
-        }
-        instructions.push({
+        const target = scopes[scopes.length - 1].openIndex + 1;
+        const jump: CompiledInstructionJump = {
           instruction: "jump",
           target,
           serialized: line,
           originalInstructionIndex: i,
-        });
-        jumps.push(target);
+        };
+        instructions.push(jump);
+        if (jumpPosition === "end") {
+          scopes[scopes.length - 1].jumpsEnd.push(jump);
+        } else {
+          jumps.push(target);
+        }
         break;
       }
       case "compare": {

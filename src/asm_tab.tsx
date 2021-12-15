@@ -63,8 +63,8 @@ export function ASMTab(props: {
     }
   }, [props.instructions, targetPlatform]);
 
-  const renderedBlocks = asm.map((block) => {
-    const renderedLines = block[1].map((line) => {
+  const renderedBlocks = asm.map((block, bi) => {
+    const renderedLines = block[1].map((line, li) => {
       const columns: React.ReactNode[] = [];
       for (let i = 0; i < 3; i++) {
         const column = line[i];
@@ -73,6 +73,7 @@ export function ASMTab(props: {
         }
         columns.push(
           <code
+            key={i}
             className={classNames({
               purple:
                 column?.charAt(0) !== ";" &&
@@ -88,10 +89,15 @@ export function ASMTab(props: {
           </code>
         );
       }
-      return <div className={"asmLine"}>{columns}</div>;
+      return (
+        <div key={li} className={"asmLine"}>
+          {columns}
+        </div>
+      );
     });
     return (
       <div
+        key={bi}
         className={classNames("asmBlock", {
           highlight: props.instructionIndex === block[0],
         })}

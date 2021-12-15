@@ -272,6 +272,13 @@ code {
   background: #444;
 }
 
+.buildContainer {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  height: 0;
+}
+
 .outputs {
   color: #fff;
   align-items: flex-start;
@@ -281,6 +288,7 @@ code {
   padding: 16px;
   overflow-y: scroll;
   height: 100%;
+  flex-grow: 1;
 }
 
 .outputLine {

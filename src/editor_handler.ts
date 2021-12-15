@@ -325,7 +325,7 @@ export function getFragmentHints(instruction: CollapsedInstruction) {
         "var | const",
       ];
     case "jumpInstruction":
-      return ["jump", "0.. instruction number"];
+      return ["jump", "start | end"];
     case "OSInstruction":
       return ["os", "stdout", "var | const"];
     case "macroInstruction":
