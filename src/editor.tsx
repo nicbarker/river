@@ -27,8 +27,6 @@ function isPlaceholderInstruction(fragment?: Fragment) {
       return fragment.value === "_";
     case "comparator":
       return fragment.value === "_";
-    case "instructionNumber":
-      return fragment.value === "_";
     default:
       return false;
   }

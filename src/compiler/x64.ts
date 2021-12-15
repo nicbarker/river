@@ -340,30 +340,37 @@ function moveAndLabelForSize(instructionSize: number) {
 }
 
 function formatOp(firstOperand: string, secondOperand?: string) {
-  return `${firstOperand}${secondOperand === undefined ? "" : `, ${secondOperand}`
-    }`;
+  return `${firstOperand}${
+    secondOperand === undefined ? "" : `, ${secondOperand}`
+  }`;
 }
 
 function memoryOffset(offset: number) {
   return `[r12${offset > 0 ? " + " + offset : ""}]`;
 }
 
-type x64Flavour = 'x64_OSX' | 'x64_win';
+type x64Flavour = "x64_OSX" | "x64_win";
 
 const nasmInstructions = (target: x64Flavour, fileName: string) => {
   switch (target) {
-    case 'x64_OSX': return `nasm -fmacho64 ${fileName}.asm && gcc ${fileName}.o`;
-    case 'x64_win': return `nasm -fwin64 ${fileName}.asm && gcc ${fileName}.obj`;
+    case "x64_OSX":
+      return `nasm -fmacho64 ${fileName}.asm && gcc ${fileName}.o`;
+    case "x64_win":
+      return `nasm -fwin64 ${fileName}.asm && gcc ${fileName}.obj`;
   }
-}
+};
 
 function syscallArgumentRegisters(target: x64Flavour, index: number) {
-  const isMac = target === 'x64_OSX'
+  const isMac = target === "x64_OSX";
   switch (index) {
-    case 0: return isMac ? 'rdi' : 'rcx';
-    case 1: return isMac ? 'rsi' : 'rdx';
-    case 2: return isMac ? 'rdx' : 'r8';
-    case 3: return isMac ? 'r10' : 'r9';
+    case 0:
+      return isMac ? "rdi" : "rcx";
+    case 1:
+      return isMac ? "rsi" : "rdx";
+    case 2:
+      return isMac ? "rdx" : "r8";
+    case 3:
+      return isMac ? "r10" : "r9";
   }
 }
 
@@ -374,19 +381,20 @@ export function compileX64(
   maxMemory: number,
   jumps: number[]
 ) {
-  const isMac = target === 'x64_OSX'
-  const mainLabel = `${isMac ? '_' : ''}main`;
-  const mallocLabel = `${isMac ? '_' : ''}malloc`;
-  const printfLabel = `${isMac ? '_' : ''}printf`;
+  console.log(jumps);
+  const isMac = target === "x64_OSX";
+  const mainLabel = `${isMac ? "_" : ""}main`;
+  const mallocLabel = `${isMac ? "_" : ""}malloc`;
+  const printfLabel = `${isMac ? "_" : ""}printf`;
   /* OSX and windows have different conventions for syscalls.
-  * OSX requires a 16 byte call stack alignment, with 8 bytes being used for the return
-  * value, hence we push the default pointer size (8 bytes) onto the stack before calling.
-  * Windows requires us to allocate 32 bytes of "shadow space", which added to our 8 byte alignment
-  * gives us 40 bytes (hex value 28h).
-  * See https://stackoverflow.com/questions/30190132/what-is-the-shadow-space-in-x64-assembly/30191127#30191127
-  */
-  const preSysCall: ASMLine = isMac ? [, "push", "rbx"] : [, 'sub', 'rsp, 28h'];
-  const postSysCall: ASMLine = isMac ? [, "pop", "rbx"] : [, 'add', 'rsp, 28h'];
+   * OSX requires a 16 byte call stack alignment, with 8 bytes being used for the return
+   * value, hence we push the default pointer size (8 bytes) onto the stack before calling.
+   * Windows requires us to allocate 32 bytes of "shadow space", which added to our 8 byte alignment
+   * gives us 40 bytes (hex value 28h).
+   * See https://stackoverflow.com/questions/30190132/what-is-the-shadow-space-in-x64-assembly/30191127#30191127
+   */
+  const preSysCall: ASMLine = isMac ? [, "push", "rbx"] : [, "sub", "rsp, 28h"];
+  const postSysCall: ASMLine = isMac ? [, "pop", "rbx"] : [, "add", "rsp, 28h"];
   const output: ASMBlock[] = [
     [
       -1,
@@ -648,11 +656,17 @@ export function compileX64(
           case "stdout": {
             const [mov, size] = moveAndLabelForSize(instruction.size);
             instructionOutputs[1].push(preSysCall);
-            instructionOutputs[1].push([, "lea", `${syscallArgumentRegisters(target, 0)}, [rel message]`]);
+            instructionOutputs[1].push([
+              ,
+              "lea",
+              `${syscallArgumentRegisters(target, 0)}, [rel message]`,
+            ]);
             instructionOutputs[1].push([
               ,
               mov,
-              `${syscallArgumentRegisters(target, 1)}, ${size} ${memoryOffset(instruction.address! / 8)}`,
+              `${syscallArgumentRegisters(target, 1)}, ${size} ${memoryOffset(
+                instruction.address! / 8
+              )}`,
             ]);
             instructionOutputs[1].push([, "call", printfLabel]);
             instructionOutputs[1].push(postSysCall);
@@ -677,4 +691,3 @@ export function compileX64(
   ]);
   return output;
 }
-

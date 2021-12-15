@@ -146,23 +146,17 @@ function macroAtLine(
   macros: Macro[],
   sourceMacro?: Macro
 ): [CollapsedMacro, MacroRanges] | undefined {
-  const instruction = instructions[instructionIndex];
-  if (
-    instruction.type === "scopeInstruction" &&
-    instruction.fragments[1]?.value === "open"
-  ) {
-    for (const macro of macros) {
-      if (macro === sourceMacro) {
-        continue;
-      }
-      const ranges = macroRanges(instructions, instructionIndex, macro);
-      if (ranges) {
-        const collapsedMacro: CollapsedMacro = {
-          ...macro,
-          placeholderFragments: [],
-        };
-        return [collapsedMacro, ranges];
-      }
+  for (const macro of macros) {
+    if (macro === sourceMacro) {
+      continue;
+    }
+    const ranges = macroRanges(instructions, instructionIndex, macro);
+    if (ranges) {
+      const collapsedMacro: CollapsedMacro = {
+        ...macro,
+        placeholderFragments: [],
+      };
+      return [collapsedMacro, ranges];
     }
   }
 }

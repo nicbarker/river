@@ -5,13 +5,6 @@ export const standardMacros: Macro[] = [
     name: "for",
     instructions: [
       {
-        type: "scopeInstruction",
-        fragments: [
-          { type: "instruction", value: "scope" },
-          { type: "scopeAction", value: "open" },
-        ],
-      },
-      {
         type: "defInstruction",
         fragments: [
           { type: "instruction", value: "def" },
@@ -26,6 +19,13 @@ export const standardMacros: Macro[] = [
           { type: "varType", value: "var", stackPosition: 0 },
           { type: "assignAction", value: "=" },
           { type: "varType", value: "_" },
+        ],
+      },
+      {
+        type: "scopeInstruction",
+        fragments: [
+          { type: "instruction", value: "scope" },
+          { type: "scopeAction", value: "open" },
         ],
       },
       {
@@ -54,7 +54,7 @@ export const standardMacros: Macro[] = [
         type: "jumpInstruction",
         fragments: [
           { type: "instruction", value: "jump" },
-          { type: "instructionNumber", value: 4 },
+          { type: "jumpPosition", value: "start" },
         ],
       },
       {

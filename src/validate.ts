@@ -3,6 +3,9 @@ import { Instruction } from "./editor_handler";
 export function validate(instructions: Instruction[]): boolean {
   for (let i = 0; i < instructions.length; i++) {
     const instruction = instructions[i];
+    if (instruction.type === "emptyInstruction") {
+      continue;
+    }
     for (let j = 0; j < instruction.fragments.length; j++) {
       const fragment = instruction.fragments[j];
       if (!fragment || fragment.value === "_") {

@@ -3,7 +3,7 @@
 
 import { Instruction } from "./editor_handler";
 
-const DEBUG = false;
+const DEBUG = true;
 
 // const file = fs.readFileSync(process.argv[2], "utf8");
 
@@ -82,6 +82,7 @@ export type Scope = {
   stackOffset: number;
   stackMemory: number;
   instruction: CompiledInstructionMemory;
+  openIndex: number;
 };
 
 export function parse(file: string) {
@@ -115,6 +116,7 @@ export function parse(file: string) {
       stackOffset,
       stackMemory: 0,
       instruction,
+      openIndex: originalInstructionIndex,
     };
     scopes.push(scope);
     scopesFinal.push(scope);
@@ -207,7 +209,12 @@ export function parse(file: string) {
         break;
       }
       case "jump": {
-        const target = parseInt(tokens[1], 10);
+        const jumpPosition = tokens[1];
+        let target = 0;
+        if (jumpPosition === "start") {
+          target = scopes[scopes.length - 1].openIndex + 1;
+        } else {
+        }
         instructions.push({
           instruction: "jump",
           target,
