@@ -1,4 +1,3 @@
-import { notStrictEqual } from "assert";
 import { VisibleVariable } from "./editor";
 
 // TOP LEVEL INSTRUCTIONS ----------------------------
