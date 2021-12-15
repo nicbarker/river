@@ -160,26 +160,14 @@ export function parse(file: string) {
       }
       case "def": {
         const scope = scopes[scopes.length - 1];
-        const memory = parseInt(tokens[3], 10);
+        const memory = parseInt(tokens[2], 10);
         maxMemory += memory;
         const newVarLocation = scope.stackOffset + scope.stackMemory;
         scope.variables.push(newVarLocation);
         scope.sizes.push(memory);
-        if (tokens[2] === "local") {
-          scope.stackMemory += memory;
-          scope.instruction.stackMemory = scope.stackMemory;
-          scope.instruction.stackOffset = scope.stackOffset;
-        } else {
-          const parent = scopes[scopes.length - 2];
-          parent.stackMemory += memory;
-          parent.variables.push(newVarLocation);
-          parent.sizes.push(memory);
-          parent.instruction.stackMemory = parent.stackMemory;
-          parent.instruction.stackOffset = parent.stackOffset;
-          scope.stackOffset += memory;
-          scope.instruction.stackMemory = scope.stackMemory;
-          scope.instruction.stackOffset = scope.stackOffset;
-        }
+        scope.stackMemory += memory;
+        scope.instruction.stackMemory = scope.stackMemory;
+        scope.instruction.stackOffset = scope.stackOffset;
         instructions.push({
           instruction: "void",
           serialized: line,

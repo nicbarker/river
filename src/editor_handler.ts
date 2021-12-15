@@ -58,23 +58,6 @@ export type DefNameFragment = {
   value: string;
 };
 
-export type DefLocal = {
-  type: "defLocation";
-  value: "local";
-};
-
-export type DefParent = {
-  type: "defLocation";
-  value: "parent";
-};
-
-export type DefPlaceholder = {
-  type: "defLocation";
-  value: "_";
-};
-
-export type DefLocationFragment = DefLocal | DefParent | DefPlaceholder;
-
 // SET ----------------------------------
 export type AssignEq = {
   type: "assignAction";
@@ -206,7 +189,6 @@ export type Fragment =
   | InstructionFragment
   | ScopeFragment
   | DefNameFragment
-  | DefLocationFragment
   | AssignActionFragment
   | VarTypeFragment
   | VarSizeFragment
@@ -221,12 +203,10 @@ export type ScopeInstruction = {
   fragments: Partial<[InstructionScope, ScopeFragment]>;
 };
 
-// def local 16
+// def foo 16
 export type DefInstruction = {
   type: "defInstruction";
-  fragments: Partial<
-    [InstructionDef, DefNameFragment, DefLocationFragment, VarSizeFragment]
-  >;
+  fragments: Partial<[InstructionDef, DefNameFragment, VarSizeFragment]>;
 };
 
 // assign 0 eq var 1
@@ -329,7 +309,7 @@ export function getFragmentHints(instruction: CollapsedInstruction) {
     case "placeholderInstruction":
       return [];
     case "defInstruction":
-      return ["def", "name", "local | parent", "8 | 16 | 32 | 64"];
+      return ["def", "name", "8 | 16 | 32 | 64"];
     case "assignInstruction":
       return ["assign", "var", "= | + | - | * | / | %", "var | const"];
     case "scopeInstruction":
@@ -375,8 +355,7 @@ export function getStackPositionAtInstructionIndex(
     } else if (
       instruction.type === "defInstruction" &&
       instruction.fragments[1] &&
-      instruction.fragments[2] &&
-      instruction.fragments[3]
+      instruction.fragments[2]
     ) {
       scopedPositions[scopedPositions.length - 1]++;
     }
@@ -749,7 +728,6 @@ export function handleKeyStroke({
             { type: "instruction", value: "def" },
             undefined,
             undefined,
-            undefined,
           ],
         };
         increment = "cursor";
@@ -847,43 +825,8 @@ export function handleKeyStroke({
             break;
           }
           case 2: {
-            switch (key) {
-              case "l": {
-                instruction.fragments[2] = {
-                  type: "defLocation",
-                  value: "local",
-                };
-                increment = "cursor";
-                break;
-              }
-              case "p": {
-                instruction.fragments[2] = {
-                  type: "defLocation",
-                  value: "parent",
-                };
-                increment = "cursor";
-                break;
-              }
-              case "_": {
-                if (isMacro) {
-                  instruction.fragments[2] = {
-                    type: "defLocation",
-                    value: "_",
-                  };
-                  instruction.fragments[3] = {
-                    type: "size",
-                    value: "_",
-                  };
-                  increment = "cursor";
-                }
-                break;
-              }
-            }
-            break;
-          }
-          case 3: {
             if (isMacro && key === "_") {
-              instruction.fragments[3] = {
+              instruction.fragments[2] = {
                 type: "size",
                 value: "_",
               };
@@ -905,7 +848,7 @@ export function handleKeyStroke({
                 default:
                   return;
               }
-              instruction.fragments[3] = {
+              instruction.fragments[2] = {
                 type: "size",
                 value,
               };

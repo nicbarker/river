@@ -213,14 +213,6 @@ code {
   color: #fe4365;
 }
 
-.fragment.parent {
-  color: #fc9d9a;
-}
-
-.fragment.local {
-  color: #fcc49a;
-}
-
 .fragment.assign {
   color: #cfa4f5;
 }

@@ -16,7 +16,6 @@ export const standardMacros: Macro[] = [
         fragments: [
           { type: "instruction", value: "def" },
           { type: "defName", value: "index" },
-          { type: "defLocation", value: "local" },
           { type: "size", value: 64 },
         ],
       },
