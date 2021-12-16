@@ -2,6 +2,8 @@ River is an experimental assembly-like programming language.
 
 You can view the current main branch at [https://riverlanguage.org](https://riverlanguage.org)
 
+<img width="1216" alt="Screen Shot 2021-12-16 at 5 53 18 PM" src="https://user-images.githubusercontent.com/2264338/146310470-41ea4153-2ca8-4cb9-b8a8-5f6447501c34.png">
+
 ### Overview
 River is a programming language that that has three goals:
 - Super fast compilation (should be instant on any modern machine for any program of any size)
@@ -10,8 +12,65 @@ River is a programming language that that has three goals:
     - With some knowledge of assembly you should be able to easily write your own compiler backend for a new target platform or architecture.
 - An extremely labourious, verbose and low level syntax is offset with a high level editor that allows you to write software with similar speed and ease as a higher level language like C.
 
+### Instructions
+As an assembly like programming language, river has no control structures, no functions and a very small set of **instructions** for doing work.
+River is formatted with 1 instruction per line, and instructions are made up of `fragments` which are seperated by spaces.
+e.g the following is a `def` instruction, with three fragments:
+`def index 32`
+
+The 5 basic instructions in river are:
+
+#### `def`
+usage: `def [variable name] [8 | 16 | 32 | 64]`
+
+e.g. `def index 32`
+
+Used to define variables and indicate their size in **bits** on the stack. Currently there are only 4 sizes of unsigned int available to use, but eventually fragment 3 will be replaced with a `type`.
+
+#### `assign`
+usage: `assign [var] [= | + | - | * | / | %] [var | const]`
+
+e.g. `assign var 0 = const 5`
+
+Used to modify a value defined with `def`. Note that this modification, like in assembly, happens _in place_. The original value is not preserved.
+For example, `assign var 0 + const 1` would increment the variable at position 0 on the stack by `1`. The second operand can either be another variable or a constant value.
+
+#### `compare`
+usage: `compare [var | const] [= | != | < | <= | > | >=] [var | const]`
+
+e.g. `compare var 0 < const 20`
+
+Performs a mathematical comparison and only runs the next instruction if the comparison returns `true`. For example:
+```
+compare const 10 > const 20
+assign var 0 = 10
+```
+The `assign` instruction here will never execute because `10 > 20` will never be `true`.
+
+#### `scope`
+usage: `scope [open | close]`
+
+e.g. `scope open`
+
+Scopes in river are used to define boundaries for memory management and `jump` instructions. Any `def` instructions that occur after a `scope open` will be deallocated at the corresponding `scope close`.
+
+#### `jump`
+usage: `jump [start | end]`
+
+e.g. `jump start`
+
+Think `goto`. `jump` either moves execution back to the beginning of the current `scope`, or to the end of the current `scope`. Used to construct control flow similar to `while` or `for`.
+
+### Value fragments
+When an instruction needs to reference a **value**, such as in `compare` or `assign`, you can provide either:
+- a _variable_ with the keyword `var` followed by the variable's position on the stack, e.g. `var 0`
+- a _constant_ with the keyword `const` followed by the constant value (at this time only unsigned integers are supported) e.g. `const 5`
+_Constants_ only ever exist in registers and aren't saved to main memory, whereas all `var` values are saved to memory.
+
+e.g. `compare var 0 > const 10` tests whether the variable at position 0 on the stack has a value that is greater than 10.
+
 ### Basic Code Structure
-The actual river code in `.rvr` files isn't great to look at. There's no indentation, variables are only referenced by their position on the stack, there are no functions, and there is almost 1:1 river:assembly mapping (e.g. no expressions or complex syntax that maps to many instructions)
+The actual river code in `.rvr` files isn't great to look at. There's no indentation, and variables are only referenced by their position on the stack.
 
 A program to print even numbers under 20:
 ```c
