@@ -1189,6 +1189,22 @@ export function handleKeyStroke({
             }
           }
         } else if (instruction.type === "defInstruction") {
+          const stackPosition = getStackPositionAtInstructionIndex(
+            collapsedIndex,
+            instructions
+          );
+          for (let i = collapsedIndex; i < instructions.length; i++) {
+            for (let j = 0; j < instructions[i].fragments.length; j++) {
+              const fragment = instructions[i].fragments[j];
+              if (
+                fragment?.type === "varType" &&
+                fragment.value === "var" &&
+                fragment.stackPosition === stackPosition
+              ) {
+                instructions[i].fragments[j] = { type: "varType", value: "_" };
+              }
+            }
+          }
           modifyStackPositionsAfter(-1, collapsedIndex, instructions);
         } else {
           setInstructionIndex(
