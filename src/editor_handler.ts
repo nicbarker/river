@@ -1166,20 +1166,13 @@ export function handleKeyStroke({
         instructions.splice(collapsedIndex, 1);
         if (instruction.type === "scopeInstruction") {
           let numOpen = 0;
-          for (let i = instructionIndex; i < instructions.length; i++) {
+          for (let i = collapsedIndex; i < instructions.length; i++) {
             const instruction = instructions[i];
             if (instruction.type === "scopeInstruction") {
               if (instruction.fragments[1]?.value === "close") {
                 if (numOpen === 0) {
                   instructions.splice(i, 1);
-                  if (instructionIndex >= i) {
-                    setInstructionIndex(
-                      Math.min(
-                        Math.max(instructionIndex - 1, 0),
-                        collapsedInstructions.length - 1
-                      )
-                    );
-                  }
+                  break;
                 } else {
                   numOpen--;
                 }
@@ -1189,6 +1182,7 @@ export function handleKeyStroke({
             }
           }
         } else if (instruction.type === "defInstruction") {
+          // Find references to this variable, and replace them with placeholders
           const stackPosition = getStackPositionAtInstructionIndex(
             collapsedIndex,
             instructions
@@ -1205,6 +1199,7 @@ export function handleKeyStroke({
               }
             }
           }
+          // Decrement the stack position of all variable references after the one we're deleting
           modifyStackPositionsAfter(-1, collapsedIndex, instructions);
         } else {
           setInstructionIndex(
