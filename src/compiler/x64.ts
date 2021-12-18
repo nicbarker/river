@@ -378,10 +378,8 @@ export function compileX64(
   target: x64Flavour,
   fileName: string,
   instructions: CompiledInstruction[],
-  maxMemory: number,
-  jumps: number[]
+  maxMemory: number
 ) {
-  console.log(jumps);
   const isMac = target === "x64_OSX";
   const mainLabel = `${isMac ? "_" : ""}main`;
   const mallocLabel = `${isMac ? "_" : ""}malloc`;
@@ -427,9 +425,6 @@ export function compileX64(
       instruction.originalInstructionIndex,
       [],
     ];
-    if (jumps.includes(instructionIndex)) {
-      instructionOutputs[1].push([`j${instructionIndex.toString()}:`]);
-    }
     switch (instruction.instruction) {
       case "assign": {
         instructionOutputs[1].push([
@@ -572,7 +567,15 @@ export function compileX64(
           ,
           `; ${instructionIndex}: ${instruction.serialized}`,
         ]);
-        instructionOutputs[1].push([, "jmp", `j${instruction.target}`]);
+        instructionOutputs[1].push([
+          ,
+          "jmp",
+          `j${
+            instruction.type === "start"
+              ? instruction.scope.openInstruction.originalInstructionIndex + 1
+              : instruction.scope.closeInstruction.originalInstructionIndex + 1
+          }`,
+        ]);
         break;
       }
       case "compare": {
@@ -675,6 +678,10 @@ export function compileX64(
           default:
             break;
         }
+        break;
+      }
+      case "scope": {
+        instructionOutputs[1].push([`j${instructionIndex.toString()}:`]);
         break;
       }
       default:

@@ -31,9 +31,9 @@ export function execute(
     }
     const instruction = instructions[instructionIndex];
     switch (instruction.instruction) {
-      case "memory": {
+      case "scope": {
         switch (instruction.action) {
-          case "alloc": {
+          case "open": {
             DEBUG &&
               console.log(
                 `allocating ${instruction.stackMemory} at offset ${instruction.stackOffset}`
@@ -49,7 +49,7 @@ export function execute(
             DOUBLE_DEBUG && console.log(`new memory state:`, memory);
             break;
           }
-          case "dealloc": {
+          case "close": {
             DEBUG &&
               console.log(
                 `deallocating ${instruction.stackMemory} at offset ${instruction.stackOffset}`
@@ -228,7 +228,10 @@ export function execute(
         break;
       }
       case "jump": {
-        const newInstructionIndex = instruction.target - 1;
+        const newInstructionIndex =
+          instruction.type === "start"
+            ? instruction.scope.openInstruction.originalInstructionIndex
+            : instruction.scope.closeInstruction.originalInstructionIndex - 1;
         DEBUG &&
           console.log(
             `jumping from ${instructionIndex} to ${newInstructionIndex}`

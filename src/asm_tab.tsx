@@ -5,6 +5,7 @@ import {
   BackendTarget,
   compile,
   formatASM,
+  formatWASM,
 } from "./compiler/compiler";
 import { Instruction } from "./editor_handler";
 import { instructionsToText, parse } from "./parse";
@@ -35,38 +36,22 @@ function compileAsm(
   target: BackendTarget,
   fileName: string
 ) {
-  const [, pInstructions, pMaxMemory, jumps] = parse(
-    instructionsToText(instructions)
-  );
-  const compiled = compile(target, fileName, pInstructions, pMaxMemory, jumps);
+  const [, pInstructions, pMaxMemory] = parse(instructionsToText(instructions));
+  const compiled = compile(target, fileName, pInstructions, pMaxMemory);
   return compiled;
 }
 
 const targetValues: [BackendTarget, string][] = [
   ["x64_OSX", "Mac OSX (x64)"],
   ["x64_win", "Windows (x64)"],
+  ["wasm", "WebAssembly"],
 ];
 
-export function ASMTab(props: {
-  instructions: Instruction[];
-  instructionIndex: number;
-}) {
-  const [asm, setAsm] = useState<ASMBlock[]>([]);
-  const [targetDropdownVisible, setTargetDropdownVisible] = useState(false);
-  const [targetPlatform, setTargetPlatform] = useState<BackendTarget>(
-    "x64_OSX"
-  );
-
-  useEffect(() => {
-    if (validate(props.instructions)) {
-      setAsm(compileAsm(props.instructions, targetPlatform, "untitled"));
-    }
-  }, [props.instructions, targetPlatform]);
-
-  const renderedBlocks = asm.map((block, bi) => {
+function renderX64(props: { asm: ASMBlock[]; instructionIndex: number }) {
+  return props.asm.map((block, bi) => {
     const renderedLines = block[1].map((line, li) => {
       const columns: React.ReactNode[] = [];
-      for (let i = 0; i < 3; i++) {
+      for (let i = 0; i < line.length || i < 3; i++) {
         const column = line[i];
         if (line[0]?.charAt(0) === ";" && i > 0) {
           continue;
@@ -106,6 +91,73 @@ export function ASMTab(props: {
       </div>
     );
   });
+}
+
+function renderWasm(props: { asm: ASMBlock[]; instructionIndex: number }) {
+  return props.asm.map((block, bi) => {
+    const renderedLines = block[1].map((line, li) => {
+      const columns: React.ReactNode[] = [];
+      for (let i = 0; i < line.length || i < 3; i++) {
+        const column = line[i];
+        if (line[0]?.charAt(0) === ";" && i > 0) {
+          continue;
+        }
+        columns.push(
+          <code
+            key={i}
+            className={classNames({
+              purple:
+                column?.startsWith("block") ||
+                column?.startsWith("loop") ||
+                column?.startsWith("end"),
+              grey: column?.startsWith(";;"),
+              red: i === 1 && column?.charAt(0) !== ";",
+              blue: i === 2 && column?.charAt(0) !== "_",
+            })}
+          >
+            {(column || "").padEnd(2, " ")}
+          </code>
+        );
+      }
+      return (
+        <div key={li} className={"asmLine"}>
+          {columns}
+        </div>
+      );
+    });
+    return (
+      <div
+        key={bi}
+        className={classNames("asmBlock", {
+          highlight: props.instructionIndex === block[0],
+        })}
+      >
+        {renderedLines}
+      </div>
+    );
+  });
+}
+
+export function ASMTab(props: {
+  instructions: Instruction[];
+  instructionIndex: number;
+}) {
+  const [asm, setAsm] = useState<ASMBlock[]>([]);
+  const [targetDropdownVisible, setTargetDropdownVisible] = useState(false);
+  const [targetPlatform, setTargetPlatform] = useState<BackendTarget>(
+    "x64_win"
+  );
+
+  useEffect(() => {
+    if (validate(props.instructions)) {
+      setAsm(compileAsm(props.instructions, targetPlatform, "untitled"));
+    }
+  }, [props.instructions, targetPlatform]);
+
+  const renderedBlocks =
+    targetPlatform === "wasm"
+      ? renderWasm({ asm, instructionIndex: props.instructionIndex })
+      : renderX64({ asm, instructionIndex: props.instructionIndex });
 
   const targets = targetValues.map((platform) => (
     <button
@@ -138,7 +190,14 @@ export function ASMTab(props: {
           )}
         </div>
         <div className={"divider"} />
-        <button onClick={() => downloadFile(formatASM(asm), "untitled.asm")}>
+        <button
+          onClick={() =>
+            downloadFile(
+              targetPlatform === "wasm" ? formatWASM(asm) : formatASM(asm),
+              "untitled.asm"
+            )
+          }
+        >
           Download
         </button>
       </div>

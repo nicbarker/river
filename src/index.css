@@ -384,3 +384,7 @@ code {
 .asmLine .purple {
   color: #bc89e8;
 }
+
+.asmLine .grey {
+  color: #aaa;
+}

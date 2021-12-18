@@ -6,12 +6,20 @@ export function dec2bin(dec: number, pad: number) {
   return (dec >>> 0).toString(2).padStart(pad, "0");
 }
 
-export type CompiledInstructionMemory = {
-  instruction: "memory";
-  action: "alloc" | "dealloc";
+export type CompiledInstructionScope = {
+  instruction: "scope";
   stackOffset: number;
   stackMemory: number;
-} & CompiledInstructionSharedAttributes;
+} & (
+  | {
+      action: "open";
+      loopCount: number;
+    }
+  | {
+      action: "close";
+    }
+) &
+  CompiledInstructionSharedAttributes;
 
 export type CompiledInstructionAssign = {
   instruction: "assign";
@@ -42,7 +50,8 @@ export type CompiledInstructionCompare = {
 
 export type CompiledInstructionJump = {
   instruction: "jump";
-  target: number;
+  type: "start" | "end";
+  scope: Scope;
 } & CompiledInstructionSharedAttributes;
 
 export type CompiledInstructionVoid = {
@@ -63,7 +72,7 @@ export type CompiledInstructionSharedAttributes = {
 };
 
 export type CompiledInstruction =
-  | CompiledInstructionMemory
+  | CompiledInstructionScope
   | CompiledInstructionAssign
   | CompiledInstructionCompare
   | CompiledInstructionJump
@@ -76,9 +85,9 @@ export type Scope = {
   sizes: number[];
   stackOffset: number;
   stackMemory: number;
-  instruction: CompiledInstructionMemory;
-  openIndex: number;
-  jumpsEnd: CompiledInstructionJump[];
+  isLoop?: boolean;
+  openInstruction: CompiledInstructionScope & { action: "open" };
+  closeInstruction: CompiledInstructionScope & { action: "close" };
 };
 
 export function parse(file: string) {
@@ -86,7 +95,6 @@ export function parse(file: string) {
   const scopes: Scope[] = [];
   const scopesFinal: Scope[] = [];
   const instructions: CompiledInstruction[] = [];
-  const jumps: number[] = [];
   let maxMemory = 0;
 
   function openScope(originalInstructionIndex: number) {
@@ -95,13 +103,14 @@ export function parse(file: string) {
         ? scopes[scopes.length - 1].stackOffset +
           scopes[scopes.length - 1].stackMemory
         : 0;
-    const instruction: CompiledInstructionMemory = {
-      instruction: "memory",
-      action: "alloc",
+    const instruction: CompiledInstructionScope & { action: "open" } = {
+      instruction: "scope",
+      action: "open",
       stackOffset,
       stackMemory: 0,
       serialized: "scope open",
       originalInstructionIndex,
+      loopCount: 0,
     };
     instructions.push(instruction);
     const scope: Scope = {
@@ -111,9 +120,12 @@ export function parse(file: string) {
       sizes: scopes.length > 0 ? [...scopes[scopes.length - 1].sizes] : [],
       stackOffset,
       stackMemory: 0,
-      instruction,
-      openIndex: originalInstructionIndex,
-      jumpsEnd: [],
+      openInstruction: instruction,
+      closeInstruction: {
+        ...instruction,
+        action: "close",
+        serialized: "scope close",
+      },
     };
     scopes.push(scope);
     scopesFinal.push(scope);
@@ -122,22 +134,12 @@ export function parse(file: string) {
   function closeScope(originalInstructionIndex: number) {
     const popped = scopes.pop();
     if (popped) {
-      console.log(popped);
-      for (const jump of popped.jumpsEnd) {
-        jump.target = originalInstructionIndex + 1;
-        if (!jumps.includes(originalInstructionIndex + 1)) {
-          jumps.push(originalInstructionIndex + 1);
-        }
-      }
-      const instruction: CompiledInstructionMemory = {
-        instruction: "memory",
-        action: "dealloc",
-        stackOffset: popped.stackOffset,
-        stackMemory: popped.stackMemory,
-        serialized: "scope close",
-        originalInstructionIndex,
-      };
-      instructions.push(instruction);
+      popped.openInstruction.stackMemory = popped.stackMemory;
+      popped.openInstruction.stackOffset = popped.stackOffset;
+      popped.closeInstruction.stackMemory = popped.stackMemory;
+      popped.closeInstruction.stackOffset = popped.stackOffset;
+      popped.closeInstruction.originalInstructionIndex = originalInstructionIndex;
+      instructions.push(popped.closeInstruction);
     }
   }
 
@@ -172,12 +174,10 @@ export function parse(file: string) {
         scope.variables.push(newVarLocation);
         scope.sizes.push(memory);
         scope.stackMemory += memory;
-        scope.instruction.stackMemory = scope.stackMemory;
-        scope.instruction.stackOffset = scope.stackOffset;
         instructions.push({
           instruction: "void",
           serialized: line,
-          originalInstructionIndex: scope.instruction.originalInstructionIndex,
+          originalInstructionIndex: i,
         });
         break;
       }
@@ -213,20 +213,18 @@ export function parse(file: string) {
         break;
       }
       case "jump": {
-        const jumpPosition = tokens[1];
-        const target = scopes[scopes.length - 1].openIndex + 1;
+        const jumpType = tokens[1] as "start" | "end";
         const jump: CompiledInstructionJump = {
           instruction: "jump",
-          target,
           serialized: line,
+          type: jumpType,
+          scope: scopes[scopes.length - 1],
           originalInstructionIndex: i,
         };
-        instructions.push(jump);
-        if (jumpPosition === "end") {
-          scopes[scopes.length - 1].jumpsEnd.push(jump);
-        } else {
-          jumps.push(target);
+        if (jumpType === "start") {
+          jump.scope.openInstruction.loopCount++;
         }
+        instructions.push(jump);
         break;
       }
       case "compare": {
@@ -284,7 +282,6 @@ export function parse(file: string) {
             break;
         }
         instructions.push(instruction);
-        jumps.push(i + 3);
         break;
       }
       case "os": {
@@ -339,7 +336,7 @@ export function parse(file: string) {
   }
   DEBUG && console.log("scopes:", scopesFinal);
 
-  return [scopesFinal, instructions, maxMemory, jumps] as const;
+  return [scopesFinal, instructions, maxMemory] as const;
 }
 
 export function instructionsToText(instructions: Instruction[]) {
