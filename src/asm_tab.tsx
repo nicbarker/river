@@ -109,7 +109,8 @@ function renderWasm(props: { asm: ASMBlock[]; instructionIndex: number }) {
               purple:
                 column?.startsWith("block") ||
                 column?.startsWith("loop") ||
-                column?.startsWith("end"),
+                column?.startsWith("end") ||
+                column?.startsWith("if"),
               grey: column?.startsWith(";;"),
               red: i === 1 && column?.charAt(0) !== ";",
               blue: i === 2 && column?.charAt(0) !== "_",

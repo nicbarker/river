@@ -14,7 +14,7 @@ export function compileWasm(
    * gives us 40 bytes (hex value 28h).
    * See https://stackoverflow.com/questions/30190132/what-is-the-shadow-space-in-x64-assembly/30191127#30191127
    */
-  let indent = [, ,];
+  let indent = [,];
   const output: ASMBlock[] = [
     [
       -1,
@@ -31,8 +31,8 @@ export function compileWasm(
       ],
     ],
   ];
-  let conditional = false;
 
+  let printEnd = 0;
   for (
     let instructionIndex = 0;
     instructionIndex < instructions.length;
@@ -230,7 +230,7 @@ export function compileWasm(
             default: {
               instructionOutputs[1].push([...indent, `if`]);
               indent.push(undefined);
-              conditional = true;
+              printEnd = 2;
               break;
             }
           }
@@ -293,10 +293,13 @@ export function compileWasm(
       default:
         break;
     }
-    if (conditional) {
+    if (printEnd === 1) {
       indent.pop();
       instructionOutputs[1].push([...indent, `end`]);
+    } else if (printEnd > 0) {
+      printEnd--;
     }
+
     if (instructionOutputs[1].length > 0) {
       output.push(instructionOutputs);
     }
