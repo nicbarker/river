@@ -157,7 +157,7 @@ River is currently full of bugs and incomplete functionality. Some of the next f
 
 - Using macros inside other macros
 - Saving / loading files
-- WebAssembly backend target
+- WebAssembly browser / wasmtime flavours
 - Types (floating point and signed integers first)
 - Structs or something similar to structs
 - More standard macros
