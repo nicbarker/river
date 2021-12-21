@@ -415,6 +415,7 @@ export function compileX64(
       ],
     ],
   ];
+  const jumpLabels: number[] = [];
   for (
     let instructionIndex = 0;
     instructionIndex < instructions.length;
@@ -425,6 +426,13 @@ export function compileX64(
       instruction.originalInstructionIndex,
       [],
     ];
+    if (
+      jumpLabels.length > 0 &&
+      jumpLabels[jumpLabels.length - 1] === instructionIndex
+    ) {
+      instructionOutputs[1].push([`j${instructionIndex.toString()}:`]);
+      jumpLabels.pop();
+    }
     switch (instruction.instruction) {
       case "assign": {
         instructionOutputs[1].push([
@@ -648,6 +656,7 @@ export function compileX64(
         }
         instructionOutputs[1].push([, "cmp", formatOp("r13", "r14")]);
         instructionOutputs[1].push([, jump, `j${instructionIndex + 2}`]);
+        jumpLabels.push(instructionIndex + 2);
         break;
       }
       case "os": {
