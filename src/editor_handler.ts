@@ -651,7 +651,7 @@ export function handleKeyStroke({
           JSON.stringify(
             instructions.slice(
               Math.min(...selectionRange),
-              Math.min(...selectionRange)
+              Math.max(...selectionRange) + 1
             )
           )
         ),
@@ -1270,7 +1270,10 @@ export function handleKeyStroke({
     setInstructions(instructions.slice());
   }
 
-  if (instructions[instructions.length - 1].type !== "emptyInstruction") {
+  if (
+    instructions[instructions.length - 1].type !== "emptyInstruction" &&
+    !isMacro
+  ) {
     instructions.push({ type: "emptyInstruction", fragments: [undefined] });
     setInstructions(instructions.slice());
   }

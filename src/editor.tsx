@@ -313,13 +313,11 @@ export function Editor({
     const inst = instructions[i];
     if (inst.type === "defInstruction") {
       const name = inst.fragments[1];
-      if (name) {
-        visibleVariables.push({
-          name: name.value,
-          index: visibleVariables.length,
-          visible: i < instruction.lineNumber,
-        });
-      }
+      visibleVariables.push({
+        name: name?.value || "",
+        index: visibleVariables.length,
+        visible: i < instruction.lineNumber,
+      });
     }
   }
 
