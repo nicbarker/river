@@ -296,7 +296,9 @@ export function compileWasm(
     if (printEnd === 1) {
       indent.pop();
       instructionOutputs[1].push([...indent, `end`]);
-    } else if (printEnd > 0) {
+    }
+
+    if (printEnd > 0) {
       printEnd--;
     }
 
