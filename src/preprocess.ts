@@ -73,6 +73,7 @@ type MacroRanges = {
   ranges: [number, number][];
   blockRanges: [number, number][];
   placeholderFragments: Fragment[];
+  endLineNumber: number;
 };
 
 function macroRanges(
@@ -137,7 +138,12 @@ function macroRanges(
       }
     }
   }
-  return { ranges, placeholderFragments, blockRanges };
+  return {
+    ranges,
+    placeholderFragments,
+    blockRanges,
+    endLineNumber: newInstructionIndex,
+  };
 }
 
 function macroAtLine(
@@ -182,6 +188,7 @@ export function preProcess(
           macro: macroRanges[0],
           blockRanges: macroRanges[1].blockRanges,
           lineNumber: index,
+          endLineNumber: macroRanges[1].endLineNumber,
         };
       } else if (
         collapse.length > 0 &&

@@ -267,6 +267,7 @@ export type MacroInstruction = {
   fragments: Fragment[];
   macro: Macro;
   blockRanges: [number, number][];
+  endLineNumber: number;
 };
 
 export type CollapsedInstruction = (Instruction | MacroInstruction) & {
@@ -383,6 +384,56 @@ export function modifyStackPositionsAfter(
         fragment.stackPosition += amount;
       }
     }
+  }
+}
+
+function deleteInstruction(
+  instructionIndex: number,
+  instructions: Instruction[],
+  matchScopes: boolean = true
+) {
+  const instruction = instructions[instructionIndex];
+  instructions.splice(instructionIndex, 1);
+  if (instruction.type === "scopeInstruction" && matchScopes) {
+    let numOpen = 0;
+    for (let i = instructionIndex; i < instructions.length; i++) {
+      const instruction = instructions[i];
+      if (instruction.type === "scopeInstruction") {
+        if (instruction.fragments[1]?.value === "close") {
+          if (numOpen === 0) {
+            instructions.splice(i, 1);
+            break;
+          } else {
+            numOpen--;
+          }
+        } else {
+          numOpen++;
+        }
+      }
+    }
+  } else if (instruction.type === "defInstruction") {
+    // Find references to this variable, and replace them with placeholders
+    const stackPosition = getStackPositionAtInstructionIndex(
+      instructionIndex,
+      instructions
+    );
+    for (let i = instructionIndex; i < instructions.length; i++) {
+      for (let j = 0; j < instructions[i].fragments.length; j++) {
+        const fragment = instructions[i].fragments[j];
+        if (
+          fragment?.type === "varType" &&
+          fragment.value === "var" &&
+          fragment.stackPosition === stackPosition
+        ) {
+          instructions[i].fragments[j] = {
+            type: "varType",
+            value: "_",
+          };
+        }
+      }
+    }
+    // Decrement the stack position of all variable references after the one we're deleting
+    modifyStackPositionsAfter(-1, instructionIndex, instructions);
   }
 }
 
@@ -1157,59 +1208,26 @@ export function handleKeyStroke({
         setInstructions(instructions.slice());
       }
     } else if (cursorPos === 0) {
-      if (instructionIndex === 0 && instructions.length === 1) {
-        instructions[instructionIndex] = {
+      if (collapsedIndex === 0 && instructions.length === 1) {
+        instructions[0] = {
           type: "emptyInstruction",
           fragments: [undefined],
         };
       } else {
-        instructions.splice(collapsedIndex, 1);
-        if (instruction.type === "scopeInstruction") {
-          let numOpen = 0;
-          for (let i = collapsedIndex; i < instructions.length; i++) {
-            const instruction = instructions[i];
-            if (instruction.type === "scopeInstruction") {
-              if (instruction.fragments[1]?.value === "close") {
-                if (numOpen === 0) {
-                  instructions.splice(i, 1);
-                  break;
-                } else {
-                  numOpen--;
-                }
-              } else {
-                numOpen++;
-              }
-            }
+        if (instruction.type === "macroInstruction") {
+          for (let i = collapsedIndex; i < instruction.endLineNumber; i++) {
+            deleteInstruction(collapsedIndex, instructions, false);
           }
-        } else if (instruction.type === "defInstruction") {
-          // Find references to this variable, and replace them with placeholders
-          const stackPosition = getStackPositionAtInstructionIndex(
-            collapsedIndex,
-            instructions
-          );
-          for (let i = collapsedIndex; i < instructions.length; i++) {
-            for (let j = 0; j < instructions[i].fragments.length; j++) {
-              const fragment = instructions[i].fragments[j];
-              if (
-                fragment?.type === "varType" &&
-                fragment.value === "var" &&
-                fragment.stackPosition === stackPosition
-              ) {
-                instructions[i].fragments[j] = { type: "varType", value: "_" };
-              }
-            }
-          }
-          // Decrement the stack position of all variable references after the one we're deleting
-          modifyStackPositionsAfter(-1, collapsedIndex, instructions);
         } else {
-          setInstructionIndex(
-            Math.min(
-              Math.max(instructionIndex, 0),
-              collapsedInstructions.length - 1
-            )
-          );
+          deleteInstruction(collapsedIndex, instructions);
         }
       }
+      setInstructionIndex(
+        Math.min(
+          Math.max(instructionIndex, 0),
+          collapsedInstructions.length - 1
+        )
+      );
       setInstructions(instructions.slice());
     }
     // ---------------------------------------------
