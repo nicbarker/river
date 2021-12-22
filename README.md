@@ -14,6 +14,27 @@ River is a programming language that that has three goals:
   - With some knowledge of assembly you should be able to easily write your own compiler backend for a new target platform or architecture.
 - An extremely labourious, verbose and low level syntax is offset with a high level editor that allows you to write software with similar speed and ease as a higher level language like C.
 
+### Controls
+At the moment River only support keyboard interactions for the main editor.
+
+#### Cursor
+The "cursor" is simply the currently highlighted instruction fragment.
+
+![Dec-22-2021 16-58-19](https://user-images.githubusercontent.com/2264338/147033316-733a2a6a-f44d-45f3-81c1-e8b3dbd98f24.gif)
+
+Use the arrow keys to move the cursor between instructions and fragment - keyboard shortcuts will apply to the current selection. 
+
+#### Auto complete
+When you see values separated by a vertical bar inside the cursor, this indicates that there are values available for auto completion.
+In the case of a finite number of selections (such as instructions types) they are hotkeyed by the first letter:
+  
+<img width="569" alt="Screen Shot 2021-12-22 at 4 56 21 PM" src="https://user-images.githubusercontent.com/2264338/147033150-93aa05b4-7dd2-4809-b8a2-4ecbaeb99da3.png">
+
+In the case of searchable values such as variable names, the **enter** key will select the first matched value.
+
+<img width="481" alt="Screen Shot 2021-12-22 at 5 10 11 PM" src="https://user-images.githubusercontent.com/2264338/147034181-315d4d98-a511-43c2-9608-aa9fb75e0565.png">
+
+
 ### Instructions
 
 As an assembly like programming language, river has no control structures, no functions and a very small set of **instructions** for doing work.
