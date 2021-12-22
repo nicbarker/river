@@ -81,6 +81,26 @@ When an instruction needs to reference a **value**, such as in `compare` or `ass
 
 e.g. `compare var 0 > const 10` tests whether the variable at position 0 on the stack has a value that is greater than 10.
 
+### Memory
+
+River features an extremely basic memory management strategy. There is no dynamic allocation and no distinction between the stack and the heap - all defined variables are added to a linear growable memory structure at the beginning of their enclosing **scope**, and then are deallocated at the end of their enclosing **scope**.
+
+```c
+scope open // 16 bytes (2x 64 bit values) allocated here, placed on top of the stack
+    def foo 64 // var 0
+    def var 64 // var 1
+    assign var 0 = const 5
+    assign var 1 = var 0
+    assign var 1 + const 5
+    os stdout var 0
+    os stdout var 1
+scope close // 16 bytes deallocated here - highest 16 bytes removed from the stack
+```
+
+You can imagine it simply like a giant stack inside a single function. This means that all variable sizes must be known at compile time - array sizes & string sizes must be declared, and there is no such thing as dynamically resizable structures.
+
+This of course can feel restrictive, but it makes the code much easier for the compiler to reason about, and allows us to apply things like range checks at compile time.
+
 ### Basic Code Structure
 
 The actual river code in `.rvr` files isn't great to look at. There's no indentation, and variables are only referenced by their position on the stack.
