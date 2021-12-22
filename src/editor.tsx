@@ -144,7 +144,19 @@ function useRenderInstructions(
           )}
           {fragmentContent}
         </div>,
-        <div key={i + "-space"}> </div>,
+        instruction.type === "macroInstruction" && i === 0 && (
+          <div className="macro-paren">
+            {instruction.fragments.length > 1 && " "}(
+          </div>
+        ),
+        instruction.type === "macroInstruction" &&
+          i === instruction.fragments.length - 1 && (
+            <div className="macro-paren">)</div>
+          ),
+        ((i > 0 && i < instruction.fragments.length - 1) ||
+          instruction.type !== "macroInstruction") && (
+          <div key={i + "-space"}> </div>
+        ),
       ];
     });
 

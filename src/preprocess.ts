@@ -83,7 +83,7 @@ function macroRanges(
 ): MacroRanges | undefined {
   let newInstructionIndex = instructionIndex;
   let placeholderFragments: Fragment[] = [];
-  let ranges: [number, number][] = [[0, macro.instructions.length + 1]];
+  let ranges: [number, number][] = [[0, macro.instructions.length]];
   let blockRanges: [number, number][] = [];
   let stackPositionOffset = getStackPositionAtInstructionIndex(
     instructionIndex,

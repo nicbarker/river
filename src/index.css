@@ -195,6 +195,12 @@ code {
   display: inline;
 }
 
+.macro-paren {
+  color: #999;
+  display: inline;
+  margin-top: -2px;
+}
+
 .macro-block-braces {
   display: flex;
   margin-left: 46px;
