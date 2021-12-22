@@ -30,18 +30,18 @@ In the case of a finite number of selections (such as instructions types) they a
   
 <img width="569" alt="Screen Shot 2021-12-22 at 4 56 21 PM" src="https://user-images.githubusercontent.com/2264338/147033150-93aa05b4-7dd2-4809-b8a2-4ecbaeb99da3.png">
 
-_(the instruction types above would be hotkeyed with **s**, **d**, **a**, **c** etc)_
+_(the instruction types above would be hotkeyed with `s`, `d`, `a`, `c` etc)_
 
-In the case of searchable values such as variable names, the **enter** key will select the first matched value.
+In the case of searchable values such as variable names, the `enter` key will select the first matched value.
 
 <img width="481" alt="Screen Shot 2021-12-22 at 5 10 11 PM" src="https://user-images.githubusercontent.com/2264338/147034181-315d4d98-a511-43c2-9608-aa9fb75e0565.png">
 
 #### Selection
-You can select multiple lines by holding the **shift** key and using the **up** and **down arrow**.
+You can select multiple lines by holding the **shift** key and using the `up` and `down` arrow.
 
 ![Dec-23-2021 07-47-22](https://user-images.githubusercontent.com/2264338/147140717-91162033-2eef-4477-a8f9-15953fc6868d.gif)
 
-Once you've selected multiple lines, you can delete them all by pressing the **backspace** key, or create a new **macro** from the selected lines by pressing the **m** key.
+Once you've selected multiple lines, you can delete them all by pressing the `backspace` key, or create a new **macro** from the selected lines by pressing the `m` key.
 
 ### Instructions
 
