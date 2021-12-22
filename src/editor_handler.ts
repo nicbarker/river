@@ -443,7 +443,7 @@ export function handleKeyStroke({
   collapsedInstructions,
   cursorPos,
   instructionIndex,
-  selectedInstructions,
+  selectionRange,
   isMacro,
   macros,
   macroSearchString,
@@ -455,7 +455,7 @@ export function handleKeyStroke({
   setInstructions,
   setInstructionIndex,
   setCursorPos,
-  setSelectedInstructions,
+  setSelectionRange,
   setMacros,
   setMacroSearchString,
   setVariableSearchString,
@@ -467,7 +467,7 @@ export function handleKeyStroke({
   collapsedInstructions: CollapsedInstruction[];
   cursorPos: number;
   instructionIndex: number;
-  selectedInstructions: CollapsedInstruction[];
+  selectionRange: [number, number];
   isMacro: boolean;
   macros: Macro[];
   macroSearchString?: string;
@@ -479,7 +479,7 @@ export function handleKeyStroke({
   setInstructions: (instructions: Instruction[]) => void;
   setInstructionIndex: (instructionIndex: number) => void;
   setCursorPos: (cursorPos: number) => void;
-  setSelectedInstructions: (instructions: CollapsedInstruction[]) => void;
+  setSelectionRange: (selectionRange: [number, number]) => void;
   setMacros: (macros: Macro[]) => void;
   setMacroSearchString: (macroSearchString?: string) => void;
   setVariableSearchString: (macroSearchString?: string) => void;
@@ -620,68 +620,48 @@ export function handleKeyStroke({
     return;
   }
 
-  if (selectedInstructions.length > 0) {
-    if (key === "ArrowUp") {
-      const previousInstruction = collapsedInstructions[instructionIndex - 1]!;
-      if (shiftKey && instructionIndex > 0) {
-        const selectedIndex = selectedInstructions.findIndex(
-          (i) => i === instruction
+  if (selectionRange[0] !== -1) {
+    if (key === "ArrowUp" || key === "ArrowDown") {
+      const change = key === "ArrowUp" ? -1 : 1;
+      if (shiftKey) {
+        selectionRange[1] = Math.max(
+          Math.min(selectionRange[1] + change, instructions.length - 1),
+          0
         );
-        if (
-          selectedIndex > -1 &&
-          selectedInstructions.includes(previousInstruction)
-        ) {
-          selectedInstructions.splice(selectedIndex, 1);
-        } else {
-          if (!selectedInstructions.includes(instruction)) {
-            selectedInstructions.push(instruction);
-          }
-          selectedInstructions.push(previousInstruction);
-        }
-        setInstructionIndex(instructionIndex - 1);
-        setSelectedInstructions(selectedInstructions);
-      } else if (!shiftKey) {
-        selectedInstructions.splice(0, selectedInstructions.length);
-        setSelectedInstructions(selectedInstructions.slice());
-        setInstructionIndex(Math.max(instructionIndex - 1, 0));
-      }
-    } else if (key === "ArrowDown") {
-      if (shiftKey && instructionIndex < collapsedInstructions.length - 1) {
-        const nextInstruction = collapsedInstructions[instructionIndex + 1]!;
-        const selectedIndex = selectedInstructions.findIndex(
-          (i) => i === instruction
-        );
-        if (
-          selectedIndex > -1 &&
-          selectedInstructions.includes(nextInstruction)
-        ) {
-          selectedInstructions.splice(selectedIndex, 1);
-        } else {
-          selectedInstructions.push(nextInstruction);
-          if (!selectedInstructions.includes(instruction)) {
-            selectedInstructions.push(instruction);
-          }
-        }
-        setSelectedInstructions(selectedInstructions);
-        setInstructionIndex(instructionIndex + 1);
-      } else if (!shiftKey) {
-        selectedInstructions.splice(0, selectedInstructions.length);
-        setSelectedInstructions(selectedInstructions.slice());
         setInstructionIndex(
-          Math.min(instructionIndex + 1, collapsedInstructions.length - 1)
+          Math.min(
+            Math.max(instructionIndex + change, 0),
+            instructions.length - 1
+          )
+        );
+      } else if (!shiftKey) {
+        setSelectionRange([-1, -1]);
+        setInstructionIndex(
+          Math.min(
+            Math.max(instructionIndex + change, 0),
+            instructions.length - 1
+          )
         );
       }
+      return;
     } else if (key === "m") {
       macros.push({
         name: "Untitled",
-        instructions: JSON.parse(JSON.stringify(selectedInstructions)),
+        instructions: JSON.parse(
+          JSON.stringify(
+            instructions.slice(
+              Math.min(...selectionRange),
+              Math.min(...selectionRange)
+            )
+          )
+        ),
         placeholders: [],
       });
       setMacros(macros.slice());
       setActiveRightTab("macros");
       setFocusIndex(macros.length);
+      return;
     }
-    return;
   }
 
   let increment: "instruction" | "cursor" | "none" = "none";
@@ -1181,20 +1161,14 @@ export function handleKeyStroke({
   // ---------------------------------------------
   if (key === "Backspace") {
     // Delete multiple lines
-    if (selectedInstructions.length > 0) {
-      let earliest = instructions.findIndex(
-        (i) => i === selectedInstructions[0]
-      );
-      for (const selected of selectedInstructions) {
-        const index = instructions.findIndex((i) => i === selected);
-        earliest = Math.min(earliest, index);
-        instructions.splice(index, 1);
+    if (selectionRange[0] > -1) {
+      let min = Math.min(...selectionRange);
+      let max = Math.max(...selectionRange);
+      for (let i = min; i <= max; i++) {
+        deleteInstruction(min, instructions, false);
       }
-      setSelectedInstructions([]);
-      if (instructions.length === 0) {
-        instructions.push({ type: "emptyInstruction", fragments: [undefined] });
-      }
-      setInstructionIndex(Math.max(earliest - 1, 0));
+      setSelectionRange([-1, -1]);
+      setInstructionIndex(Math.max(min - 1, 0));
       setInstructions(instructions.slice(0));
     } else if (cursorPos > 0) {
       if (cursorPos >= instruction.fragments.length) {
@@ -1267,9 +1241,9 @@ export function handleKeyStroke({
       }
       setInstructionIndex(instructionIndex - 1);
       if (shiftKey) {
-        selectedInstructions.push(instruction);
-        selectedInstructions.push(previousInstruction);
-        setSelectedInstructions(selectedInstructions.slice());
+        selectionRange[0] = instructionIndex;
+        selectionRange[1] = instructionIndex - 1;
+        setSelectionRange([instructionIndex, instructionIndex - 1]);
       }
     }
     // ---------------------------------------------
@@ -1283,9 +1257,7 @@ export function handleKeyStroke({
     }
     setInstructionIndex(instructionIndex + 1);
     if (shiftKey) {
-      selectedInstructions.push(instruction);
-      selectedInstructions.push(nextInstruction);
-      setSelectedInstructions(selectedInstructions.slice());
+      setSelectionRange([instructionIndex, instructionIndex + 1]);
     }
     // ---------------------------------------------
   } else if (key === "Enter" && instruction) {

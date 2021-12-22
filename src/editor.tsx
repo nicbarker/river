@@ -34,7 +34,7 @@ function isPlaceholderInstruction(fragment?: Fragment) {
 
 function useRenderInstructions(
   instructions: CollapsedInstruction[],
-  selectedInstructions: CollapsedInstruction[],
+  selectionRange: [number, number],
   instructionIndex: number,
   cursorPos: number,
   hasFocus: boolean,
@@ -106,7 +106,7 @@ function useRenderInstructions(
       } else if (cursorPos === i && instructionIndex === li) {
         fragmentContent = (
           <div className={classnames("empty", "fragment")}>
-            {selectedInstructions.length === 0 &&
+            {selectionRange[0] === -1 &&
               getFragmentHints(instruction)
                 [cursorPos].split(" | ")
                 .concat(isMacro ? ["_"] : [])
@@ -132,7 +132,7 @@ function useRenderInstructions(
             highlight:
               instructionIndex === li &&
               cursorPos === i &&
-              selectedInstructions.length === 0 &&
+              selectionRange[0] === -1 &&
               hasFocus,
             placeholder: isPlaceholderInstruction(fragment),
           })}
@@ -234,7 +234,9 @@ function useRenderInstructions(
       ),
       <div
         className={classnames("line", {
-          selected: selectedInstructions.includes(instruction),
+          selected:
+            (li >= selectionRange[0] && li <= selectionRange[1]) ||
+            (li >= selectionRange[1] && li <= selectionRange[0]),
           highlight: li === instructionIndex,
         })}
         key={li}
@@ -280,9 +282,10 @@ export function Editor({
 }) {
   const isMacro = !!sourceMacro;
   const [cursorPos, setCursorPos] = useState(0);
-  const [selectedInstructions, setSelectedInstructions] = useState<
-    CollapsedInstruction[]
-  >([]);
+  const [selectionRange, setSelectionRange] = useState<[number, number]>([
+    -1,
+    -1,
+  ]);
   const [instructionIndex, setInstructionIndex] = useState(0);
   const [macroSearchString, setMacroSearchString] = useState<
     string | undefined
@@ -335,7 +338,7 @@ export function Editor({
           collapsedInstructions,
           cursorPos,
           instructionIndex: fixedInstructionIndex,
-          selectedInstructions,
+          selectionRange,
           isMacro,
           macros,
           macroSearchString,
@@ -350,7 +353,7 @@ export function Editor({
               setParentInstructionIndex(instructionIndex);
           },
           setCursorPos,
-          setSelectedInstructions,
+          setSelectionRange,
           setMacros,
           setMacroSearchString,
           setVariableSearchString,
@@ -369,7 +372,7 @@ export function Editor({
     hasFocus,
     instructionIndex,
     instruction,
-    selectedInstructions,
+    selectionRange,
     macros,
     setMacros,
     macroSearchString,
@@ -386,7 +389,7 @@ export function Editor({
 
   const instructionsRendered = useRenderInstructions(
     collapsedInstructions,
-    selectedInstructions,
+    selectionRange,
     instructionIndex,
     cursorPos,
     hasFocus,
