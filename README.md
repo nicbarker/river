@@ -210,5 +210,6 @@ River is currently full of bugs and incomplete functionality. Some of the next f
 - Types (floating point and signed integers first)
 - Structs or something similar to structs
 - More standard macros
+- Binary rvr file representation
 - The `temp` variable type
 - The `macro` variable type for expression-like usage
