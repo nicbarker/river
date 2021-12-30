@@ -28,6 +28,7 @@ export type InstructionOS = {
 export type InstructionPlaceholder = {
   type: "instruction";
   value: "_";
+  name: string;
 };
 
 export type InstructionFragment =
@@ -83,10 +84,6 @@ export type AssignMod = {
   type: "assignAction";
   value: "%";
 };
-export type AssignPlaceholder = {
-  type: "assignAction";
-  value: "_";
-};
 
 export type AssignActionFragment =
   | AssignEq
@@ -94,8 +91,7 @@ export type AssignActionFragment =
   | AssignSubtract
   | AssignDivide
   | AssignMultiply
-  | AssignMod
-  | AssignPlaceholder;
+  | AssignMod;
 
 // VAR TYPES ----------------------------------
 export type VarTypeVar = {
@@ -111,9 +107,19 @@ export type VarTypeConst = {
 export type VarTypePlaceholder = {
   type: "varType";
   value: "_";
+  name: string;
+};
+export type VarTypeMissing = {
+  type: "varType";
+  value: "missing";
+  name: string;
 };
 
-export type VarTypeFragment = VarTypeVar | VarTypeConst | VarTypePlaceholder;
+export type VarTypeFragment =
+  | VarTypeVar
+  | VarTypeConst
+  | VarTypePlaceholder
+  | VarTypeMissing;
 
 // VAR SIZES / POSITIONS ----------------------------------
 export type VarSizeFragment =
@@ -151,19 +157,13 @@ export type ComparatorGte = {
   type: "comparator";
   value: ">=";
 };
-export type ComparatorPlaceholder = {
-  type: "comparator";
-  value: "_";
-};
-
 export type ComparatorFragment =
   | ComparatorEq
   | ComparatorNeq
   | ComparatorLt
   | ComparatorLte
   | ComparatorGt
-  | ComparatorGte
-  | ComparatorPlaceholder;
+  | ComparatorGte;
 
 export type JumpPositionStart = {
   type: "jumpPosition";
@@ -266,6 +266,7 @@ export type MacroInstruction = {
   type: "macroInstruction";
   fragments: Fragment[];
   macro: Macro;
+  placeholders: string[];
   blockRanges: [number, number][];
   endLineNumber: number;
 };
@@ -276,7 +277,6 @@ export type CollapsedInstruction = (Instruction | MacroInstruction) & {
 
 export type Macro = {
   name: string;
-  placeholders: string[];
   instructions: Instruction[];
 };
 
@@ -299,7 +299,7 @@ export function getFragmentLength(instruction: CollapsedInstruction): number {
     case "placeholderInstruction":
       return 1;
     case "macroInstruction":
-      return instruction.macro.placeholders.length + 1;
+      return instruction.placeholders.length + 1;
     default:
       return -1;
   }
@@ -329,17 +329,9 @@ export function getFragmentHints(instruction: CollapsedInstruction) {
     case "OSInstruction":
       return ["os", "stdout", "var | const"];
     case "macroInstruction":
-      return instruction.macro.placeholders;
+      return instruction.placeholders;
   }
 }
-
-export const fragmentPlaceholderMessage: { [k: string]: string } = {
-  instruction: "_block",
-  assignAction: "_operator",
-  varType: "_var",
-  comparator: "_comparator",
-  instructionNumber: "_instructions",
-};
 
 export function getStackPositionAtInstructionIndex(
   index: number,
@@ -428,6 +420,7 @@ function deleteInstruction(
           instructions[i].fragments[j] = {
             type: "varType",
             value: "_",
+            name: instruction.fragments[1]?.value || "",
           };
         }
       }
@@ -501,7 +494,17 @@ export function handleKeyStroke({
         case "Enter": {
           const macroContentsFixed = found[0].instructions
             .map((inst): Instruction[] => {
-              switch (inst.type) {
+              const toReturn = JSON.parse(JSON.stringify(inst)) as Instruction;
+              for (let i = 0; i < toReturn.fragments.length; i++) {
+                const fragment = toReturn.fragments[i];
+                if (fragment?.type === "varType" && fragment.value === "_") {
+                  toReturn.fragments[i] = {
+                    ...fragment,
+                    value: "missing",
+                  };
+                }
+              }
+              switch (toReturn.type) {
                 case "placeholderInstruction": {
                   return [
                     {
@@ -512,7 +515,6 @@ export function handleKeyStroke({
                 }
                 case "compareInstruction":
                 case "assignInstruction": {
-                  const toReturn = JSON.parse(JSON.stringify(inst));
                   const target = toReturn.fragments[1] && {
                     ...toReturn.fragments[1],
                   };
@@ -544,12 +546,11 @@ export function handleKeyStroke({
                   return [toReturn];
                 }
                 case "defInstruction": {
-                  console.log(collapsedIndex);
                   modifyStackPositionsAfter(1, collapsedIndex, instructions);
-                  return [inst];
+                  return [toReturn];
                 }
                 default: {
-                  return [inst];
+                  return [toReturn];
                 }
               }
             })
@@ -655,7 +656,6 @@ export function handleKeyStroke({
             )
           )
         ),
-        placeholders: [],
       });
       setMacros(macros.slice());
       setActiveRightTab("macros");
@@ -667,11 +667,12 @@ export function handleKeyStroke({
   let increment: "instruction" | "cursor" | "none" = "none";
 
   function parseVarType(
-    fragment?: VarTypeVar | VarTypeConst | VarTypePlaceholder,
-    disableConst?: boolean
+    fragment?: VarTypeFragment,
+    disableConst?: boolean,
+    isMacro?: boolean
   ) {
     let newFragment = fragment;
-    if (typeof newFragment === "undefined" || fragment?.value === "_") {
+    if (typeof newFragment === "undefined" || newFragment.value === "missing") {
       switch (key) {
         case "c": {
           if (!disableConst) {
@@ -695,6 +696,7 @@ export function handleKeyStroke({
             newFragment = {
               type: "varType",
               value: "_",
+              name: "",
             };
           }
           break;
@@ -723,6 +725,17 @@ export function handleKeyStroke({
           newFragment.constValue.toString() + key,
           10
         );
+      }
+    } else if (newFragment.value === "_") {
+      if (key === " " || key === "Enter") {
+        increment = "cursor";
+      }
+      if (key === "Backspace") {
+        newFragment.name =
+          newFragment.name.length > 0 ? newFragment.name.slice(0, -1) : "";
+      } else if (key.match(/[\p{L}\p{N}\s]/gu)) {
+        // Multi language alpha numeric
+        newFragment.name += key;
       }
     }
     return newFragment;
@@ -820,7 +833,7 @@ export function handleKeyStroke({
         if (isMacro) {
           instructions[collapsedIndex] = {
             type: "placeholderInstruction",
-            fragments: [{ type: "instruction", value: "_" }],
+            fragments: [{ type: "instruction", value: "_", name: "" }],
           };
         }
         increment = "instruction";
@@ -912,7 +925,8 @@ export function handleKeyStroke({
           case 1:
             instruction.fragments[1] = parseVarType(
               instruction.fragments[1],
-              true
+              true,
+              isMacro
             ) as VarTypeVar;
             setInstructions(instructions.slice());
             break;
@@ -966,21 +980,15 @@ export function handleKeyStroke({
                 increment = "cursor";
                 break;
               }
-              case "_": {
-                if (isMacro) {
-                  instruction.fragments[2] = {
-                    type: "assignAction",
-                    value: "_",
-                  };
-                  increment = "cursor";
-                }
-                break;
-              }
             }
             break;
           }
           case 3: {
-            instruction.fragments[3] = parseVarType(instruction.fragments[3]);
+            instruction.fragments[3] = parseVarType(
+              instruction.fragments[3],
+              false,
+              isMacro
+            );
             setInstructions(instructions.slice());
             break;
           }
@@ -990,85 +998,84 @@ export function handleKeyStroke({
       case "compareInstruction": {
         switch (cursorPos) {
           case 1:
-            instruction.fragments[1] = parseVarType(instruction.fragments[1]);
+            instruction.fragments[1] = parseVarType(
+              instruction.fragments[1],
+              false,
+              isMacro
+            );
             setInstructions(instructions.slice());
             break;
           case 2: {
-            if (isMacro && key === "_") {
-              instruction.fragments[2] = {
-                type: "comparator",
-                value: "_",
-              };
+            if (
+              instruction.fragments[2] &&
+              (key === " " || key.match(/[a-z]/))
+            ) {
               increment = "cursor";
               break;
-            } else {
-              if (
-                instruction.fragments[2] &&
-                (key === " " || key.match(/[a-z]/))
-              ) {
+            }
+            switch (key) {
+              case "=": {
+                if (!instruction.fragments[2]) {
+                  instruction.fragments[2] = {
+                    type: "comparator",
+                    value: "==",
+                  };
+                } else {
+                  switch (instruction.fragments[2].value) {
+                    case "<": {
+                      instruction.fragments[2] = {
+                        type: "comparator",
+                        value: "<=",
+                      };
+                      increment = "cursor";
+                      break;
+                    }
+                    case ">": {
+                      instruction.fragments[2] = {
+                        type: "comparator",
+                        value: ">=",
+                      };
+                      increment = "cursor";
+                      break;
+                    }
+                  }
+                }
                 increment = "cursor";
                 break;
               }
-              switch (key) {
-                case "=": {
-                  if (!instruction.fragments[2]) {
-                    instruction.fragments[2] = {
-                      type: "comparator",
-                      value: "==",
-                    };
-                  } else {
-                    switch (instruction.fragments[2].value) {
-                      case "<": {
-                        instruction.fragments[2] = {
-                          type: "comparator",
-                          value: "<=",
-                        };
-                        increment = "cursor";
-                        break;
-                      }
-                      case ">": {
-                        instruction.fragments[2] = {
-                          type: "comparator",
-                          value: ">=",
-                        };
-                        increment = "cursor";
-                        break;
-                      }
-                    }
-                  }
-                  increment = "cursor";
-                  break;
-                }
-                case "!": {
-                  instruction.fragments[2] = {
-                    type: "comparator",
-                    value: "!=",
-                  };
-                  increment = "cursor";
-                  break;
-                }
-                case "<": {
-                  instruction.fragments[2] = {
-                    type: "comparator",
-                    value: "<",
-                  };
-                  setInstructions(instructions.slice());
-                  break;
-                }
-                case ">": {
-                  instruction.fragments[2] = {
-                    type: "comparator",
-                    value: ">",
-                  };
-                  setInstructions(instructions.slice());
-                  break;
-                }
+              case "!": {
+                instruction.fragments[2] = {
+                  type: "comparator",
+                  value: "!=",
+                };
+                increment = "cursor";
+                break;
+              }
+              case "<": {
+                instruction.fragments[2] = {
+                  type: "comparator",
+                  value: "<",
+                };
+                setInstructions(instructions.slice());
+                break;
+              }
+              case ">": {
+                instruction.fragments[2] = {
+                  type: "comparator",
+                  value: ">",
+                };
+                setInstructions(instructions.slice());
+                break;
               }
             }
             break;
           }
           case 3: {
-            instruction.fragments[3] = parseVarType(instruction.fragments[3]);
+            instruction.fragments[3] = parseVarType(
+              instruction.fragments[3],
+              false,
+              isMacro
+            );
             setInstructions(instructions.slice());
             break;
           }
@@ -1116,7 +1123,8 @@ export function handleKeyStroke({
           case 2: {
             instruction.fragments[2] = parseVarType(
               instruction.fragments[2],
-              true
+              true,
+              isMacro
             );
             setInstructions(instructions.slice());
             break;
@@ -1127,7 +1135,7 @@ export function handleKeyStroke({
       case "macroInstruction": {
         const fragment = instruction.fragments[cursorPos];
         if (fragment.type === "varType") {
-          const newVarType = parseVarType(fragment);
+          const newVarType = parseVarType(fragment, false, isMacro);
           if (newVarType) {
             fragment.value = newVarType.value;
             if (fragment.value === "var") {
@@ -1175,7 +1183,7 @@ export function handleKeyStroke({
         setCursorPos(cursorPos - 1);
       } else {
         if (instruction.type === "macroInstruction") {
-          instruction.fragments[cursorPos].value = "_";
+          instruction.fragments[cursorPos].value = "missing";
         } else {
           instruction.fragments[cursorPos] = undefined;
         }

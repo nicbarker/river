@@ -18,7 +18,7 @@ export const standardMacros: Macro[] = [
           { type: "instruction", value: "assign" },
           { type: "varType", value: "var", stackPosition: 0 },
           { type: "assignAction", value: "=" },
-          { type: "varType", value: "_" },
+          { type: "varType", value: "_", name: "initial" },
         ],
       },
       {
@@ -30,7 +30,7 @@ export const standardMacros: Macro[] = [
       },
       {
         type: "placeholderInstruction",
-        fragments: [{ type: "instruction", value: "_" }],
+        fragments: [{ type: "instruction", value: "_", name: "body" }],
       },
       {
         type: "assignInstruction",
@@ -38,7 +38,7 @@ export const standardMacros: Macro[] = [
           { type: "instruction", value: "assign" },
           { type: "varType", value: "var", stackPosition: 0 },
           { type: "assignAction", value: "+" },
-          { type: "varType", value: "_" },
+          { type: "varType", value: "_", name: "increment" },
         ],
       },
       {
@@ -47,7 +47,7 @@ export const standardMacros: Macro[] = [
           { type: "instruction", value: "compare" },
           { type: "varType", value: "var", stackPosition: 0 },
           { type: "comparator", value: "<" },
-          { type: "varType", value: "_" },
+          { type: "varType", value: "_", name: "max" },
         ],
       },
       {
@@ -65,6 +65,5 @@ export const standardMacros: Macro[] = [
         ],
       },
     ],
-    placeholders: ["initial", "increment", "max"],
   },
 ];

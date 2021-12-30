@@ -175,7 +175,8 @@ code {
   background: rgba(0, 170, 255, 0.4);
 }
 
-.fragment:not(.highlight).placeholder:after {
+.fragment:not(.highlight).placeholder:after,
+.fragment:not(.highlight).missing:after {
   content: " ";
   position: absolute;
   width: calc(100% + 8px);
@@ -199,6 +200,14 @@ code {
   color: #999;
   display: inline;
   margin-top: -2px;
+}
+
+.macro-paren.open {
+  margin-right: 4px;
+}
+
+.macro-paren.close {
+  margin-left: 4px;
 }
 
 .macro-block-braces {

@@ -6,8 +6,10 @@ import {
   getStackPositionAtInstructionIndex,
 } from "./editor_handler";
 
+type PlaceholderFragment = { name: string; fragment: Fragment };
+
 type CollapsedMacro = Macro & {
-  placeholderFragments: Fragment[];
+  placeholderFragments: PlaceholderFragment[];
 };
 
 function instructionsAreEqual(
@@ -72,7 +74,7 @@ function instructionsAreEqual(
 type MacroRanges = {
   ranges: [number, number][];
   blockRanges: [number, number][];
-  placeholderFragments: Fragment[];
+  placeholderFragments: PlaceholderFragment[];
   endLineNumber: number;
 };
 
@@ -82,7 +84,7 @@ function macroRanges(
   macro: Macro
 ): MacroRanges | undefined {
   let newInstructionIndex = instructionIndex;
-  let placeholderFragments: Fragment[] = [];
+  let placeholderFragments: PlaceholderFragment[] = [];
   let ranges: [number, number][] = [[0, macro.instructions.length]];
   let blockRanges: [number, number][] = [];
   let stackPositionOffset = getStackPositionAtInstructionIndex(
@@ -128,13 +130,11 @@ function macroRanges(
     }
     for (let j = 0; j < macroInstruction.fragments.length; j++) {
       const macroFragment = macroInstruction.fragments[j];
-      if (
-        macroFragment?.value === "_" &&
-        macroFragment.type !== "instruction"
-      ) {
-        placeholderFragments.push(
-          instructions[newInstructionIndex].fragments[j]!
-        );
+      if (macroFragment?.value === "_" && macroFragment.type === "varType") {
+        placeholderFragments.push({
+          name: macroFragment.name,
+          fragment: instructions[newInstructionIndex].fragments[j]!,
+        });
       }
     }
   }
@@ -183,8 +183,9 @@ export function preProcess(
           type: "macroInstruction",
           fragments: [
             { type: "macroName", value: macroRanges[0].name },
-            ...macroRanges[1].placeholderFragments,
+            ...macroRanges[1].placeholderFragments.map((p) => p.fragment),
           ],
+          placeholders: macroRanges[1].placeholderFragments.map((p) => p.name),
           macro: macroRanges[0],
           blockRanges: macroRanges[1].blockRanges,
           lineNumber: index,

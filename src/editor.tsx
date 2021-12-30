@@ -3,9 +3,7 @@ import React from "react";
 import { useState, useEffect } from "react";
 import {
   CollapsedInstruction,
-  Fragment,
   getFragmentHints,
-  fragmentPlaceholderMessage,
   handleKeyStroke,
   Instruction,
   Macro,
@@ -13,24 +11,6 @@ import {
 import { preProcess } from "./preprocess";
 
 export type VisibleVariable = { index: number; name: string; visible: boolean };
-
-function isPlaceholderInstruction(fragment?: Fragment) {
-  if (!fragment) {
-    return false;
-  }
-  switch (fragment.type) {
-    case "instruction":
-      return fragment.value === "_";
-    case "assignAction":
-      return fragment.value === "_";
-    case "varType":
-      return fragment.value === "_";
-    case "comparator":
-      return fragment.value === "_";
-    default:
-      return false;
-  }
-}
 
 function useRenderInstructions(
   instructions: CollapsedInstruction[],
@@ -51,10 +31,7 @@ function useRenderInstructions(
     const instruction = instructions[li];
     const fragments = instruction.fragments.map((fragment, i) => {
       let fragmentContent: React.ReactNode;
-      const isPlaceholder = isPlaceholderInstruction(fragment);
-      if (isPlaceholder) {
-        fragmentContent = fragmentPlaceholderMessage[fragment!.type];
-      } else if (
+      if (
         typeof variableSearchString !== "undefined" &&
         fragment?.type === "varType" &&
         instructionIndex === li &&
@@ -85,9 +62,14 @@ function useRenderInstructions(
         );
       } else if (fragment?.type === "varType") {
         switch (fragment?.value) {
-          case "_":
-            fragmentContent = "_";
+          case "_": {
+            fragmentContent = "_" + fragment.name;
             break;
+          }
+          case "missing": {
+            fragmentContent = "_var";
+            break;
+          }
           case "var":
             if (typeof fragment.stackPosition !== "undefined") {
               fragmentContent = visibleVariables[fragment.stackPosition].name;
@@ -101,6 +83,8 @@ function useRenderInstructions(
             }`;
             break;
         }
+      } else if (fragment?.type === "instruction" && fragment.value === "_") {
+        fragmentContent = "_block";
       } else if (fragment) {
         fragmentContent = fragment.value;
       } else if (cursorPos === i && instructionIndex === li) {
@@ -134,24 +118,27 @@ function useRenderInstructions(
               cursorPos === i &&
               selectionRange[0] === -1 &&
               hasFocus,
-            placeholder: isPlaceholderInstruction(fragment),
+            placeholder:
+              (fragment?.type === "varType" ||
+                fragment?.type === "instruction") &&
+              fragment.value === "_",
           })}
         >
           {instruction.type === "macroInstruction" && i > 0 && (
             <div className="macro-param-label">
-              {instruction.macro.placeholders[i - 1] + ": "}
+              {instruction.placeholders[i - 1] + ": "}
             </div>
           )}
           {fragmentContent}
         </div>,
         instruction.type === "macroInstruction" && i === 0 && (
-          <div className="macro-paren">
+          <div className="macro-paren open">
             {instruction.fragments.length > 1 && " "}(
           </div>
         ),
         instruction.type === "macroInstruction" &&
           i === instruction.fragments.length - 1 && (
-            <div className="macro-paren">)</div>
+            <div className="macro-paren close">)</div>
           ),
         ((i > 0 && i < instruction.fragments.length - 1) ||
           instruction.type !== "macroInstruction") && (
