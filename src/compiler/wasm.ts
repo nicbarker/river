@@ -22,8 +22,10 @@ export function compileWasm(
         [";; --------------------------------------------------"],
         [";; Generated with River compiler 1.0"],
         [";; Targeting .wat WebAssembly text format"],
+        [";; See github.com/nicbarker/river#running-wasm"],
         [";; --------------------------------------------------"],
-        ['(import "console" "log" (func $log (param i32)))'],
+        ['(import "console" "log" (func $log32 (param i32)))'],
+        ['(import "console" "log" (func $log64 (param i64)))'],
         [],
         ["(memory 1)"],
         [],
@@ -33,6 +35,7 @@ export function compileWasm(
   ];
 
   let printEnd = 0;
+  let loopDepth = 0;
   for (
     let instructionIndex = 0;
     instructionIndex < instructions.length;
@@ -97,7 +100,7 @@ export function compileWasm(
             break;
           }
           case "%": {
-            action = "mod";
+            action = "rem_u";
             break;
           }
           default:
@@ -112,6 +115,17 @@ export function compileWasm(
       }
       case "jump": {
         if (instruction.type === "start") {
+          let branch = "br";
+          if (printEnd === 1) {
+            branch = "br_if";
+            printEnd--;
+            indent.pop();
+          }
+          loopDepth -= 1;
+          instructionOutputs[1].push([
+            ...indent,
+            `${branch} $${instruction.scope.openInstruction.originalInstructionIndex}-${loopDepth}`,
+          ]);
           indent.pop();
           instructionOutputs[1].push([...indent, `end`]);
         }
@@ -202,58 +216,29 @@ export function compileWasm(
         instructionOutputs[1].push([...indent, `i${leftSize}.${comp}`]);
 
         if (instructionIndex < instructions.length - 1) {
-          const nextInstruction = instructions[instructionIndex + 1];
-          switch (nextInstruction.instruction) {
-            case "jump": {
-              if (nextInstruction.type === "start") {
-                instructionOutputs[1].push([...indent, `i32.const 0`]);
-                instructionOutputs[1].push([...indent, `i32.eq`]);
-                instructionOutputs[1].push([
-                  ...indent,
-                  `br_if $${nextInstruction.scope.openInstruction.originalInstructionIndex}`,
-                ]);
-              }
-              if (nextInstruction.type === "end") {
-                instructionOutputs[1].push([
-                  ...indent,
-                  `br_if $${nextInstruction.scope.openInstruction.originalInstructionIndex}`,
-                ]);
-              }
-              break;
-            }
-            default: {
-              instructionOutputs[1].push([...indent, `if`]);
-              indent.push(undefined);
-              printEnd = 2;
-              break;
-            }
-          }
+          // We use a br_if instead of an if statement in the case of compare then jump
+          instructions[instructionIndex + 1].instruction !== "jump" &&
+            instructionOutputs[1].push([...indent, `if`]);
+          indent.push(undefined);
+          printEnd = 2;
+          break;
         }
         break;
       }
       case "os": {
-        instructionOutputs[1].push([
-          ,
-          `;; ${instructionIndex}: ${instruction.serialized}`,
-        ]);
         switch (instruction.action) {
           case "stdout": {
-            // const [mov, size] = moveAndLabelForSize(instruction.size);
-            // instructionOutputs[1].push(preSysCall);
-            // instructionOutputs[1].push([
-            //   ,
-            //   "lea",
-            //   `${syscallArgumentRegisters(target, 0)}, [rel message]`,
-            // ]);
-            // instructionOutputs[1].push([
-            //   ,
-            //   mov,
-            //   `${syscallArgumentRegisters(target, 1)}, ${size} ${memoryOffset(
-            //     instruction.address! / 8
-            //   )}`,
-            // ]);
-            // instructionOutputs[1].push([, "call", printfLabel]);
-            // instructionOutputs[1].push(postSysCall);
+            instructionOutputs[1].push([
+              ,
+              `;; ${instructionIndex}: ${instruction.serialized}`,
+            ]);
+            if (typeof instruction.address !== "undefined") {
+              const sourceSize = instruction.size === 64 ? 64 : 32;
+              const source = instruction.address / 8;
+              instructionOutputs[1].push([...indent, `i32.const ${source}`]);
+              instructionOutputs[1].push([...indent, `i${sourceSize}.load`]);
+              instructionOutputs[1].push([...indent, `call $log${sourceSize}`]);
+            }
             break;
           }
           default:
@@ -275,8 +260,12 @@ export function compileWasm(
           ]);
           indent.push(undefined);
           for (let i = 0; i < instruction.loopCount; i++) {
-            instructionOutputs[1].push([...indent, `${"loop"}`]);
+            instructionOutputs[1].push([
+              ...indent,
+              `loop $${instruction.originalInstructionIndex}-${i}`,
+            ]);
             indent.push(undefined);
+            loopDepth += 1;
           }
         } else {
           indent.pop();
@@ -305,6 +294,5 @@ export function compileWasm(
   output.push([-1, []]);
   output.push([-1, [[`(export "${fileName}" (func $${fileName}))`]]]);
 
-  console.log(output);
   return output;
 }
