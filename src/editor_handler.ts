@@ -573,9 +573,13 @@ export function handleKeyStroke({
           break;
         }
         case "Backspace": {
-          setMacroSearchString(
-            macroSearchString.slice(0, macroSearchString.length - 1)
-          );
+          if (macroSearchString.length > 0) {
+            setMacroSearchString(
+              macroSearchString.slice(0, macroSearchString.length - 1)
+            );
+          } else {
+            setMacroSearchString(undefined);
+          }
           break;
         }
       }
@@ -611,9 +615,16 @@ export function handleKeyStroke({
           break;
         }
         case "Backspace": {
-          setVariableSearchString(
-            variableSearchString.slice(0, variableSearchString.length - 1)
-          );
+          if (variableSearchString.length > 0) {
+            setVariableSearchString(
+              variableSearchString.slice(0, variableSearchString.length - 1)
+            );
+          } else {
+            collapsedInstructions[instructionIndex].fragments[
+              cursorPos
+            ] = undefined;
+            setVariableSearchString(undefined);
+          }
           break;
         }
       }
