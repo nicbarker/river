@@ -53,15 +53,9 @@ export function compileWasm(
         const sourceSize = instruction.size === 64 ? 64 : 32;
         let source = "";
         const target = instruction.target / 8;
-        instructionOutputs[1].push([
-          ...indent,
-          `i${targetSize}.const ${target}`,
-        ]);
+        instructionOutputs[1].push([...indent, `i32.const ${target}`]);
         if (instruction.action !== "=") {
-          instructionOutputs[1].push([
-            ...indent,
-            `i${targetSize}.const ${target}`,
-          ]);
+          instructionOutputs[1].push([...indent, `i32.const ${target}`]);
           instructionOutputs[1].push([...indent, `i${targetSize}.load`]);
         }
         switch (instruction.source) {
@@ -76,7 +70,7 @@ export function compileWasm(
           case "var": {
             instructionOutputs[1].push([
               ...indent,
-              `i${targetSize}.const ${instruction.address! / 8}`,
+              `i32.const ${instruction.address! / 8}`,
             ]);
             instructionOutputs[1].push([...indent, `i${sourceSize}.load`]);
             break;
@@ -174,7 +168,7 @@ export function compileWasm(
           case "var": {
             instructionOutputs[1].push([
               ...indent,
-              `i${leftSize}.const ${instruction.left.address! / 8}`,
+              `i32.const ${instruction.left.address! / 8}`,
             ]);
             instructionOutputs[1].push([...indent, `i${leftSize}.load`]);
             break;
@@ -196,7 +190,7 @@ export function compileWasm(
           case "var": {
             instructionOutputs[1].push([
               ...indent,
-              `i${rightSize}.const ${instruction.right.address! / 8}`,
+              `i32.const ${instruction.right.address! / 8}`,
             ]);
             instructionOutputs[1].push([...indent, `i${rightSize}.load`]);
             break;
@@ -212,8 +206,8 @@ export function compileWasm(
           switch (nextInstruction.instruction) {
             case "jump": {
               if (nextInstruction.type === "start") {
-                instructionOutputs[1].push([...indent, `i${leftSize}.const 0`]);
-                instructionOutputs[1].push([...indent, `i${leftSize}.eq`]);
+                instructionOutputs[1].push([...indent, `i32.const 0`]);
+                instructionOutputs[1].push([...indent, `i32.eq`]);
                 instructionOutputs[1].push([
                   ...indent,
                   `br_if $${nextInstruction.scope.openInstruction.originalInstructionIndex}`,
