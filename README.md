@@ -200,6 +200,17 @@ You can see the corresponding assembly instructions highlighted in the asm tab a
 
 ![Dec-16-2021 16-38-53](https://user-images.githubusercontent.com/2264338/146304092-a9fb1ad3-0753-4cf2-9336-f8f9fbd9a664.gif)
 
+### Running WASM
+Running WASM is a bit of a pain, but you can test out your code here:
+https://webassembly.github.io/wabt/demo/wat2wasm/
+
+Using the following javascript:
+```js
+const wasmInstance = new WebAssembly.Instance(wasmModule, { console: { log: (num) => console.log(num) } });
+const { untitled } = wasmInstance.exports;
+untitled()
+```
+
 ### Future
 
 River is currently full of bugs and incomplete functionality. Some of the next features for development are:
