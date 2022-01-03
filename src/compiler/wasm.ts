@@ -7,13 +7,6 @@ export function compileWasm(
   instructions: CompiledInstruction[],
   maxMemory: number
 ) {
-  /* OSX and windows have different conventions for syscalls.
-   * OSX requires a 16 byte call stack alignment, with 8 bytes being used for the return
-   * value, hence we push the default pointer size (8 bytes) onto the stack before calling.
-   * Windows requires us to allocate 32 bytes of "shadow space", which added to our 8 byte alignment
-   * gives us 40 bytes (hex value 28h).
-   * See https://stackoverflow.com/questions/30190132/what-is-the-shadow-space-in-x64-assembly/30191127#30191127
-   */
   let indent = [,];
   const output: ASMBlock[] = [
     [

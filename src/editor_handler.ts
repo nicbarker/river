@@ -480,6 +480,19 @@ export function handleKeyStroke({
   setFocusIndex: (focusIndex: number) => void;
 }) {
   const collapsedIndex = collapsedInstructions[instructionIndex].lineNumber;
+  let indexInBlock = collapsedIndex;
+  let blockLength = instructions.length;
+  for (const inst of collapsedInstructions) {
+    if (inst.type === "macroInstruction") {
+      const containingBlock = inst.blockRanges.find(
+        (r) => r[0] <= collapsedIndex && r[1] > collapsedIndex
+      );
+      if (containingBlock) {
+        indexInBlock = containingBlock[0] - collapsedIndex;
+        blockLength = containingBlock[1] - containingBlock[0];
+      }
+    }
+  }
 
   if (typeof macroSearchString !== "undefined") {
     const found = macros.filter((m) =>
@@ -1201,8 +1214,8 @@ export function handleKeyStroke({
         setInstructions(instructions.slice());
       }
     } else if (cursorPos === 0) {
-      if (collapsedIndex === 0 && instructions.length === 1) {
-        instructions[0] = {
+      if (indexInBlock === 0 && blockLength === 1) {
+        instructions[collapsedIndex] = {
           type: "emptyInstruction",
           fragments: [undefined],
         };
