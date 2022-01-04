@@ -22,7 +22,9 @@ The "cursor" is simply the currently highlighted instruction fragment.
 
 ![Dec-22-2021 16-58-19](https://user-images.githubusercontent.com/2264338/147033316-733a2a6a-f44d-45f3-81c1-e8b3dbd98f24.gif)
 
-Use the **arrow keys** to move the cursor between instructions and fragments - keyboard shortcuts will apply to the current selection. 
+Use the **arrow keys** to move the cursor between instructions and fragments - keyboard shortcuts will apply to the current selection.
+
+The `Enter` key is used to create a new instruction _after_ the current one, a lot like a newline in a text file. `Shift + Enter` creates a new instruction _before_ the current one.
 
 #### Auto complete
 When you see values separated by a vertical bar inside the cursor, this indicates that there are values available for auto completion.
