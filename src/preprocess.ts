@@ -36,6 +36,15 @@ function instructionsAreEqual(
   ) {
     const fragment = programInstruction.fragments[j];
     const macroFragment = macroInstruction.fragments[j];
+    // This allows us to modify return values or internal names in macros to prevent collisions
+    if (
+      fragment?.type === "defName" &&
+      macroFragment?.type === "defName" &&
+      fragment.value !== macroFragment.value
+    ) {
+      continue;
+    }
+
     if (
       fragment?.value !== "_" &&
       macroFragment?.value !== "_" &&
@@ -97,6 +106,7 @@ function macroRanges(
     i++, newInstructionIndex++
   ) {
     const macroInstruction = macro.instructions[i];
+    // Process a placeholder _block inside a macro
     if (macroInstruction.type === "placeholderInstruction") {
       ranges[ranges.length - 1][1] = newInstructionIndex;
       blockRanges.push([newInstructionIndex, newInstructionIndex + 1]);
@@ -193,10 +203,11 @@ export function preProcess(
         };
       } else if (
         collapse.length > 0 &&
-        collapse[collapse.length - 1].find(
-          (range) => range[0] <= index && range[1] > index
-        ) &&
-        !expandMacros
+        collapse.find(
+          (c) =>
+            c.find((range) => range[0] <= index && range[1] > index) &&
+            !expandMacros
+        )
       ) {
         return undefined;
       } else {

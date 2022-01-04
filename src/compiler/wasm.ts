@@ -114,11 +114,8 @@ export function compileWasm(
             printEnd--;
             indent.pop();
           }
+          instructionOutputs[1].push([...indent, `${branch} $${loopDepth}`]);
           loopDepth -= 1;
-          instructionOutputs[1].push([
-            ...indent,
-            `${branch} $${instruction.scope.openInstruction.originalInstructionIndex}-${loopDepth}`,
-          ]);
           indent.pop();
           instructionOutputs[1].push([...indent, `end`]);
         }
@@ -247,20 +244,16 @@ export function compileWasm(
             : `;; ${instruction.originalInstructionIndex}: ${instruction.serialized}`,
         ]);
         if (instruction.action === "open") {
-          instructionOutputs[1].push([
-            ...indent,
-            `${"block"} $${instruction.originalInstructionIndex}`,
-          ]);
+          loopDepth += 1;
+          instructionOutputs[1].push([...indent, `${"block"} $${loopDepth}`]);
           indent.push(undefined);
           for (let i = 0; i < instruction.loopCount; i++) {
-            instructionOutputs[1].push([
-              ...indent,
-              `loop $${instruction.originalInstructionIndex}-${i}`,
-            ]);
-            indent.push(undefined);
             loopDepth += 1;
+            instructionOutputs[1].push([...indent, `loop $${loopDepth}`]);
+            indent.push(undefined);
           }
         } else {
+          loopDepth--;
           indent.pop();
           instructionOutputs[1].push([...indent, `end`]);
         }

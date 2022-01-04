@@ -559,6 +559,22 @@ export function handleKeyStroke({
                   return [toReturn];
                 }
                 case "defInstruction": {
+                  if (
+                    toReturn.fragments[1] &&
+                    visibleVariables.find(
+                      (v) => v.name === toReturn.fragments[1]?.value
+                    )
+                  ) {
+                    let nextNumber = 2;
+                    const parsed = parseInt(
+                      toReturn.fragments[1].value.slice(-1),
+                      10
+                    );
+                    if (!isNaN(parsed)) {
+                      nextNumber = parsed + 1;
+                    }
+                    toReturn.fragments[1].value += nextNumber.toString();
+                  }
                   modifyStackPositionsAfter(1, collapsedIndex, instructions);
                   return [toReturn];
                 }

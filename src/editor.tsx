@@ -180,10 +180,29 @@ function useRenderInstructions(
       indent += 2;
     }
 
-    let postLine: React.ReactNode = null;
+    // [index, brace]
+    let postLine: [React.ReactNode, React.ReactNode][] = [];
     if (blockRanges.find((br) => br[1] - 1 === instruction.lineNumber)) {
-      postLine = <div>{"}"}</div>;
       indent -= 2;
+      const braceIndent = Array(Math.max(indent, 0))
+        .fill(0)
+        .map(() => <div className="indent"> </div>);
+      postLine.push([braceIndent, <div>{"}"}</div>]);
+    }
+
+    if (
+      blockRanges.find(
+        (br) =>
+          li < instructions.length - 1 &&
+          br[1] - 1 > instruction.lineNumber &&
+          br[1] - 1 < instructions[li + 1].lineNumber
+      )
+    ) {
+      indent -= 2;
+      const braceIndent = Array(Math.max(indent, 0))
+        .fill(0)
+        .map(() => <div className="indent"> </div>);
+      postLine.push([braceIndent, <div>{"}"}</div>]);
     }
 
     let contents: React.ReactElement;
@@ -243,12 +262,12 @@ function useRenderInstructions(
         <div className="lineNumber">{instruction.lineNumber + 1}</div>
         <div className="instruction">{contents}</div>
       </div>,
-      postLine && (
+      postLine.map((l) => (
         <div className="macro-block-braces">
-          {braceIndentRendered}
-          {postLine}
+          {l[0]}
+          {l[1]}
         </div>
-      ),
+      )),
     ]);
   }
   return instructionsRendered;
