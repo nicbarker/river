@@ -10,6 +10,7 @@ export function execute(
   outputCallback: (output: Output) => void
 ) {
   const memory = Array(200).fill(undefined);
+  let temp = 0;
 
   function writeBinaryToStack(value: number[], offset: number) {
     for (let i = 0; i < value.length; i++) {
@@ -67,12 +68,18 @@ export function execute(
         break;
       }
       case "assign": {
-        let targetValue = parseInt(
-          memory
-            .slice(instruction.target, instruction.target + instruction.size)
-            .join(""),
-          2
-        );
+        let targetValue =
+          instruction.target === "temp"
+            ? temp
+            : parseInt(
+                memory
+                  .slice(
+                    instruction.target,
+                    instruction.target + instruction.size
+                  )
+                  .join(""),
+                2
+              );
         let sourceValue: number = 0;
         switch (instruction.source) {
           case "const": {
@@ -101,6 +108,10 @@ export function execute(
                 `set ${instruction.action} with var value ${value} from address ${instruction.address} at offset ${instruction.target}`
               );
             sourceValue = parseInt(value, 2);
+            break;
+          }
+          case "temp": {
+            sourceValue = temp;
             break;
           }
           default:
@@ -135,12 +146,16 @@ export function execute(
           default:
             break;
         }
-        writeBinaryToStack(
-          dec2bin(toWrite, instruction.size)
-            .split("")
-            .map((v) => parseInt(v, 10)),
-          instruction.target
-        );
+        if (instruction.target === "temp") {
+          temp = toWrite;
+        } else {
+          writeBinaryToStack(
+            dec2bin(toWrite, instruction.size)
+              .split("")
+              .map((v) => parseInt(v, 10)),
+            instruction.target
+          );
+        }
         DOUBLE_DEBUG && console.log(`new memory state:`, memory);
         break;
       }
@@ -168,6 +183,10 @@ export function execute(
             leftValue = parseInt(value, 2);
             break;
           }
+          case "temp": {
+            leftValue = temp;
+            break;
+          }
           default:
             break;
         }
@@ -184,6 +203,10 @@ export function execute(
               )
               .join("");
             rightValue = parseInt(value, 2);
+            break;
+          }
+          case "temp": {
+            rightValue = temp;
             break;
           }
           default:
@@ -242,19 +265,38 @@ export function execute(
       case "os": {
         switch (instruction.action) {
           case "stdout": {
-            let value = parseInt(
-              memory
-                .slice(
-                  instruction.address,
-                  instruction.address! + instruction.size
-                )
-                .join(""),
-              2
-            );
-            outputCallback({
-              lineNumber: instructionIndex,
-              value: value.toString(),
-            });
+            switch (instruction.source) {
+              case "temp": {
+                outputCallback({
+                  lineNumber: instructionIndex,
+                  value: temp.toString(),
+                });
+                break;
+              }
+              case "var": {
+                let value = parseInt(
+                  memory
+                    .slice(
+                      instruction.address,
+                      instruction.address! + instruction.size
+                    )
+                    .join(""),
+                  2
+                );
+                outputCallback({
+                  lineNumber: instructionIndex,
+                  value: value.toString(),
+                });
+                break;
+              }
+              case "const": {
+                outputCallback({
+                  lineNumber: instructionIndex,
+                  value: instruction.value!.toString(),
+                });
+                break;
+              }
+            }
             break;
           }
           default:

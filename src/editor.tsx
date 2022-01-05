@@ -82,6 +82,9 @@ function useRenderInstructions(
                 : fragment.constValue
             }`;
             break;
+          case "temp":
+            fragmentContent = "temp";
+            break;
         }
       } else if (fragment?.type === "instruction" && fragment.value === "_") {
         fragmentContent = "_block";

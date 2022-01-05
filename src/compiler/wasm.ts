@@ -23,6 +23,7 @@ export function compileWasm(
         ["(memory 1)"],
         [],
         [`(func $${fileName}`],
+        [, "(local $temp i64)"],
       ],
     ],
   ];
@@ -48,11 +49,18 @@ export function compileWasm(
         const targetSize = instruction.size === 64 ? 64 : 32;
         const sourceSize = instruction.size === 64 ? 64 : 32;
         let source = "";
-        const target = instruction.target / 8;
-        instructionOutputs[1].push([...indent, `i32.const ${target}`]);
-        if (instruction.action !== "=") {
+        // If we're using the temp variable we assume that it's already on the stack here
+        if (instruction.target === "temp") {
+          if (instruction.action !== "=") {
+            instructionOutputs[1].push([...indent, `local.get $temp`]);
+          }
+        } else {
+          const target = instruction.target / 8;
           instructionOutputs[1].push([...indent, `i32.const ${target}`]);
-          instructionOutputs[1].push([...indent, `i${targetSize}.load`]);
+          if (instruction.action !== "=") {
+            instructionOutputs[1].push([...indent, `i32.const ${target}`]);
+            instructionOutputs[1].push([...indent, `i${targetSize}.load`]);
+          }
         }
         switch (instruction.source) {
           case "const": {
@@ -69,6 +77,10 @@ export function compileWasm(
               `i32.const ${instruction.address! / 8}`,
             ]);
             instructionOutputs[1].push([...indent, `i${sourceSize}.load`]);
+            break;
+          }
+          case "temp": {
+            instructionOutputs[1].push([...indent, `local.get $temp`]);
             break;
           }
           default:
@@ -102,7 +114,11 @@ export function compileWasm(
         if (action) {
           instructionOutputs[1].push([...indent, `i${sourceSize}.${action}`]);
         }
-        instructionOutputs[1].push([...indent, `i${sourceSize}.store`]);
+        if (instruction.target === "temp") {
+          instructionOutputs[1].push([...indent, `local.set $temp`]);
+        } else {
+          instructionOutputs[1].push([...indent, `i${sourceSize}.store`]);
+        }
 
         break;
       }
@@ -177,6 +193,10 @@ export function compileWasm(
             instructionOutputs[1].push([...indent, `i${leftSize}.load`]);
             break;
           }
+          case "temp": {
+            instructionOutputs[1].push([...indent, `local.get $temp`]);
+            break;
+          }
           default:
             break;
         }
@@ -197,6 +217,10 @@ export function compileWasm(
               `i32.const ${instruction.right.address! / 8}`,
             ]);
             instructionOutputs[1].push([...indent, `i${rightSize}.load`]);
+            break;
+          }
+          case "temp": {
+            instructionOutputs[1].push([...indent, `local.get $temp`]);
             break;
           }
           default:
@@ -222,12 +246,30 @@ export function compileWasm(
               ,
               `;; ${instructionIndex}: ${instruction.serialized}`,
             ]);
-            if (typeof instruction.address !== "undefined") {
-              const sourceSize = instruction.size === 64 ? 64 : 32;
-              const source = instruction.address / 8;
-              instructionOutputs[1].push([...indent, `i32.const ${source}`]);
-              instructionOutputs[1].push([...indent, `i${sourceSize}.load`]);
-              instructionOutputs[1].push([...indent, `call $log${sourceSize}`]);
+            switch (instruction.source) {
+              case "var": {
+                const sourceSize = instruction.size === 64 ? 64 : 32;
+                const source = instruction.address! / 8;
+                instructionOutputs[1].push([...indent, `i32.const ${source}`]);
+                instructionOutputs[1].push([...indent, `i${sourceSize}.load`]);
+                instructionOutputs[1].push([
+                  ...indent,
+                  `call $log${sourceSize}`,
+                ]);
+                break;
+              }
+              case "const": {
+                instructionOutputs[1].push([
+                  ...indent,
+                  `i64.const ${instruction.value!}`,
+                ]);
+                instructionOutputs[1].push([...indent, `call $log64`]);
+                break;
+              }
+              case "temp": {
+                instructionOutputs[1].push([...indent, `local.get $temp`]);
+                instructionOutputs[1].push([...indent, `call $log64`]);
+              }
             }
             break;
           }

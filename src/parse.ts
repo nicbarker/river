@@ -24,7 +24,7 @@ export type CompiledInstructionScope = {
 export type CompiledInstructionAssign = {
   instruction: "assign";
   action: string;
-  target: number;
+  target: number | "temp";
   source: string;
   size: number;
   value?: number;
@@ -61,6 +61,7 @@ export type CompiledInstructionVoid = {
 export type CompiledInstructionOs = {
   instruction: "os";
   action: string;
+  source: "var" | "const" | "temp";
   value?: number;
   address?: number;
   size: number;
@@ -184,8 +185,9 @@ export function parse(file: string) {
       case "assign": {
         const scope = scopes[scopes.length - 1];
         const targetIndex = parseInt(tokens[2], 10);
-        const target = scope.variables[targetIndex];
-        const size = scope.sizes[targetIndex];
+        const target =
+          tokens[1] === "temp" ? "temp" : scope.variables[targetIndex];
+        const size = tokens[1] === "temp" ? 64 : scope.sizes[targetIndex];
         const source = tokens[4];
         const instruction: CompiledInstructionAssign = {
           instruction: "assign",
@@ -193,7 +195,7 @@ export function parse(file: string) {
           target,
           source,
           size,
-          serialized: line,
+          serialized: line.replaceAll(/temp\s[0-9]/g, "temp"),
           originalInstructionIndex: i,
         };
         switch (source) {
@@ -239,7 +241,7 @@ export function parse(file: string) {
             source: tokens[4],
             size: 64,
           },
-          serialized: line,
+          serialized: line.replaceAll(/temp\s[0-9]/g, "temp"),
           originalInstructionIndex: i,
         };
         const scope = scopes[scopes.length - 1];
@@ -291,14 +293,16 @@ export function parse(file: string) {
               instruction: "os",
               action: "stdout",
               size: 0,
-              serialized: line,
+              source: "var",
+              serialized: line.replaceAll(/temp\s[0-9]/g, "temp"),
               originalInstructionIndex: i,
             };
             switch (tokens[2]) {
               case "const": {
                 // TODO: fix handling of primitives in stdout
                 instruction.value = parseInt(tokens[3]);
-                instruction.size = 32;
+                instruction.size = 64;
+                instruction.source = "const";
                 break;
               }
               case "var": {
@@ -307,6 +311,12 @@ export function parse(file: string) {
                 const size = scope.sizes[sourceIndex];
                 instruction.address = scope.variables[sourceIndex];
                 instruction.size = size;
+                instruction.source = "var";
+                break;
+              }
+              case "temp": {
+                instruction.size = 64;
+                instruction.source = "temp";
                 break;
               }
               default:
@@ -352,6 +362,9 @@ export function instructionsToText(instructions: Instruction[]) {
                 return `var ${f.stackPosition}`;
               case "const":
                 return `const ${f.constValue}`;
+              case "temp": {
+                return "temp 0";
+              }
               case "_":
                 return "_";
             }

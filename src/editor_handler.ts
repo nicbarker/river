@@ -104,6 +104,10 @@ export type VarTypeConst = {
   value: "const";
   constValue?: number;
 };
+export type VarTypeTemp = {
+  type: "varType";
+  value: "temp";
+};
 export type VarTypePlaceholder = {
   type: "varType";
   value: "_";
@@ -118,6 +122,7 @@ export type VarTypeMissing = {
 export type VarTypeFragment =
   | VarTypeVar
   | VarTypeConst
+  | VarTypeTemp
   | VarTypePlaceholder
   | VarTypeMissing;
 
@@ -314,20 +319,25 @@ export function getFragmentHints(instruction: CollapsedInstruction) {
     case "defInstruction":
       return ["def", "name", "8 | 16 | 32 | 64"];
     case "assignInstruction":
-      return ["assign", "var", "= | + | - | * | / | %", "var | const"];
+      return [
+        "assign",
+        "var | temp",
+        "= | + | - | * | / | %",
+        "var | const | temp",
+      ];
     case "scopeInstruction":
       return ["scope", "open | close"];
     case "compareInstruction":
       return [
         "compare",
-        "var | const",
+        "var | const | temp",
         "= | != | < | <= | > | >=",
-        "var | const",
+        "var | const | temp",
       ];
     case "jumpInstruction":
       return ["jump", "start | end"];
     case "OSInstruction":
-      return ["os", "stdout", "var | const"];
+      return ["os", "stdout", "var | const | temp"];
     case "macroInstruction":
       return instruction.placeholders;
   }
@@ -729,6 +739,14 @@ export function handleKeyStroke({
             value: "var",
           };
           setVariableSearchString("");
+          break;
+        }
+        case "t": {
+          newFragment = {
+            type: "varType",
+            value: "temp",
+          };
+          increment = "cursor";
           break;
         }
         case "_": {
@@ -1163,7 +1181,7 @@ export function handleKeyStroke({
           case 2: {
             instruction.fragments[2] = parseVarType(
               instruction.fragments[2],
-              true,
+              false,
               isMacro
             );
             setInstructions(instructions.slice());

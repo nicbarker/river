@@ -416,6 +416,7 @@ export function compileX64(
     ],
   ];
   const jumpLabels: number[] = [];
+  const jumpLabelsUsed: number[] = [];
   for (
     let instructionIndex = 0;
     instructionIndex < instructions.length;
@@ -431,7 +432,7 @@ export function compileX64(
       jumpLabels[jumpLabels.length - 1] === instructionIndex
     ) {
       instructionOutputs[1].push([`j${instructionIndex.toString()}:`]);
-      jumpLabels.pop();
+      jumpLabelsUsed.push(jumpLabels.pop()!);
     }
     switch (instruction.instruction) {
       case "assign": {
@@ -441,7 +442,16 @@ export function compileX64(
         ]);
         const [mov, size] = moveAndLabelForSize(instruction.size);
         let source = "";
-        const target = instruction.target / 8;
+        let target = "";
+        let targetWithOffset: number | string = "";
+        if (instruction.target === "temp") {
+          target = "r15";
+          targetWithOffset = "r15";
+        } else {
+          const address = instruction.target / 8;
+          target = `${size} [r12${address > 0 ? " + " + address : ""}]`;
+          targetWithOffset = memoryOffset(instruction.target);
+        }
         let operands: string[] = [];
         switch (instruction.source) {
           case "const": {
@@ -450,17 +460,14 @@ export function compileX64(
               case "=":
               case "+":
               case "-": {
-                operands = [
-                  `${size} [r12${target > 0 ? " + " + target : ""}]`,
-                  source,
-                ];
+                operands = [target, source];
                 break;
               }
               case "*": {
                 instructionOutputs[1].push([
                   ,
                   mov,
-                  formatOp("r13", memoryOffset(target)),
+                  formatOp("r13", targetWithOffset),
                 ]);
                 operands = ["r13", source];
                 break;
@@ -472,7 +479,7 @@ export function compileX64(
                 instructionOutputs[1].push([
                   ,
                   mov,
-                  formatOp("rax", memoryOffset(target)),
+                  formatOp("rax", targetWithOffset),
                 ]);
                 operands = ["r13"];
                 break;
@@ -492,9 +499,13 @@ export function compileX64(
               ),
             ]);
             operands = [
-              memoryOffset(target),
+              targetWithOffset,
               registerWithSize("r13", instruction.size),
             ];
+            break;
+          }
+          case "temp": {
+            operands = [targetWithOffset, "r15"];
             break;
           }
           default:
@@ -535,7 +546,7 @@ export function compileX64(
               ,
               "mov",
               formatOp(
-                memoryOffset(target),
+                targetWithOffset,
                 registerWithSize("r13", instruction.size)
               ),
             ]);
@@ -547,7 +558,7 @@ export function compileX64(
               ,
               "mov",
               formatOp(
-                memoryOffset(target),
+                targetWithOffset,
                 registerWithSize("rax", instruction.size)
               ),
             ]);
@@ -559,7 +570,7 @@ export function compileX64(
               ,
               "mov",
               formatOp(
-                memoryOffset(target),
+                targetWithOffset,
                 registerWithSize("rdx", instruction.size)
               ),
             ]);
@@ -614,6 +625,8 @@ export function compileX64(
           default:
             break;
         }
+        let leftReg = "r13";
+        let rightReg = "r14";
         switch (instruction.left.source) {
           case "const": {
             instructionOutputs[1].push([
@@ -629,6 +642,10 @@ export function compileX64(
               "mov",
               formatOp("r13", memoryOffset(instruction.left.address! / 8)),
             ]);
+            break;
+          }
+          case "temp": {
+            leftReg = "r15";
             break;
           }
           default:
@@ -651,10 +668,14 @@ export function compileX64(
             ]);
             break;
           }
+          case "temp": {
+            rightReg = "r15";
+            break;
+          }
           default:
             break;
         }
-        instructionOutputs[1].push([, "cmp", formatOp("r13", "r14")]);
+        instructionOutputs[1].push([, "cmp", formatOp(leftReg, rightReg)]);
         instructionOutputs[1].push([, jump, `j${instructionIndex + 2}`]);
         jumpLabels.push(instructionIndex + 2);
         break;
@@ -673,13 +694,36 @@ export function compileX64(
               "lea",
               `${syscallArgumentRegisters(target, 0)}, [rel message]`,
             ]);
-            instructionOutputs[1].push([
-              ,
-              mov,
-              `${syscallArgumentRegisters(target, 1)}, ${size} ${memoryOffset(
-                instruction.address! / 8
-              )}`,
-            ]);
+            switch (instruction.source) {
+              case "temp": {
+                instructionOutputs[1].push([
+                  ,
+                  mov,
+                  `${syscallArgumentRegisters(target, 1)}, r15`,
+                ]);
+                break;
+              }
+              case "var": {
+                instructionOutputs[1].push([
+                  ,
+                  mov,
+                  `${syscallArgumentRegisters(
+                    target,
+                    1
+                  )}, ${size} ${memoryOffset(instruction.address! / 8)}`,
+                ]);
+                break;
+              }
+              case "const": {
+                instructionOutputs[1].push([
+                  ,
+                  mov,
+                  `${syscallArgumentRegisters(target, 1)}, ${
+                    instruction.value
+                  }`,
+                ]);
+              }
+            }
             instructionOutputs[1].push([, "call", printfLabel]);
             instructionOutputs[1].push(postSysCall);
             break;
@@ -690,7 +734,9 @@ export function compileX64(
         break;
       }
       case "scope": {
-        instructionOutputs[1].push([`j${instructionIndex.toString()}:`]);
+        if (!jumpLabelsUsed.includes(instructionIndex)) {
+          instructionOutputs[1].push([`j${instructionIndex.toString()}:`]);
+        }
         break;
       }
       default:
