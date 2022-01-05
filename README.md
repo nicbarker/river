@@ -102,15 +102,28 @@ e.g. `jump start`
 
 Think `goto`. `jump` either moves execution back to the beginning of the current `scope`, or to the end of the current `scope`. Used to construct control flow similar to `while` or `for`.
 
-### Value fragments
+### Value Fragments
 
 When an instruction needs to reference a **value**, such as in `compare` or `assign`, you can provide either:
 
 - a _variable_ with the keyword `var` followed by the variable's position on the stack, e.g. `var 0`
 - a _constant_ with the keyword `const` followed by the constant value (at this time only unsigned integers are supported) e.g. `const 5`
   _Constants_ only ever exist in registers and aren't saved to main memory, whereas all `var` values are saved to memory.
+- the _temporary_ variable with the keyword `temp`. More info on the temp variable can be found in the [following section](#the-temporary-variable).
 
 e.g. `compare var 0 > const 10` tests whether the variable at position 0 on the stack has a value that is greater than 10.
+
+### The Temporary Variable
+The `temp` variable type can only be used in the instruction **immediately following its assignment.**
+```c
+assign temp 0 = const 5
+compare temp 0 < 10 // Allowed to use temp here because it was assigned immediately before
+os stdout temp 0 // Error - we can't use the temp variable here because the preceding instruction doesn't assign it
+```
+
+The `temp` variable is stored directly in a register on supported architectures and never gets saved to main memory. It's used for intermediate values and will eventually form the basis of expression-like structures in River.
+
+Note: in the underlying text / binary representation, `temp` still needs to be followed by an 8 byte number, to make parsing simpler. As a result you'll always see it referenced as `temp 0` in the raw `.rvr` files, but the number is hidden in the editor as it has no significance and is discarded.
 
 ### Memory
 
