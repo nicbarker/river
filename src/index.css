@@ -175,6 +175,10 @@ code {
   background: rgba(0, 170, 255, 0.4);
 }
 
+.fragment.missing {
+  margin-right: 5px;
+}
+
 .fragment:not(.highlight).placeholder:after,
 .fragment:not(.highlight).missing:after {
   content: " ";

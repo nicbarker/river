@@ -140,7 +140,11 @@ function macroRanges(
     }
     for (let j = 0; j < macroInstruction.fragments.length; j++) {
       const macroFragment = macroInstruction.fragments[j];
-      if (macroFragment?.value === "_" && macroFragment.type === "varType") {
+      if (
+        macroFragment?.value === "_" &&
+        (macroFragment.type === "varType" ||
+          macroFragment.type === "assignAction")
+      ) {
         placeholderFragments.push({
           name: macroFragment.name,
           fragment: instructions[newInstructionIndex].fragments[j]!,

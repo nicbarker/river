@@ -66,4 +66,54 @@ export const standardMacros: Macro[] = [
       },
     ],
   },
+  {
+    name: "expr",
+    instructions: [
+      {
+        type: "assignInstruction",
+        fragments: [
+          {
+            type: "instruction",
+            value: "assign",
+          },
+          {
+            type: "varType",
+            value: "temp",
+          },
+          {
+            type: "assignAction",
+            value: "=",
+          },
+          {
+            type: "varType",
+            value: "_",
+            name: "left",
+          },
+        ],
+      },
+      {
+        type: "assignInstruction",
+        fragments: [
+          {
+            type: "instruction",
+            value: "assign",
+          },
+          {
+            type: "varType",
+            value: "temp",
+          },
+          {
+            type: "assignAction",
+            value: "_",
+            name: "op",
+          },
+          {
+            type: "varType",
+            value: "_",
+            name: "right",
+          },
+        ],
+      },
+    ],
+  },
 ];

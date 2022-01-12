@@ -86,6 +86,20 @@ function useRenderInstructions(
             fragmentContent = "temp";
             break;
         }
+      } else if (fragment?.type === "assignAction") {
+        switch (fragment?.value) {
+          case "_": {
+            fragmentContent = "_" + fragment.name;
+            break;
+          }
+          case "missing": {
+            fragmentContent = "_operator";
+            break;
+          }
+          default:
+            fragmentContent = fragment.value;
+            break;
+        }
       } else if (fragment?.type === "instruction" && fragment.value === "_") {
         fragmentContent = "_block";
       } else if (fragment) {
@@ -121,10 +135,7 @@ function useRenderInstructions(
               cursorPos === i &&
               selectionRange[0] === -1 &&
               hasFocus,
-            placeholder:
-              (fragment?.type === "varType" ||
-                fragment?.type === "instruction") &&
-              fragment.value === "_",
+            placeholder: fragment?.value === "_",
           })}
         >
           {instruction.type === "macroInstruction" && i > 0 && (

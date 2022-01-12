@@ -84,6 +84,16 @@ export type AssignMod = {
   type: "assignAction";
   value: "%";
 };
+export type AssignPlaceholder = {
+  type: "assignAction";
+  value: "_";
+  name: string;
+};
+export type AssignMissing = {
+  type: "assignAction";
+  value: "missing";
+  name: string;
+};
 
 export type AssignActionFragment =
   | AssignEq
@@ -91,7 +101,9 @@ export type AssignActionFragment =
   | AssignSubtract
   | AssignDivide
   | AssignMultiply
-  | AssignMod;
+  | AssignMod
+  | AssignPlaceholder
+  | AssignMissing;
 
 // VAR TYPES ----------------------------------
 export type VarTypeVar = {
@@ -222,7 +234,7 @@ export type AssignInstruction = {
   fragments: Partial<
     [
       InstructionAssign,
-      VarTypeVar | VarTypePlaceholder,
+      VarTypeVar | VarTypePlaceholder | VarTypeTemp,
       AssignActionFragment,
       VarTypeFragment
     ]
@@ -520,7 +532,11 @@ export function handleKeyStroke({
               const toReturn = JSON.parse(JSON.stringify(inst)) as Instruction;
               for (let i = 0; i < toReturn.fragments.length; i++) {
                 const fragment = toReturn.fragments[i];
-                if (fragment?.type === "varType" && fragment.value === "_") {
+                if (
+                  (fragment?.type === "varType" ||
+                    fragment?.type === "assignAction") &&
+                  fragment.value === "_"
+                ) {
                   toReturn.fragments[i] = {
                     ...fragment,
                     value: "missing",
@@ -799,6 +815,87 @@ export function handleKeyStroke({
     return newFragment;
   }
 
+  function parseAssignAction(
+    fragment?: AssignActionFragment,
+    isMacro?: boolean
+  ) {
+    let newFragment = fragment;
+    if (typeof newFragment === "undefined" || newFragment.value === "missing") {
+      switch (key) {
+        case "=": {
+          newFragment = {
+            type: "assignAction",
+            value: "=",
+          };
+          increment = "cursor";
+          break;
+        }
+        case "+": {
+          newFragment = {
+            type: "assignAction",
+            value: "+",
+          };
+          increment = "cursor";
+          break;
+        }
+        case "-": {
+          newFragment = {
+            type: "assignAction",
+            value: "-",
+          };
+          increment = "cursor";
+          break;
+        }
+        case "*": {
+          newFragment = {
+            type: "assignAction",
+            value: "*",
+          };
+          increment = "cursor";
+          break;
+        }
+        case "/": {
+          newFragment = {
+            type: "assignAction",
+            value: "/",
+          };
+          increment = "cursor";
+          break;
+        }
+        case "%": {
+          newFragment = {
+            type: "assignAction",
+            value: "%",
+          };
+          increment = "cursor";
+          break;
+        }
+        case "_": {
+          if (isMacro) {
+            newFragment = {
+              type: "assignAction",
+              value: "_",
+              name: "",
+            };
+            increment = "cursor";
+          }
+        }
+      }
+    } else if (newFragment.value === "_") {
+      if (key === " " || key === "Enter") {
+        increment = "cursor";
+      }
+      if (key === "Backspace") {
+        newFragment.name =
+          newFragment.name.length > 0 ? newFragment.name.slice(0, -1) : "";
+      } else if (key.match(/[\p{L}\p{N}\s]/gu)) {
+        // Multi language alpha numeric
+        newFragment.name += key;
+      }
+    }
+    return newFragment;
+  }
+
   if (instruction.type === "emptyInstruction" || cursorPos === 0) {
     switch (key) {
       case "s": {
@@ -989,56 +1086,9 @@ export function handleKeyStroke({
             setInstructions(instructions.slice());
             break;
           case 2: {
-            switch (key) {
-              case "=": {
-                instruction.fragments[2] = {
-                  type: "assignAction",
-                  value: "=",
-                };
-                increment = "cursor";
-                break;
-              }
-              case "+": {
-                instruction.fragments[2] = {
-                  type: "assignAction",
-                  value: "+",
-                };
-                increment = "cursor";
-                break;
-              }
-              case "-": {
-                instruction.fragments[2] = {
-                  type: "assignAction",
-                  value: "-",
-                };
-                increment = "cursor";
-                break;
-              }
-              case "*": {
-                instruction.fragments[2] = {
-                  type: "assignAction",
-                  value: "*",
-                };
-                increment = "cursor";
-                break;
-              }
-              case "/": {
-                instruction.fragments[2] = {
-                  type: "assignAction",
-                  value: "/",
-                };
-                increment = "cursor";
-                break;
-              }
-              case "%": {
-                instruction.fragments[2] = {
-                  type: "assignAction",
-                  value: "%",
-                };
-                increment = "cursor";
-                break;
-              }
-            }
+            instruction.fragments[2] = parseAssignAction(
+              instruction.fragments[2]
+            );
             break;
           }
           case 3: {
@@ -1207,6 +1257,12 @@ export function handleKeyStroke({
                   ? newVarType.constValue
                   : undefined;
             }
+          }
+          setInstructions(instructions.slice());
+        } else if (fragment.type === "assignAction") {
+          const newAssignAction = parseAssignAction(fragment, isMacro);
+          if (newAssignAction) {
+            fragment.value = newAssignAction.value;
           }
           setInstructions(instructions.slice());
         }
