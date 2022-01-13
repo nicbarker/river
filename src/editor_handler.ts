@@ -1383,13 +1383,35 @@ export function handleKeyStroke({
     }
     // ---------------------------------------------
   } else if (key === "Enter" && instruction) {
-    instructions.splice(collapsedIndex + (shiftKey ? 0 : 1), 0, {
-      type: "emptyInstruction",
-      fragments: [undefined],
-    });
-    setCursorPos(0);
-    setInstructionIndex(instructionIndex + (shiftKey ? 0 : 1));
-    setInstructions(instructions.slice());
+    if (instruction.type === "macroInstruction" && !shiftKey) {
+      let collapsedEndLineNumber = collapsedInstructions.findIndex(
+        (i, index) => i.lineNumber === instruction.endLineNumber
+      );
+      if (collapsedEndLineNumber === -1) {
+        collapsedEndLineNumber =
+          collapsedInstructions.findIndex(
+            (i, index) =>
+              i.lineNumber < instruction.endLineNumber &&
+              collapsedInstructions[index + 1].lineNumber >
+                instruction.endLineNumber
+          ) + 1;
+      }
+      instructions.splice(instruction.endLineNumber, 0, {
+        type: "emptyInstruction",
+        fragments: [undefined],
+      });
+      setCursorPos(0);
+      setInstructionIndex(collapsedEndLineNumber);
+      setInstructions(instructions.slice());
+    } else {
+      instructions.splice(collapsedIndex + (shiftKey ? 0 : 1), 0, {
+        type: "emptyInstruction",
+        fragments: [undefined],
+      });
+      setCursorPos(0);
+      setInstructionIndex(instructionIndex + (shiftKey ? 0 : 1));
+      setInstructions(instructions.slice());
+    }
   }
 
   if (

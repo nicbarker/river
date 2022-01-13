@@ -175,8 +175,9 @@ code {
   background: rgba(0, 170, 255, 0.4);
 }
 
-.fragment.missing {
-  margin-right: 5px;
+.fragment.missing,
+.fragment.placeholder {
+  margin: 0 2px;
 }
 
 .fragment:not(.highlight).placeholder:after,
