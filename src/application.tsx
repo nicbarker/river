@@ -21,7 +21,10 @@ export function App() {
   const [activeRightTab, setActiveRightTab] = useState<
     "build" | "asm" | "macros"
   >("asm");
-  const [instructionIndex, setInstructionIndex] = useState(0);
+  const [instructionRange, setInstructionRange] = useState<[number, number]>([
+    0,
+    0,
+  ]);
   const [macrosExpanded, setMacrosExpanded] = useState(false);
 
   useEffect(() => {
@@ -60,7 +63,7 @@ export function App() {
       setInstructions={setInstructions}
       setActiveRightTab={setActiveRightTab}
       setFocusIndex={setFocusIndex}
-      setInstructionIndex={setInstructionIndex}
+      setInstructionRange={setInstructionRange}
     />
   );
 
@@ -146,7 +149,7 @@ export function App() {
         {activeRightTab === "asm" && (
           <ASMTab
             instructions={instructions}
-            instructionIndex={instructionIndex}
+            instructionRange={instructionRange}
           />
         )}
         {activeRightTab === "macros" && (

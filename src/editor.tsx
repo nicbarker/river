@@ -298,7 +298,7 @@ export function Editor({
   setActiveRightTab,
   setFocusIndex,
   onCursorUnderflow,
-  setInstructionIndex: setParentInstructionIndex,
+  setInstructionRange,
 }: {
   instructions: Instruction[];
   macros: Macro[];
@@ -310,7 +310,7 @@ export function Editor({
   setActiveRightTab: (rightTab: "build" | "asm" | "macros") => void;
   setFocusIndex: (focusIndex: number) => void;
   onCursorUnderflow?: () => void;
-  setInstructionIndex?: (instructionIndex: number) => void;
+  setInstructionRange?: (range: [number, number]) => void;
 }) {
   const isMacro = !!sourceMacro;
   const [cursorPos, setCursorPos] = useState(0);
@@ -337,6 +337,22 @@ export function Editor({
     collapsedInstructions.length - 1
   );
   const instruction = collapsedInstructions[fixedInstructionIndex];
+
+  useEffect(() => {
+    if (setInstructionRange) {
+      if (instruction.type === "macroInstruction") {
+        setInstructionRange([
+          instruction.lineNumber,
+          instruction.endLineNumber,
+        ]);
+      } else {
+        setInstructionRange([
+          instruction.lineNumber,
+          instruction.lineNumber + 1,
+        ]);
+      }
+    }
+  }, [instructions, instructions.length, instructionIndex]);
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const visibleVariables: VisibleVariable[] = [];
@@ -377,11 +393,7 @@ export function Editor({
           key: e.key,
           shiftKey: e.shiftKey,
           setInstructions,
-          setInstructionIndex: (instructionIndex: number) => {
-            setInstructionIndex(instructionIndex);
-            setParentInstructionIndex &&
-              setParentInstructionIndex(instructionIndex);
-          },
+          setInstructionIndex,
           setCursorPos,
           setSelectionRange,
           setMacros,
@@ -409,7 +421,6 @@ export function Editor({
     setActiveRightTab,
     setFocusIndex,
     onCursorUnderflow,
-    setParentInstructionIndex,
     isMacro,
     collapsedInstructions,
     fixedInstructionIndex,

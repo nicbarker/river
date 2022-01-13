@@ -47,7 +47,10 @@ const targetValues: [BackendTarget, string][] = [
   ["wasm", "WebAssembly"],
 ];
 
-function renderX64(props: { asm: ASMBlock[]; instructionIndex: number }) {
+function renderX64(props: {
+  asm: ASMBlock[];
+  instructionRange: [number, number];
+}) {
   return props.asm.map((block, bi) => {
     const renderedLines = block[1].map((line, li) => {
       const columns: React.ReactNode[] = [];
@@ -84,7 +87,9 @@ function renderX64(props: { asm: ASMBlock[]; instructionIndex: number }) {
       <div
         key={bi}
         className={classNames("asmBlock", {
-          highlight: props.instructionIndex === block[0],
+          highlight:
+            props.instructionRange[0] <= block[0] &&
+            props.instructionRange[1] > block[0],
         })}
       >
         {renderedLines}
@@ -93,7 +98,10 @@ function renderX64(props: { asm: ASMBlock[]; instructionIndex: number }) {
   });
 }
 
-function renderWasm(props: { asm: ASMBlock[]; instructionIndex: number }) {
+function renderWasm(props: {
+  asm: ASMBlock[];
+  instructionRange: [number, number];
+}) {
   return props.asm.map((block, bi) => {
     const renderedLines = block[1].map((line, li) => {
       const columns: React.ReactNode[] = [];
@@ -130,7 +138,9 @@ function renderWasm(props: { asm: ASMBlock[]; instructionIndex: number }) {
       <div
         key={bi}
         className={classNames("asmBlock", {
-          highlight: props.instructionIndex === block[0],
+          highlight:
+            props.instructionRange[0] <= block[0] &&
+            props.instructionRange[1] > block[0],
         })}
       >
         {renderedLines}
@@ -141,7 +151,7 @@ function renderWasm(props: { asm: ASMBlock[]; instructionIndex: number }) {
 
 export function ASMTab(props: {
   instructions: Instruction[];
-  instructionIndex: number;
+  instructionRange: [number, number];
 }) {
   const [asm, setAsm] = useState<ASMBlock[]>([]);
   const [targetDropdownVisible, setTargetDropdownVisible] = useState(false);
@@ -157,8 +167,8 @@ export function ASMTab(props: {
 
   const renderedBlocks =
     targetPlatform === "wasm"
-      ? renderWasm({ asm, instructionIndex: props.instructionIndex })
-      : renderX64({ asm, instructionIndex: props.instructionIndex });
+      ? renderWasm({ asm, instructionRange: props.instructionRange })
+      : renderX64({ asm, instructionRange: props.instructionRange });
 
   const targets = targetValues.map((platform) => (
     <button
