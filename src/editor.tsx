@@ -331,6 +331,7 @@ export function Editor({
     sourceMacro,
     macrosExpanded
   );
+  console.log(collapsedInstructions);
 
   const fixedInstructionIndex = Math.min(
     instructionIndex,
@@ -352,6 +353,7 @@ export function Editor({
         ]);
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [instructions, instructions.length, instructionIndex]);
 
   // eslint-disable-next-line react-hooks/exhaustive-deps

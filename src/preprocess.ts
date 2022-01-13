@@ -195,6 +195,8 @@ export function preProcess(
       const macroRanges = macroAtLine(instructions, index, macros, sourceMacro);
       if (macroRanges && !expandMacros) {
         collapse.push(macroRanges[1].ranges);
+        const finalInstruction =
+          macroRanges[0].instructions[macroRanges[0].instructions.length - 1];
         return {
           type: "macroInstruction",
           fragments: [
@@ -206,6 +208,11 @@ export function preProcess(
           blockRanges: macroRanges[1].blockRanges,
           lineNumber: index,
           endLineNumber: macroRanges[1].endLineNumber,
+          macroType:
+            finalInstruction.type === "assignInstruction" &&
+            finalInstruction.fragments[1]?.value === "temp"
+              ? "inline"
+              : "function",
         };
       } else if (
         collapse.length > 0 &&

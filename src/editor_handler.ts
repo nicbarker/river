@@ -286,6 +286,7 @@ export type MacroInstruction = {
   placeholders: string[];
   blockRanges: [number, number][];
   endLineNumber: number;
+  macroType: "function" | "inline";
 };
 
 export type CollapsedInstruction = (Instruction | MacroInstruction) & {
