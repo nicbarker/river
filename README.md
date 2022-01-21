@@ -226,10 +226,10 @@ untitled();
 River is currently full of bugs and incomplete functionality. Some of the next features for development are:
 
 - Using macros inside other macros
+- Examples (project euler or something)
 - Saving / loading files
 - WebAssembly browser / wasmtime flavours
 - Types (floating point and signed integers first)
 - Structs or something similar to structs
 - More standard macros
 - Binary rvr file representation
-- The `macro` variable type for expression-like usage
