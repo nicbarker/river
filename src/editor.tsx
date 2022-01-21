@@ -2,21 +2,221 @@ import classnames from "classnames";
 import React from "react";
 import { useState, useEffect } from "react";
 import {
+  CollapsedData,
   CollapsedInstruction,
   getFragmentHints,
   handleKeyStroke,
   Instruction,
   Macro,
+  MacroInstruction,
 } from "./editor_handler";
 import { preProcess } from "./preprocess";
 
 export type VisibleVariable = { index: number; name: string; visible: boolean };
+function renderFragments(
+  instruction: CollapsedInstruction,
+  hasCursor: boolean,
+  hasFocus: boolean,
+  isMacro: boolean,
+  cursorPositions: number[],
+  visibleVariables: VisibleVariable[],
+  selectionRange: [number, number],
+  macros: Macro[],
+  variableSearchString?: string,
+  macroSearchString?: string,
+  inlineMacro?: boolean
+) {
+  const cursorPos = cursorPositions.length > 1 ? -1 : cursorPositions[0];
+  return instruction.fragments.map((fragment, i) => {
+    let fragmentContent: React.ReactNode;
+    if (
+      typeof variableSearchString !== "undefined" &&
+      fragment?.type === "varType" &&
+      hasCursor &&
+      cursorPos === i
+    ) {
+      const found = visibleVariables
+        .filter((m) =>
+          m.name
+            .toLocaleLowerCase()
+            .startsWith(variableSearchString.toLocaleLowerCase())
+        )
+        .map((m) => (
+          <>
+            <b className="bold-hint">
+              {m.name.slice(0, variableSearchString.length)}
+            </b>
+            {m.name.slice(variableSearchString.length)}
+          </>
+        ))
+        .map((e, i, arr) => (
+          <React.Fragment key={i}>
+            {e}
+            {i < arr.length - 1 ? " | " : null}
+          </React.Fragment>
+        ));
+      fragmentContent = (
+        <div className={classnames("empty", "fragment")}>{found}</div>
+      );
+    } else if (
+      typeof macroSearchString !== "undefined" &&
+      hasCursor &&
+      cursorPos === i
+    ) {
+      const found = macros
+        .filter(
+          (m) =>
+            m.inline &&
+            m.name
+              .toLocaleLowerCase()
+              .startsWith(macroSearchString.toLocaleLowerCase())
+        )
+        .map((m) => (
+          <>
+            <b className="bold-hint">
+              {m.name.slice(0, macroSearchString.length)}
+            </b>
+            {m.name.slice(macroSearchString.length)}
+          </>
+        ))
+        .map((e, i, arr) => (
+          <React.Fragment key={i}>
+            {e}
+            {i < arr.length - 1 ? " | " : null}
+          </React.Fragment>
+        ));
+      fragmentContent = (
+        <div className={classnames("empty", "fragment")}>{found}</div>
+      );
+    } else if (fragment?.type === "varType") {
+      switch (fragment?.value) {
+        case "_": {
+          fragmentContent = "_" + fragment.name;
+          break;
+        }
+        case "missing": {
+          fragmentContent = "_var";
+          break;
+        }
+        case "var":
+          if (typeof fragment.stackPosition !== "undefined") {
+            if (
+              instruction.inlineMacros.find(
+                (m) => m && m.stackPosition === fragment.stackPosition
+              )
+            ) {
+              fragmentContent = (
+                <div className="fragment">
+                  {renderFragments(
+                    instruction.inlineMacros[i].instruction,
+                    hasCursor,
+                    hasFocus,
+                    isMacro,
+                    cursorPositions[0] === i ? cursorPositions.slice(1) : [],
+                    visibleVariables,
+                    selectionRange,
+                    macros,
+                    variableSearchString,
+                    macroSearchString,
+                    true
+                  )}
+                </div>
+              );
+            } else {
+              fragmentContent = visibleVariables[fragment.stackPosition].name;
+            }
+          }
+          break;
+        case "const":
+          fragmentContent = `const ${
+            typeof fragment.constValue === "undefined"
+              ? "0.. value"
+              : fragment.constValue
+          }`;
+          break;
+      }
+    } else if (fragment?.type === "assignAction") {
+      switch (fragment?.value) {
+        case "_": {
+          fragmentContent = "_" + fragment.name;
+          break;
+        }
+        case "missing": {
+          fragmentContent = "_operator";
+          break;
+        }
+        default:
+          fragmentContent = fragment.value;
+          break;
+      }
+    } else if (fragment?.type === "instruction" && fragment.value === "_") {
+      fragmentContent = "_block";
+    } else if (fragment) {
+      fragmentContent = fragment.value;
+    } else if (cursorPos === i && hasCursor) {
+      fragmentContent = (
+        <div className={classnames("empty", "fragment")}>
+          {selectionRange[0] === -1 &&
+            getFragmentHints(instruction)
+              [cursorPos].split(" | ")
+              .concat(isMacro ? ["_"] : [])
+              .map((h) => (
+                <>
+                  <b className="bold-hint">{h.slice(0, 1)}</b>
+                  {h.slice(1)}
+                </>
+              ))
+              .map((e, i, arr) => (
+                <React.Fragment key={i}>
+                  {e}
+                  {i < arr.length - 1 ? " | " : null}
+                </React.Fragment>
+              ))}
+        </div>
+      );
+    }
+    return [
+      <div
+        key={i}
+        className={classnames("fragment", fragment?.type, {
+          [fragment?.value || ""]: fragment?.type !== "defName",
+          highlight:
+            hasCursor &&
+            cursorPos === i &&
+            selectionRange[0] === -1 &&
+            hasFocus,
+          placeholder: fragment?.value === "_",
+        })}
+      >
+        {instruction.type === "macroInstruction" && !inlineMacro && i > 0 && (
+          <div className="macro-param-label">
+            {instruction.placeholders[i - 1] + ": "}
+          </div>
+        )}
+        {fragmentContent}
+      </div>,
+      instruction.type === "macroInstruction" && i === 0 && (
+        <div className="macro-paren open">
+          {instruction.fragments.length > 1 && !inlineMacro && " "}(
+        </div>
+      ),
+      instruction.type === "macroInstruction" &&
+        i === instruction.fragments.length - 1 && (
+          <div className="macro-paren close">)</div>
+        ),
+      ((i > 0 && i < instruction.fragments.length - 1) ||
+        instruction.type !== "macroInstruction") && (
+        <div key={i + "-space"}> </div>
+      ),
+    ];
+  });
+}
 
-function useRenderInstructions(
+function renderInstructions(
   instructions: CollapsedInstruction[],
   selectionRange: [number, number],
   instructionIndex: number,
-  cursorPos: number,
+  cursorPositions: number[],
   hasFocus: boolean,
   isMacro: boolean,
   macros: Macro[],
@@ -28,138 +228,20 @@ function useRenderInstructions(
   let instructionsRendered: React.ReactNode[] = [];
   let blockRanges: [number, number][] = [];
   for (let li = 0; li < instructions.length; li++) {
+    const previousInstruction = li > 0 ? instructions[li - 1] : undefined;
     const instruction = instructions[li];
-    const fragments = instruction.fragments.map((fragment, i) => {
-      let fragmentContent: React.ReactNode;
-      if (
-        typeof variableSearchString !== "undefined" &&
-        fragment?.type === "varType" &&
-        instructionIndex === li &&
-        cursorPos === i
-      ) {
-        const found = visibleVariables
-          .filter((m) =>
-            m.name
-              .toLocaleLowerCase()
-              .startsWith(variableSearchString.toLocaleLowerCase())
-          )
-          .map((m) => (
-            <>
-              <b className="bold-hint">
-                {m.name.slice(0, variableSearchString.length)}
-              </b>
-              {m.name.slice(variableSearchString.length)}
-            </>
-          ))
-          .map((e, i, arr) => (
-            <React.Fragment key={i}>
-              {e}
-              {i < arr.length - 1 ? " | " : null}
-            </React.Fragment>
-          ));
-        fragmentContent = (
-          <div className={classnames("empty", "fragment")}>{found}</div>
-        );
-      } else if (fragment?.type === "varType") {
-        switch (fragment?.value) {
-          case "_": {
-            fragmentContent = "_" + fragment.name;
-            break;
-          }
-          case "missing": {
-            fragmentContent = "_var";
-            break;
-          }
-          case "var":
-            if (typeof fragment.stackPosition !== "undefined") {
-              fragmentContent = visibleVariables[fragment.stackPosition].name;
-            }
-            break;
-          case "const":
-            fragmentContent = `const ${
-              typeof fragment.constValue === "undefined"
-                ? "0.. value"
-                : fragment.constValue
-            }`;
-            break;
-          case "temp":
-            fragmentContent = "temp";
-            break;
-        }
-      } else if (fragment?.type === "assignAction") {
-        switch (fragment?.value) {
-          case "_": {
-            fragmentContent = "_" + fragment.name;
-            break;
-          }
-          case "missing": {
-            fragmentContent = "_operator";
-            break;
-          }
-          default:
-            fragmentContent = fragment.value;
-            break;
-        }
-      } else if (fragment?.type === "instruction" && fragment.value === "_") {
-        fragmentContent = "_block";
-      } else if (fragment) {
-        fragmentContent = fragment.value;
-      } else if (cursorPos === i && instructionIndex === li) {
-        fragmentContent = (
-          <div className={classnames("empty", "fragment")}>
-            {selectionRange[0] === -1 &&
-              getFragmentHints(instruction)
-                [cursorPos].split(" | ")
-                .concat(isMacro ? ["_"] : [])
-                .map((h) => (
-                  <>
-                    <b className="bold-hint">{h.slice(0, 1)}</b>
-                    {h.slice(1)}
-                  </>
-                ))
-                .map((e, i, arr) => (
-                  <React.Fragment key={i}>
-                    {e}
-                    {i < arr.length - 1 ? " | " : null}
-                  </React.Fragment>
-                ))}
-          </div>
-        );
-      }
-      return [
-        <div
-          key={i}
-          className={classnames("fragment", fragment?.value, fragment?.type, {
-            highlight:
-              instructionIndex === li &&
-              cursorPos === i &&
-              selectionRange[0] === -1 &&
-              hasFocus,
-            placeholder: fragment?.value === "_",
-          })}
-        >
-          {instruction.type === "macroInstruction" && i > 0 && (
-            <div className="macro-param-label">
-              {instruction.placeholders[i - 1] + ": "}
-            </div>
-          )}
-          {fragmentContent}
-        </div>,
-        instruction.type === "macroInstruction" && i === 0 && (
-          <div className="macro-paren open">
-            {instruction.fragments.length > 1 && " "}(
-          </div>
-        ),
-        instruction.type === "macroInstruction" &&
-          i === instruction.fragments.length - 1 && (
-            <div className="macro-paren close">)</div>
-          ),
-        ((i > 0 && i < instruction.fragments.length - 1) ||
-          instruction.type !== "macroInstruction") && (
-          <div key={i + "-space"}> </div>
-        ),
-      ];
-    });
+    const fragments = renderFragments(
+      instruction,
+      li === instructionIndex,
+      hasFocus,
+      isMacro,
+      cursorPositions,
+      visibleVariables,
+      selectionRange,
+      macros,
+      variableSearchString,
+      macroSearchString
+    );
 
     if (instruction.type === "macroInstruction") {
       blockRanges = blockRanges.concat(instruction.blockRanges);
@@ -174,7 +256,11 @@ function useRenderInstructions(
       indent -= 2;
     }
 
-    if (blockRanges.find((br) => br[0] === instruction.lineNumber)) {
+    if (
+      blockRanges.find((br) => br[0] <= instruction.lineNumber) &&
+      (!previousInstruction ||
+        blockRanges.find((br) => br[0] > previousInstruction.lineNumber))
+    ) {
       indent += 2;
       preLine = <div>{"{"}</div>;
     }
@@ -221,12 +307,18 @@ function useRenderInstructions(
 
     let contents: React.ReactElement;
 
-    if (typeof macroSearchString !== "undefined" && instructionIndex === li) {
+    if (
+      typeof macroSearchString !== "undefined" &&
+      instructionIndex === li &&
+      cursorPositions[cursorPositions.length - 1] === 0
+    ) {
       const found = macros
-        .filter((m) =>
-          m.name
-            .toLocaleLowerCase()
-            .startsWith(macroSearchString.toLocaleLowerCase())
+        .filter(
+          (m) =>
+            !m.inline &&
+            m.name
+              .toLocaleLowerCase()
+              .startsWith(macroSearchString.toLocaleLowerCase())
         )
         .map((m) => (
           <>
@@ -313,7 +405,7 @@ export function Editor({
   setInstructionRange?: (range: [number, number]) => void;
 }) {
   const isMacro = !!sourceMacro;
-  const [cursorPos, setCursorPos] = useState(0);
+  const [cursorPositions, setCursorPositions] = useState([0]);
   const [selectionRange, setSelectionRange] = useState<[number, number]>([
     -1,
     -1,
@@ -331,7 +423,6 @@ export function Editor({
     sourceMacro,
     macrosExpanded
   );
-  console.log(collapsedInstructions);
 
   const fixedInstructionIndex = Math.min(
     instructionIndex,
@@ -341,17 +432,26 @@ export function Editor({
 
   useEffect(() => {
     if (setInstructionRange) {
+      let min = instruction.lineNumber;
+      let max = instruction.lineNumber + 1;
       if (instruction.type === "macroInstruction") {
-        setInstructionRange([
-          instruction.lineNumber,
-          instruction.endLineNumber,
-        ]);
-      } else {
-        setInstructionRange([
-          instruction.lineNumber,
-          instruction.lineNumber + 1,
-        ]);
+        min = Math.min(min, instruction.lineNumber);
+        max = Math.max(max, instruction.endLineNumber);
       }
+      let toInspect = instruction.inlineMacros.filter((m) => !!m);
+      for (let i = 0; i < toInspect.length; i++) {
+        const inlineMacro = toInspect[i];
+        min = Math.min(min, inlineMacro.instruction.lineNumber);
+        max = Math.max(max, inlineMacro.instruction.endLineNumber);
+        toInspect.splice(i, 1);
+        i--;
+        for (const inline of inlineMacro.instruction.inlineMacros) {
+          if (inline) {
+            toInspect.push(inline);
+          }
+        }
+      }
+      setInstructionRange([min, max]);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [instructions, instructions.length, instructionIndex]);
@@ -384,7 +484,7 @@ export function Editor({
           instruction,
           instructions,
           collapsedInstructions,
-          cursorPos,
+          cursorPositions,
           instructionIndex: fixedInstructionIndex,
           selectionRange,
           isMacro,
@@ -396,7 +496,7 @@ export function Editor({
           shiftKey: e.shiftKey,
           setInstructions,
           setInstructionIndex,
-          setCursorPos,
+          setCursorPositions,
           setSelectionRange,
           setMacros,
           setMacroSearchString,
@@ -412,7 +512,6 @@ export function Editor({
   }, [
     instructions,
     setInstructions,
-    cursorPos,
     hasFocus,
     instructionIndex,
     instruction,
@@ -428,13 +527,14 @@ export function Editor({
     fixedInstructionIndex,
     visibleVariables,
     variableSearchString,
+    cursorPositions,
   ]);
 
-  const instructionsRendered = useRenderInstructions(
+  const instructionsRendered = renderInstructions(
     collapsedInstructions,
     selectionRange,
     instructionIndex,
-    cursorPos,
+    cursorPositions,
     hasFocus,
     isMacro,
     macros,

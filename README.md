@@ -15,9 +15,11 @@ River is a programming language that that has three goals:
 - An extremely labourious, verbose and low level syntax is offset with a high level editor that allows you to write software with similar speed and ease as a higher level language like C.
 
 ### Controls
+
 At the moment River only supports keyboard interactions for the main editor.
 
 #### Cursor
+
 The "cursor" is simply the currently highlighted instruction fragment.
 
 ![Dec-22-2021 16-58-19](https://user-images.githubusercontent.com/2264338/147033316-733a2a6a-f44d-45f3-81c1-e8b3dbd98f24.gif)
@@ -27,9 +29,10 @@ Use the **arrow keys** to move the cursor between instructions and fragments - k
 The `Enter` key is used to create a new instruction _after_ the current one, a lot like a newline in a text file. `Shift + Enter` creates a new instruction _before_ the current one.
 
 #### Auto complete
+
 When you see values separated by a vertical bar inside the cursor, this indicates that there are values available for auto completion.
 In the case of a finite number of selections (such as instructions types) they are hotkeyed by the first letter.
-  
+
 <img width="569" alt="Screen Shot 2021-12-22 at 4 56 21 PM" src="https://user-images.githubusercontent.com/2264338/147033150-93aa05b4-7dd2-4809-b8a2-4ecbaeb99da3.png">
 
 _(the instruction types above would be hotkeyed with `s`, `d`, `a`, `c` etc)_
@@ -39,6 +42,7 @@ In the case of searchable values such as variable names, the `enter` key will se
 <img width="481" alt="Screen Shot 2021-12-22 at 5 10 11 PM" src="https://user-images.githubusercontent.com/2264338/147034181-315d4d98-a511-43c2-9608-aa9fb75e0565.png">
 
 #### Selection
+
 You can select multiple lines by holding the **shift** key and using the `up` and `down` arrow.
 
 ![Dec-23-2021 07-47-22](https://user-images.githubusercontent.com/2264338/147140717-91162033-2eef-4477-a8f9-15953fc6868d.gif)
@@ -109,21 +113,8 @@ When an instruction needs to reference a **value**, such as in `compare` or `ass
 - a _variable_ with the keyword `var` followed by the variable's position on the stack, e.g. `var 0`
 - a _constant_ with the keyword `const` followed by the constant value (at this time only unsigned integers are supported) e.g. `const 5`
   _Constants_ only ever exist in registers and aren't saved to main memory, whereas all `var` values are saved to memory.
-- the _temporary_ variable with the keyword `temp`. More info on the temp variable can be found in the [following section](#the-temporary-variable).
 
 e.g. `compare var 0 > const 10` tests whether the variable at position 0 on the stack has a value that is greater than 10.
-
-### The Temporary Variable
-The `temp` variable type can only be used in the instruction **immediately following its assignment.**
-```c
-assign temp 0 = const 5
-compare temp 0 < 10 // Allowed to use temp here because it was assigned immediately before
-os stdout temp 0 // Error - we can't use the temp variable here because the preceding instruction doesn't assign it
-```
-
-The `temp` variable is stored directly in a register on supported architectures and never gets saved to main memory. It's used for intermediate values and will eventually form the basis of expression-like structures in River.
-
-Note: in the underlying text / binary representation, `temp` still needs to be followed by an 8 byte number, to make parsing simpler. As a result you'll always see it referenced as `temp 0` in the raw `.rvr` files, but the number is hidden in the editor as it has no significance and is discarded.
 
 ### Memory
 
@@ -216,14 +207,18 @@ You can see the corresponding assembly instructions highlighted in the asm tab a
 ![Dec-16-2021 16-38-53](https://user-images.githubusercontent.com/2264338/146304092-a9fb1ad3-0753-4cf2-9336-f8f9fbd9a664.gif)
 
 ### Running WASM
+
 Running WASM is a bit of a pain, but you can test out your code here:
 https://webassembly.github.io/wabt/demo/wat2wasm/
 
 Using the following javascript:
+
 ```js
-const wasmInstance = new WebAssembly.Instance(wasmModule, { console: { log: (num) => console.log(num) } });
+const wasmInstance = new WebAssembly.Instance(wasmModule, {
+  console: { log: (num) => console.log(num) },
+});
 const { untitled } = wasmInstance.exports;
-untitled()
+untitled();
 ```
 
 ### Future
@@ -237,5 +232,4 @@ River is currently full of bugs and incomplete functionality. Some of the next f
 - Structs or something similar to structs
 - More standard macros
 - Binary rvr file representation
-- The `temp` variable type
 - The `macro` variable type for expression-like usage

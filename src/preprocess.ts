@@ -4,6 +4,8 @@ import {
   Macro,
   CollapsedInstruction,
   getStackPositionAtInstructionIndex,
+  MacroInstruction,
+  CollapsedData,
 } from "./editor_handler";
 
 type PlaceholderFragment = { name: string; fragment: Fragment };
@@ -190,14 +192,16 @@ export function preProcess(
   expandMacros?: boolean
 ): CollapsedInstruction[] {
   const collapse: [number, number][][] = [];
+  let unplacedInlineMacros: {
+    instruction: MacroInstruction & CollapsedData;
+    stackPosition: number;
+  }[] = [];
   return instructions
     .map((instruction, index): CollapsedInstruction | undefined => {
       const macroRanges = macroAtLine(instructions, index, macros, sourceMacro);
       if (macroRanges && !expandMacros) {
         collapse.push(macroRanges[1].ranges);
-        const finalInstruction =
-          macroRanges[0].instructions[macroRanges[0].instructions.length - 1];
-        return {
+        const macroInstruction: CollapsedInstruction = {
           type: "macroInstruction",
           fragments: [
             { type: "macroName", value: macroRanges[0].name },
@@ -208,12 +212,37 @@ export function preProcess(
           blockRanges: macroRanges[1].blockRanges,
           lineNumber: index,
           endLineNumber: macroRanges[1].endLineNumber,
-          macroType:
-            finalInstruction.type === "assignInstruction" &&
-            finalInstruction.fragments[1]?.value === "temp"
-              ? "inline"
-              : "function",
+          macroType: macroRanges[0].inline ? "inline" : "function",
+          inlineMacros: [],
         };
+        for (let i = 0; i < unplacedInlineMacros.length; i++) {
+          const macro = unplacedInlineMacros[i];
+          let cursorPos = 0;
+          for (const fragment of macroInstruction.fragments) {
+            if (
+              fragment?.type === "varType" &&
+              fragment.value === "var" &&
+              fragment.stackPosition === macro.stackPosition
+            ) {
+              macroInstruction.inlineMacros[cursorPos] = macro;
+              unplacedInlineMacros.splice(i, 1);
+              i--;
+            }
+            cursorPos++;
+          }
+        }
+        if (macroRanges[0].inline) {
+          unplacedInlineMacros.push({
+            instruction: macroInstruction,
+            stackPosition: getStackPositionAtInstructionIndex(
+              index,
+              instructions
+            ),
+          });
+          return undefined;
+        } else {
+          return macroInstruction;
+        }
       } else if (
         collapse.length > 0 &&
         collapse.find(
@@ -223,8 +252,32 @@ export function preProcess(
         )
       ) {
         return undefined;
+      } else if (unplacedInlineMacros.length > 0) {
+        const toReturn: CollapsedInstruction = {
+          ...instruction,
+          lineNumber: index,
+          inlineMacros: [],
+        };
+        for (let i = 0; i < unplacedInlineMacros.length; i++) {
+          const macro = unplacedInlineMacros[i];
+          let cursorPos = 0;
+          for (const fragment of toReturn.fragments) {
+            if (
+              fragment?.type === "varType" &&
+              fragment.value === "var" &&
+              fragment.stackPosition === macro.stackPosition
+            ) {
+              toReturn.inlineMacros[cursorPos] = macro;
+              unplacedInlineMacros.splice(i, 1);
+              i--;
+            }
+            cursorPos++;
+          }
+        }
+        unplacedInlineMacros = [];
+        return toReturn;
       } else {
-        return { ...instruction, lineNumber: index };
+        return { ...instruction, lineNumber: index, inlineMacros: [] };
       }
     })
     .filter((i) => !!i) as CollapsedInstruction[];

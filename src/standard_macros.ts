@@ -3,7 +3,15 @@ import { Macro } from "./editor_handler";
 export const standardMacros: Macro[] = [
   {
     name: "for",
+    inline: false,
     instructions: [
+      {
+        type: "scopeInstruction",
+        fragments: [
+          { type: "instruction", value: "scope" },
+          { type: "scopeAction", value: "open" },
+        ],
+      },
       {
         type: "defInstruction",
         fragments: [
@@ -64,11 +72,36 @@ export const standardMacros: Macro[] = [
           { type: "scopeAction", value: "close" },
         ],
       },
+      {
+        type: "scopeInstruction",
+        fragments: [
+          { type: "instruction", value: "scope" },
+          { type: "scopeAction", value: "close" },
+        ],
+      },
     ],
   },
   {
     name: "expr",
+    inline: true,
     instructions: [
+      {
+        type: "defInstruction",
+        fragments: [
+          {
+            type: "instruction",
+            value: "def",
+          },
+          {
+            type: "defName",
+            value: "output",
+          },
+          {
+            type: "size",
+            value: 64,
+          },
+        ],
+      },
       {
         type: "assignInstruction",
         fragments: [
@@ -78,7 +111,8 @@ export const standardMacros: Macro[] = [
           },
           {
             type: "varType",
-            value: "temp",
+            value: "var",
+            stackPosition: 0,
           },
           {
             type: "assignAction",
@@ -100,7 +134,8 @@ export const standardMacros: Macro[] = [
           },
           {
             type: "varType",
-            value: "temp",
+            value: "var",
+            stackPosition: 0,
           },
           {
             type: "assignAction",

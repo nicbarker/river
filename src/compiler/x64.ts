@@ -444,14 +444,9 @@ export function compileX64(
         let source = "";
         let target = "";
         let targetWithOffset: number | string = "";
-        if (instruction.target === "temp") {
-          target = "r15";
-          targetWithOffset = "r15";
-        } else {
-          const address = instruction.target / 8;
-          target = `${size} [r12${address > 0 ? " + " + address : ""}]`;
-          targetWithOffset = memoryOffset(instruction.target);
-        }
+        const address = instruction.target / 8;
+        target = `${size} [r12${address > 0 ? " + " + address : ""}]`;
+        targetWithOffset = memoryOffset(instruction.target / 8);
         let operands: string[] = [];
         switch (instruction.source) {
           case "const": {
@@ -490,22 +485,34 @@ export function compileX64(
             break;
           }
           case "var": {
-            instructionOutputs[1].push([
-              ,
-              mov,
-              formatOp(
-                "r13",
-                `${size} ${memoryOffset(instruction.address! / 8)}`
-              ),
-            ]);
-            operands = [
-              targetWithOffset,
-              registerWithSize("r13", instruction.size),
-            ];
-            break;
-          }
-          case "temp": {
-            operands = [targetWithOffset, "r15"];
+            switch (instruction.action) {
+              case "=": {
+                instructionOutputs[1].push([
+                  ,
+                  mov,
+                  formatOp(
+                    "r13",
+                    `${size} ${memoryOffset(instruction.address! / 8)}`
+                  ),
+                ]);
+                operands = [
+                  targetWithOffset,
+                  registerWithSize("r13", instruction.size),
+                ];
+                break;
+              }
+              default: {
+                instructionOutputs[1].push([
+                  ,
+                  mov,
+                  formatOp("r13", targetWithOffset),
+                ]);
+                operands = [
+                  "r13",
+                  `${size} ${memoryOffset(instruction.address! / 8)}`,
+                ];
+              }
+            }
             break;
           }
           default:
@@ -644,10 +651,6 @@ export function compileX64(
             ]);
             break;
           }
-          case "temp": {
-            leftReg = "r15";
-            break;
-          }
           default:
             break;
         }
@@ -666,10 +669,6 @@ export function compileX64(
               "mov",
               formatOp("r14", memoryOffset(instruction.right.address! / 8)),
             ]);
-            break;
-          }
-          case "temp": {
-            rightReg = "r15";
             break;
           }
           default:
@@ -695,14 +694,6 @@ export function compileX64(
               `${syscallArgumentRegisters(target, 0)}, [rel message]`,
             ]);
             switch (instruction.source) {
-              case "temp": {
-                instructionOutputs[1].push([
-                  ,
-                  mov,
-                  `${syscallArgumentRegisters(target, 1)}, r15`,
-                ]);
-                break;
-              }
               case "var": {
                 instructionOutputs[1].push([
                   ,

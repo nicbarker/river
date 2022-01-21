@@ -223,6 +223,7 @@ code {
 
 .fragment {
   display: flex;
+  align-items: center;
 }
 
 .fragment.scope {

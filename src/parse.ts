@@ -24,7 +24,7 @@ export type CompiledInstructionScope = {
 export type CompiledInstructionAssign = {
   instruction: "assign";
   action: string;
-  target: number | "temp";
+  target: number;
   source: string;
   size: number;
   value?: number;
@@ -61,7 +61,7 @@ export type CompiledInstructionVoid = {
 export type CompiledInstructionOs = {
   instruction: "os";
   action: string;
-  source: "var" | "const" | "temp";
+  source: "var" | "const";
   value?: number;
   address?: number;
   size: number;
@@ -185,9 +185,8 @@ export function parse(file: string) {
       case "assign": {
         const scope = scopes[scopes.length - 1];
         const targetIndex = parseInt(tokens[2], 10);
-        const target =
-          tokens[1] === "temp" ? "temp" : scope.variables[targetIndex];
-        const size = tokens[1] === "temp" ? 64 : scope.sizes[targetIndex];
+        const target = scope.variables[targetIndex];
+        const size = scope.sizes[targetIndex];
         const source = tokens[4];
         const instruction: CompiledInstructionAssign = {
           instruction: "assign",
@@ -195,7 +194,7 @@ export function parse(file: string) {
           target,
           source,
           size,
-          serialized: line.replaceAll(/temp\s[0-9]/g, "temp"),
+          serialized: line,
           originalInstructionIndex: i,
         };
         switch (source) {
@@ -241,7 +240,7 @@ export function parse(file: string) {
             source: tokens[4],
             size: 64,
           },
-          serialized: line.replaceAll(/temp\s[0-9]/g, "temp"),
+          serialized: line,
           originalInstructionIndex: i,
         };
         const scope = scopes[scopes.length - 1];
@@ -294,7 +293,7 @@ export function parse(file: string) {
               action: "stdout",
               size: 0,
               source: "var",
-              serialized: line.replaceAll(/temp\s[0-9]/g, "temp"),
+              serialized: line,
               originalInstructionIndex: i,
             };
             switch (tokens[2]) {
@@ -312,11 +311,6 @@ export function parse(file: string) {
                 instruction.address = scope.variables[sourceIndex];
                 instruction.size = size;
                 instruction.source = "var";
-                break;
-              }
-              case "temp": {
-                instruction.size = 64;
-                instruction.source = "temp";
                 break;
               }
               default:
@@ -362,9 +356,6 @@ export function instructionsToText(instructions: Instruction[]) {
                 return `var ${f.stackPosition}`;
               case "const":
                 return `const ${f.constValue}`;
-              case "temp": {
-                return "temp 0";
-              }
               case "_":
                 return "_";
             }

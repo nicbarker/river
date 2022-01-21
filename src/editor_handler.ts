@@ -116,10 +116,6 @@ export type VarTypeConst = {
   value: "const";
   constValue?: number;
 };
-export type VarTypeTemp = {
-  type: "varType";
-  value: "temp";
-};
 export type VarTypePlaceholder = {
   type: "varType";
   value: "_";
@@ -134,7 +130,6 @@ export type VarTypeMissing = {
 export type VarTypeFragment =
   | VarTypeVar
   | VarTypeConst
-  | VarTypeTemp
   | VarTypePlaceholder
   | VarTypeMissing;
 
@@ -234,7 +229,7 @@ export type AssignInstruction = {
   fragments: Partial<
     [
       InstructionAssign,
-      VarTypeVar | VarTypePlaceholder | VarTypeTemp,
+      VarTypeVar | VarTypePlaceholder,
       AssignActionFragment,
       VarTypeFragment
     ]
@@ -289,13 +284,21 @@ export type MacroInstruction = {
   macroType: "function" | "inline";
 };
 
-export type CollapsedInstruction = (Instruction | MacroInstruction) & {
+export type CollapsedData = {
   lineNumber: number;
+  inlineMacros: {
+    instruction: MacroInstruction & CollapsedData;
+    stackPosition: number;
+  }[];
 };
+
+export type CollapsedInstruction = (Instruction | MacroInstruction) &
+  CollapsedData;
 
 export type Macro = {
   name: string;
   instructions: Instruction[];
+  inline: boolean;
 };
 
 export function getFragmentLength(instruction: CollapsedInstruction): number {
@@ -303,7 +306,7 @@ export function getFragmentLength(instruction: CollapsedInstruction): number {
     case "emptyInstruction":
       return 0;
     case "defInstruction":
-      return 4;
+      return 3;
     case "assignInstruction":
       return 4;
     case "scopeInstruction":
@@ -332,25 +335,20 @@ export function getFragmentHints(instruction: CollapsedInstruction) {
     case "defInstruction":
       return ["def", "name", "8 | 16 | 32 | 64"];
     case "assignInstruction":
-      return [
-        "assign",
-        "var | temp",
-        "= | + | - | * | / | %",
-        "var | const | temp",
-      ];
+      return ["assign", "var", "= | + | - | * | / | %", "var | const | macro"];
     case "scopeInstruction":
       return ["scope", "open | close"];
     case "compareInstruction":
       return [
         "compare",
-        "var | const | temp",
+        "var | const",
         "= | != | < | <= | > | >=",
-        "var | const | temp",
+        "var | const",
       ];
     case "jumpInstruction":
       return ["jump", "start | end"];
     case "OSInstruction":
-      return ["os", "stdout", "var | const | temp"];
+      return ["os", "stdout", "var | const"];
     case "macroInstruction":
       return instruction.placeholders;
   }
@@ -387,7 +385,7 @@ export function modifyStackPositionsAfter(
   instructions: Instruction[]
 ) {
   const stackPosition = getStackPositionAtInstructionIndex(index, instructions);
-  for (let i = 0; i < instructions.length; i++) {
+  for (let i = index; i < instructions.length; i++) {
     for (let j = 0; j < instructions[i].fragments.length; j++) {
       const fragment = instructions[i].fragments[j];
       if (
@@ -432,6 +430,7 @@ function deleteInstruction(
       instructionIndex,
       instructions
     );
+    console.log(instructionIndex, instructions.length);
     for (let i = instructionIndex; i < instructions.length; i++) {
       for (let j = 0; j < instructions[i].fragments.length; j++) {
         const fragment = instructions[i].fragments[j];
@@ -453,11 +452,19 @@ function deleteInstruction(
   }
 }
 
+export enum CursorMovement {
+  INCREMENT,
+  DECREMENT,
+  START,
+  END,
+  PRESERVE,
+}
+
 export function handleKeyStroke({
   instruction,
   instructions,
   collapsedInstructions,
-  cursorPos,
+  cursorPositions,
   instructionIndex,
   selectionRange,
   isMacro,
@@ -470,7 +477,7 @@ export function handleKeyStroke({
   onCursorUnderflow,
   setInstructions,
   setInstructionIndex,
-  setCursorPos,
+  setCursorPositions,
   setSelectionRange,
   setMacros,
   setMacroSearchString,
@@ -481,7 +488,7 @@ export function handleKeyStroke({
   instruction: CollapsedInstruction;
   instructions: Instruction[];
   collapsedInstructions: CollapsedInstruction[];
-  cursorPos: number;
+  cursorPositions: number[];
   instructionIndex: number;
   selectionRange: [number, number];
   isMacro: boolean;
@@ -494,7 +501,7 @@ export function handleKeyStroke({
   onCursorUnderflow?: () => void;
   setInstructions: (instructions: Instruction[]) => void;
   setInstructionIndex: (instructionIndex: number) => void;
-  setCursorPos: (cursorPos: number) => void;
+  setCursorPositions: (cursorPostions: number[]) => void;
   setSelectionRange: (selectionRange: [number, number]) => void;
   setMacros: (macros: Macro[]) => void;
   setMacroSearchString: (macroSearchString?: string) => void;
@@ -517,17 +524,178 @@ export function handleKeyStroke({
     }
   }
 
+  let cursorPos = cursorPositions[cursorPositions.length - 1];
+
+  let inlineInstruction = instruction;
+  if (cursorPositions.length > 1) {
+    let i = 0;
+    while (
+      i < cursorPositions.length &&
+      inlineInstruction.inlineMacros[cursorPositions[i]]
+    ) {
+      inlineInstruction =
+        inlineInstruction.inlineMacros[cursorPositions[i]].instruction;
+      i++;
+    }
+  }
+  const currentInstruction = inlineInstruction;
+
+  function setCursorPos(
+    cursorMovement: CursorMovement,
+    newInstruction?: CollapsedInstruction
+  ) {
+    let targetInstruction = newInstruction || currentInstruction;
+    switch (cursorMovement) {
+      case CursorMovement.INCREMENT: {
+        if (
+          cursorPos < getFragmentLength(targetInstruction) - 1 &&
+          cursorPos < targetInstruction.fragments.length
+        ) {
+          cursorPositions[cursorPositions.length - 1]++;
+          const newFragment =
+            targetInstruction.fragments[
+              cursorPositions[cursorPositions.length - 1]
+            ];
+          if (
+            newFragment?.type === "varType" &&
+            newFragment.value === "var" &&
+            targetInstruction.inlineMacros.find(
+              (m) => m && m.stackPosition === newFragment.stackPosition
+            )
+          ) {
+            cursorPositions.push(0);
+          }
+        } else if (cursorPositions.length > 1) {
+          cursorPositions.splice(cursorPositions.length - 1, 1);
+          cursorPos = cursorPositions[cursorPositions.length - 1];
+          setCursorPos(CursorMovement.INCREMENT);
+        } else if (instructionIndex < collapsedInstructions.length - 1) {
+          if (cursorPositions.length > 1) {
+            cursorPositions.splice(1, cursorPositions.length);
+          }
+          setCursorPos(CursorMovement.START);
+          setInstructionIndex(instructionIndex + 1);
+        }
+        break;
+      }
+      case CursorMovement.DECREMENT: {
+        if (cursorPos > 0) {
+          cursorPositions[cursorPositions.length - 1]--;
+          const newFragment =
+            targetInstruction.fragments[
+              cursorPositions[cursorPositions.length - 1]
+            ];
+          if (
+            newFragment?.type === "varType" &&
+            newFragment.value === "var" &&
+            targetInstruction.inlineMacros[
+              cursorPositions[cursorPositions.length - 1]
+            ]
+          ) {
+            cursorPositions.push(
+              targetInstruction.inlineMacros[
+                cursorPositions[cursorPositions.length - 1]
+              ].instruction.fragments.length - 1
+            );
+          }
+        } else if (cursorPositions.length > 1) {
+          cursorPositions.splice(cursorPositions.length - 1, 1);
+          cursorPositions[cursorPositions.length - 1]--;
+        } else if (instructionIndex > 0 && currentInstruction) {
+          setInstructionIndex(instructionIndex - 1);
+          const previousInstruction =
+            collapsedInstructions[instructionIndex - 1];
+          cursorPositions[cursorPositions.length - 1] = Math.max(
+            Math.min(
+              previousInstruction.fragments.length,
+              getFragmentLength(previousInstruction) - 1
+            ),
+            0
+          );
+          const newFragment =
+            previousInstruction.fragments[
+              cursorPositions[cursorPositions.length - 1]
+            ];
+          if (
+            newFragment?.type === "varType" &&
+            newFragment.value === "var" &&
+            previousInstruction.inlineMacros[
+              previousInstruction.fragments.length - 1
+            ]
+          ) {
+            let inlineInstruction = previousInstruction;
+            while (
+              inlineInstruction.inlineMacros[
+                inlineInstruction.fragments.length - 1
+              ]
+            ) {
+              inlineInstruction =
+                inlineInstruction.inlineMacros[
+                  inlineInstruction.fragments.length - 1
+                ].instruction;
+              cursorPositions.push(inlineInstruction.fragments.length - 1);
+            }
+          }
+        }
+        break;
+      }
+      case CursorMovement.START: {
+        cursorPositions[cursorPositions.length - 1] = 0;
+        break;
+      }
+      case CursorMovement.END: {
+        cursorPositions[cursorPositions.length - 1] = Math.max(
+          Math.min(
+            targetInstruction.fragments.length,
+            getFragmentLength(targetInstruction) - 1
+          ),
+          0
+        );
+        break;
+      }
+      case CursorMovement.PRESERVE: {
+        cursorPositions.splice(
+          0,
+          cursorPositions.length,
+          Math.max(
+            Math.min(
+              cursorPositions[cursorPositions.length - 1],
+              targetInstruction.fragments.length,
+              getFragmentLength(targetInstruction) - 1
+            ),
+            0
+          )
+        );
+        break;
+      }
+    }
+    setCursorPositions(cursorPositions.slice());
+  }
+
   if (typeof macroSearchString !== "undefined") {
-    const found = macros.filter((m) =>
-      m.name
-        .toLocaleLowerCase()
-        .startsWith(macroSearchString.toLocaleLowerCase())
+    const isInline = cursorPositions[0] !== 0;
+    let parentInstruction = instruction;
+    let depth = 0;
+    while (isInline && parentInstruction.inlineMacros[cursorPositions[depth]]) {
+      parentInstruction =
+        parentInstruction.inlineMacros[cursorPositions[depth]].instruction;
+      depth++;
+    }
+    const found = macros.filter(
+      (m) =>
+        ((isInline && m.inline) || (!isInline && !m.inline)) &&
+        m.name
+          .toLocaleLowerCase()
+          .startsWith(macroSearchString.toLocaleLowerCase())
     );
     if (key.match(/^[ -~]$/)) {
       setMacroSearchString(macroSearchString + key);
     } else {
       switch (key) {
         case "Enter": {
+          if (found.length === 0) {
+            break;
+          }
           const macroContentsFixed = found[0].instructions
             .map((inst): Instruction[] => {
               const toReturn = JSON.parse(JSON.stringify(inst)) as Instruction;
@@ -564,7 +732,7 @@ export function handleKeyStroke({
                     typeof target.stackPosition !== "undefined"
                   ) {
                     target.stackPosition += getStackPositionAtInstructionIndex(
-                      collapsedIndex,
+                      parentInstruction.lineNumber,
                       instructions
                     );
                     toReturn.fragments[1] = target;
@@ -578,7 +746,7 @@ export function handleKeyStroke({
                     typeof source.stackPosition !== "undefined"
                   ) {
                     source.stackPosition += getStackPositionAtInstructionIndex(
-                      collapsedIndex,
+                      parentInstruction.lineNumber,
                       instructions
                     );
                     toReturn.fragments[3] = source;
@@ -586,23 +754,33 @@ export function handleKeyStroke({
                   return [toReturn];
                 }
                 case "defInstruction": {
-                  if (
-                    toReturn.fragments[1] &&
-                    visibleVariables.find(
-                      (v) => v.name === toReturn.fragments[1]?.value
-                    )
-                  ) {
-                    let nextNumber = 2;
-                    const parsed = parseInt(
-                      toReturn.fragments[1].value.slice(-1),
-                      10
-                    );
-                    if (!isNaN(parsed)) {
-                      nextNumber = parsed + 1;
+                  const fragment = toReturn.fragments[1];
+                  if (fragment) {
+                    let nextNumber = 1;
+                    while (true) {
+                      const next = nextNumber;
+                      if (
+                        visibleVariables.find((v) =>
+                          v.name.startsWith(
+                            fragment.value + (next === 1 ? "" : next)
+                          )
+                        )
+                      ) {
+                        nextNumber++;
+                      } else {
+                        break;
+                      }
                     }
-                    toReturn.fragments[1].value += nextNumber.toString();
+                    fragment.value += (nextNumber === 1
+                      ? ""
+                      : nextNumber
+                    ).toString();
                   }
-                  modifyStackPositionsAfter(1, collapsedIndex, instructions);
+                  modifyStackPositionsAfter(
+                    1,
+                    parentInstruction.lineNumber,
+                    instructions
+                  );
                   return [toReturn];
                 }
                 default: {
@@ -611,11 +789,44 @@ export function handleKeyStroke({
               }
             })
             .flat();
-          instructions.splice(
-            collapsedIndex,
-            1,
-            ...JSON.parse(JSON.stringify(macroContentsFixed))
-          );
+          if (isInline) {
+            instructions.splice(
+              parentInstruction.lineNumber,
+              0,
+              ...JSON.parse(JSON.stringify(macroContentsFixed))
+            );
+            const attachedFragment = parentInstruction.fragments[
+              cursorPositions[cursorPositions.length - 1]
+            ] as VarTypeFragment;
+            if (attachedFragment) {
+              attachedFragment.value = "var";
+              if (attachedFragment.value === "var") {
+                attachedFragment.stackPosition = getStackPositionAtInstructionIndex(
+                  parentInstruction.lineNumber,
+                  instructions
+                );
+              }
+            } else {
+              parentInstruction.fragments[
+                cursorPositions[cursorPositions.length - 1]
+              ] = {
+                type: "varType",
+                value: "var",
+                stackPosition: getStackPositionAtInstructionIndex(
+                  parentInstruction.lineNumber,
+                  instructions
+                ),
+              };
+            }
+            cursorPositions.push(0);
+            setCursorPositions(cursorPositions.slice());
+          } else {
+            instructions.splice(
+              parentInstruction.lineNumber,
+              1,
+              ...JSON.parse(JSON.stringify(macroContentsFixed))
+            );
+          }
           if (
             instructions[instructions.length - 1].type !== "emptyInstruction"
           ) {
@@ -657,8 +868,10 @@ export function handleKeyStroke({
       switch (key) {
         case " ":
         case "Enter": {
-          const currentFragment =
-            collapsedInstructions[instructionIndex].fragments[cursorPos];
+          if (found.length === 0) {
+            break;
+          }
+          const currentFragment = currentInstruction.fragments[cursorPos];
           if (
             currentFragment?.type === "varType" &&
             currentFragment.value === "var"
@@ -666,7 +879,7 @@ export function handleKeyStroke({
             currentFragment.stackPosition = found[0].index;
           }
           setVariableSearchString(undefined);
-          setCursorPos(cursorPos + 1);
+          setCursorPos(CursorMovement.INCREMENT);
           setInstructions(instructions.slice());
           break;
         }
@@ -676,9 +889,7 @@ export function handleKeyStroke({
               variableSearchString.slice(0, variableSearchString.length - 1)
             );
           } else {
-            collapsedInstructions[instructionIndex].fragments[
-              cursorPos
-            ] = undefined;
+            currentInstruction.fragments[cursorPos] = undefined;
             setVariableSearchString(undefined);
           }
           break;
@@ -713,6 +924,7 @@ export function handleKeyStroke({
       }
       return;
     } else if (key === "m") {
+      const firstInstruction = instructions[Math.max(...selectionRange)];
       macros.push({
         name: "Untitled",
         instructions: JSON.parse(
@@ -723,6 +935,7 @@ export function handleKeyStroke({
             )
           )
         ),
+        inline: firstInstruction.type === "defInstruction",
       });
       setMacros(macros.slice());
       setActiveRightTab("macros");
@@ -758,12 +971,8 @@ export function handleKeyStroke({
           setVariableSearchString("");
           break;
         }
-        case "t": {
-          newFragment = {
-            type: "varType",
-            value: "temp",
-          };
-          increment = "cursor";
+        case "m": {
+          setMacroSearchString("");
           break;
         }
         case "_": {
@@ -897,7 +1106,7 @@ export function handleKeyStroke({
     return newFragment;
   }
 
-  if (instruction.type === "emptyInstruction" || cursorPos === 0) {
+  if (currentInstruction.type === "emptyInstruction" || cursorPos === 0) {
     switch (key) {
       case "s": {
         const openInstruction: ScopeInstruction = {
@@ -998,14 +1207,19 @@ export function handleKeyStroke({
       default:
         break;
     }
+    if (increment === "cursor") {
+      cursorPositions[cursorPositions.length - 1]++;
+      setCursorPositions(cursorPositions.slice());
+      increment = "none";
+    }
   } else if (key.match(/^[ -~]$/)) {
-    switch (instruction.type) {
+    switch (currentInstruction.type) {
       case "scopeInstruction": {
         switch (cursorPos) {
           case 1: {
             switch (key) {
               case "o": {
-                instruction.fragments[1] = {
+                currentInstruction.fragments[1] = {
                   type: "scopeAction",
                   value: "open",
                 };
@@ -1013,7 +1227,7 @@ export function handleKeyStroke({
                 break;
               }
               case "c": {
-                instruction.fragments[1] = {
+                currentInstruction.fragments[1] = {
                   type: "scopeAction",
                   value: "close",
                 };
@@ -1028,11 +1242,11 @@ export function handleKeyStroke({
       case "defInstruction": {
         switch (cursorPos) {
           case 1: {
-            const nameFragment = instruction.fragments[1];
+            const nameFragment = currentInstruction.fragments[1];
             if (key === " ") {
               increment = "cursor";
             } else if (!nameFragment) {
-              instruction.fragments[1] = { type: "defName", value: key };
+              currentInstruction.fragments[1] = { type: "defName", value: key };
             } else {
               nameFragment.value += key;
             }
@@ -1041,7 +1255,7 @@ export function handleKeyStroke({
           }
           case 2: {
             if (isMacro && key === "_") {
-              instruction.fragments[2] = {
+              currentInstruction.fragments[2] = {
                 type: "size",
                 value: "_",
               };
@@ -1063,7 +1277,7 @@ export function handleKeyStroke({
                 default:
                   return;
               }
-              instruction.fragments[2] = {
+              currentInstruction.fragments[2] = {
                 type: "size",
                 value,
               };
@@ -1079,22 +1293,22 @@ export function handleKeyStroke({
       case "assignInstruction": {
         switch (cursorPos) {
           case 1:
-            instruction.fragments[1] = parseVarType(
-              instruction.fragments[1],
+            currentInstruction.fragments[1] = parseVarType(
+              currentInstruction.fragments[1],
               true,
               isMacro
             ) as VarTypeVar;
             setInstructions(instructions.slice());
             break;
           case 2: {
-            instruction.fragments[2] = parseAssignAction(
-              instruction.fragments[2]
+            currentInstruction.fragments[2] = parseAssignAction(
+              currentInstruction.fragments[2]
             );
             break;
           }
           case 3: {
-            instruction.fragments[3] = parseVarType(
-              instruction.fragments[3],
+            currentInstruction.fragments[3] = parseVarType(
+              currentInstruction.fragments[3],
               false,
               isMacro
             );
@@ -1107,8 +1321,8 @@ export function handleKeyStroke({
       case "compareInstruction": {
         switch (cursorPos) {
           case 1:
-            instruction.fragments[1] = parseVarType(
-              instruction.fragments[1],
+            currentInstruction.fragments[1] = parseVarType(
+              currentInstruction.fragments[1],
               false,
               isMacro
             );
@@ -1116,7 +1330,7 @@ export function handleKeyStroke({
             break;
           case 2: {
             if (
-              instruction.fragments[2] &&
+              currentInstruction.fragments[2] &&
               (key === " " || key.match(/[a-z]/))
             ) {
               increment = "cursor";
@@ -1124,15 +1338,15 @@ export function handleKeyStroke({
             }
             switch (key) {
               case "=": {
-                if (!instruction.fragments[2]) {
-                  instruction.fragments[2] = {
+                if (!currentInstruction.fragments[2]) {
+                  currentInstruction.fragments[2] = {
                     type: "comparator",
                     value: "==",
                   };
                 } else {
-                  switch (instruction.fragments[2].value) {
+                  switch (currentInstruction.fragments[2].value) {
                     case "<": {
-                      instruction.fragments[2] = {
+                      currentInstruction.fragments[2] = {
                         type: "comparator",
                         value: "<=",
                       };
@@ -1140,7 +1354,7 @@ export function handleKeyStroke({
                       break;
                     }
                     case ">": {
-                      instruction.fragments[2] = {
+                      currentInstruction.fragments[2] = {
                         type: "comparator",
                         value: ">=",
                       };
@@ -1153,7 +1367,7 @@ export function handleKeyStroke({
                 break;
               }
               case "!": {
-                instruction.fragments[2] = {
+                currentInstruction.fragments[2] = {
                   type: "comparator",
                   value: "!=",
                 };
@@ -1161,7 +1375,7 @@ export function handleKeyStroke({
                 break;
               }
               case "<": {
-                instruction.fragments[2] = {
+                currentInstruction.fragments[2] = {
                   type: "comparator",
                   value: "<",
                 };
@@ -1169,7 +1383,7 @@ export function handleKeyStroke({
                 break;
               }
               case ">": {
-                instruction.fragments[2] = {
+                currentInstruction.fragments[2] = {
                   type: "comparator",
                   value: ">",
                 };
@@ -1180,8 +1394,8 @@ export function handleKeyStroke({
             break;
           }
           case 3: {
-            instruction.fragments[3] = parseVarType(
-              instruction.fragments[3],
+            currentInstruction.fragments[3] = parseVarType(
+              currentInstruction.fragments[3],
               false,
               isMacro
             );
@@ -1196,13 +1410,13 @@ export function handleKeyStroke({
           case 1: {
             switch (key) {
               case "s":
-                instruction.fragments[1] = {
+                currentInstruction.fragments[1] = {
                   type: "jumpPosition",
                   value: "start",
                 };
                 break;
               case "e":
-                instruction.fragments[1] = {
+                currentInstruction.fragments[1] = {
                   type: "jumpPosition",
                   value: "end",
                 };
@@ -1219,7 +1433,7 @@ export function handleKeyStroke({
           case 1: {
             switch (key) {
               case "s": {
-                instruction.fragments[1] = {
+                currentInstruction.fragments[1] = {
                   type: "OSAction",
                   value: "stdout",
                 };
@@ -1230,8 +1444,8 @@ export function handleKeyStroke({
             break;
           }
           case 2: {
-            instruction.fragments[2] = parseVarType(
-              instruction.fragments[2],
+            currentInstruction.fragments[2] = parseVarType(
+              currentInstruction.fragments[2],
               false,
               isMacro
             );
@@ -1242,7 +1456,7 @@ export function handleKeyStroke({
         break;
       }
       case "macroInstruction": {
-        const fragment = instruction.fragments[cursorPos];
+        const fragment = currentInstruction.fragments[cursorPos];
         if (fragment.type === "varType") {
           const newVarType = parseVarType(fragment, false, isMacro);
           if (newVarType) {
@@ -1276,97 +1490,131 @@ export function handleKeyStroke({
       instructions.push({ type: "emptyInstruction", fragments: [undefined] });
     }
     setInstructionIndex(instructionIndex + 1);
-    setCursorPos(0);
+    setCursorPos(CursorMovement.START);
   } else if (increment === "cursor") {
-    setCursorPos(cursorPos + 1);
+    setCursorPos(CursorMovement.INCREMENT);
   }
 
   // ---------------------------------------------
   if (key === "Backspace") {
     // Delete multiple lines
+    const instructionsToDelete = [currentInstruction];
     if (selectionRange[0] > -1) {
+      instructionsToDelete.splice(0, 1);
       let min = Math.min(...selectionRange);
       let max = Math.max(...selectionRange);
-      for (let i = min; i <= max; i++) {
-        deleteInstruction(min, instructions, false);
+      for (let i = max; i >= min; i--) {
+        instructionsToDelete.push(collapsedInstructions[i]);
       }
       setSelectionRange([-1, -1]);
-      setInstructionIndex(Math.max(min - 1, 0));
-      setInstructions(instructions.slice(0));
-    } else if (cursorPos > 0) {
-      if (cursorPos >= instruction.fragments.length) {
-        setCursorPos(cursorPos - 1);
+    }
+
+    if (cursorPos > 0) {
+      if (cursorPos >= currentInstruction.fragments.length) {
+        setCursorPos(CursorMovement.DECREMENT);
       } else {
-        if (instruction.type === "macroInstruction") {
-          instruction.fragments[cursorPos].value = "missing";
+        if (currentInstruction.type === "macroInstruction") {
+          currentInstruction.fragments[cursorPos].value = "missing";
         } else {
-          instruction.fragments[cursorPos] = undefined;
+          currentInstruction.fragments[cursorPos] = undefined;
         }
         setInstructions(instructions.slice());
       }
     } else if (cursorPos === 0) {
-      if (indexInBlock === 0 && blockLength === 1) {
-        instructions[collapsedIndex] = {
-          type: "emptyInstruction",
-          fragments: [undefined],
-        };
-      } else {
-        if (instruction.type === "macroInstruction") {
-          for (let i = collapsedIndex; i < instruction.endLineNumber; i++) {
-            deleteInstruction(collapsedIndex, instructions, false);
+      let startLine = instructionsToDelete[0].lineNumber;
+      let endLine = instructionsToDelete[0].lineNumber + 1;
+      // First delete all the related inline macros
+      for (const currentInstruction of instructionsToDelete) {
+        startLine = Math.min(startLine, currentInstruction.lineNumber);
+        endLine = Math.max(endLine, currentInstruction.lineNumber);
+        if (currentInstruction.type === "macroInstruction") {
+          endLine = Math.max(endLine, currentInstruction.endLineNumber);
+        }
+        const toTest = currentInstruction.inlineMacros;
+        for (let i = 0; i < toTest.length; i++) {
+          const inline = toTest[i];
+          if (inline) {
+            startLine = Math.min(startLine, inline.instruction.lineNumber);
+            endLine = Math.max(endLine, inline.instruction.endLineNumber);
+            if (inline.instruction.inlineMacros) {
+              toTest.push(...inline.instruction.inlineMacros);
+            }
+            toTest.splice(i, 1);
+            i--;
           }
-        } else {
-          deleteInstruction(collapsedIndex, instructions);
         }
       }
-      setInstructionIndex(
-        Math.min(
-          Math.max(instructionIndex, 0),
+
+      let deletedLines = 0;
+      for (let i = startLine; i < endLine; i++) {
+        deleteInstruction(startLine, instructions, false);
+        deletedLines++;
+      }
+
+      // If this was the only instruction in a macro placeholder block, replace it with an empty instruction
+      if (
+        (cursorPositions.length === 1 &&
+          indexInBlock <= 0 &&
+          blockLength - deletedLines === 0) ||
+        instructions.length === 0
+      ) {
+        instructions.splice(startLine, 0, {
+          type: "emptyInstruction",
+          fragments: [undefined],
+        });
+      }
+
+      if (cursorPositions.length === 1) {
+        const newIndex = Math.min(
+          Math.max(collapsedIndex, 0),
+          instructions.length - 1,
           collapsedInstructions.length - 1
-        )
-      );
+        );
+        setInstructionIndex(newIndex);
+        setCursorPos(CursorMovement.PRESERVE, collapsedInstructions[newIndex]);
+      } else {
+        if (cursorPositions.length > 1) {
+          cursorPositions.splice(-1, 1);
+          // After we delete the macro lines, remove the reference to the inline macro return value
+          let inlineInstruction = instruction;
+          if (cursorPositions.length > 1) {
+            let i = 0;
+            while (
+              i < cursorPositions.length &&
+              inlineInstruction.inlineMacros[cursorPositions[i]]
+            ) {
+              inlineInstruction =
+                inlineInstruction.inlineMacros[cursorPositions[i]].instruction;
+              i++;
+            }
+          }
+          inlineInstruction.fragments[
+            cursorPositions[cursorPositions.length - 1]
+          ] = undefined;
+          setCursorPositions(cursorPositions.slice());
+        }
+      }
       setInstructions(instructions.slice());
     }
     // ---------------------------------------------
-  } else if (key === "ArrowRight" && instruction) {
-    if (
-      cursorPos < getFragmentLength(instruction) - 1 &&
-      cursorPos < instruction.fragments.length
-    ) {
-      setCursorPos(cursorPos + 1);
-    } else if (instructionIndex < collapsedInstructions.length - 1) {
-      setCursorPos(0);
-      setInstructionIndex(instructionIndex + 1);
-    }
+  } else if (key === "ArrowRight" && currentInstruction) {
+    setCursorPos(CursorMovement.INCREMENT);
   } else if (key === "ArrowLeft") {
-    if (cursorPos > 0) {
-      setCursorPos(cursorPos - 1);
-    } else if (instructionIndex > 0 && instruction) {
-      setInstructionIndex(instructionIndex - 1);
-      setCursorPos(
-        Math.max(
-          Math.min(
-            instructions[instructionIndex - 1]!.fragments.length,
-            getFragmentLength(collapsedInstructions[instructionIndex - 1]) - 1
-          ),
-          0
-        )
-      );
-    }
+    setCursorPos(CursorMovement.DECREMENT);
     // ---------------------------------------------
   } else if (key === "ArrowUp") {
     if (onCursorUnderflow && instructionIndex === 0) {
       onCursorUnderflow();
     } else if (instructionIndex > 0) {
       const previousInstruction = collapsedInstructions[instructionIndex - 1]!;
-      if (cursorPos > previousInstruction.fragments.length - 1) {
-        setCursorPos(Math.max(previousInstruction.fragments.length - 1, 0));
-      }
       setInstructionIndex(instructionIndex - 1);
       if (shiftKey) {
+        setCursorPositions([0]);
         selectionRange[0] = instructionIndex;
         selectionRange[1] = instructionIndex - 1;
         setSelectionRange([instructionIndex, instructionIndex - 1]);
+      } else {
+        setCursorPos(CursorMovement.PRESERVE, previousInstruction);
       }
     }
     // ---------------------------------------------
@@ -1375,33 +1623,33 @@ export function handleKeyStroke({
     instructionIndex < collapsedInstructions.length - 1
   ) {
     const nextInstruction = collapsedInstructions[instructionIndex + 1]!;
-    if (cursorPos > nextInstruction.fragments.length - 1) {
-      setCursorPos(Math.max(nextInstruction.fragments.length - 1, 0));
-    }
     setInstructionIndex(instructionIndex + 1);
     if (shiftKey) {
+      setCursorPositions([0]);
       setSelectionRange([instructionIndex, instructionIndex + 1]);
+    } else {
+      setCursorPos(CursorMovement.PRESERVE, nextInstruction);
     }
     // ---------------------------------------------
-  } else if (key === "Enter" && instruction) {
-    if (instruction.type === "macroInstruction" && !shiftKey) {
+  } else if (key === "Enter" && currentInstruction) {
+    if (currentInstruction.type === "macroInstruction" && !shiftKey) {
       let collapsedEndLineNumber = collapsedInstructions.findIndex(
-        (i, index) => i.lineNumber === instruction.endLineNumber
+        (i, index) => i.lineNumber === currentInstruction.endLineNumber
       );
       if (collapsedEndLineNumber === -1) {
         collapsedEndLineNumber =
           collapsedInstructions.findIndex(
             (i, index) =>
-              i.lineNumber < instruction.endLineNumber &&
+              i.lineNumber < currentInstruction.endLineNumber &&
               collapsedInstructions[index + 1].lineNumber >
-                instruction.endLineNumber
+                currentInstruction.endLineNumber
           ) + 1;
       }
-      instructions.splice(instruction.endLineNumber, 0, {
+      instructions.splice(currentInstruction.endLineNumber, 0, {
         type: "emptyInstruction",
         fragments: [undefined],
       });
-      setCursorPos(0);
+      setCursorPos(CursorMovement.START);
       setInstructionIndex(collapsedEndLineNumber);
       setInstructions(instructions.slice());
     } else {
@@ -1409,7 +1657,7 @@ export function handleKeyStroke({
         type: "emptyInstruction",
         fragments: [undefined],
       });
-      setCursorPos(0);
+      setCursorPos(CursorMovement.START);
       setInstructionIndex(instructionIndex + (shiftKey ? 0 : 1));
       setInstructions(instructions.slice());
     }
