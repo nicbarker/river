@@ -2,13 +2,11 @@ import classnames from "classnames";
 import React from "react";
 import { useState, useEffect } from "react";
 import {
-  CollapsedData,
   CollapsedInstruction,
   getFragmentHints,
   handleKeyStroke,
   Instruction,
   Macro,
-  MacroInstruction,
 } from "./editor_handler";
 import { preProcess } from "./preprocess";
 
