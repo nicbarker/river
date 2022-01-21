@@ -341,14 +341,14 @@ export function getFragmentHints(instruction: CollapsedInstruction) {
     case "compareInstruction":
       return [
         "compare",
-        "var | const",
+        "var | const | macro",
         "= | != | < | <= | > | >=",
-        "var | const",
+        "var | const | macro",
       ];
     case "jumpInstruction":
       return ["jump", "start | end"];
     case "OSInstruction":
-      return ["os", "stdout", "var | const"];
+      return ["os", "stdout", "var | const | macro"];
     case "macroInstruction":
       return instruction.placeholders;
   }
@@ -1027,17 +1027,22 @@ export function handleKeyStroke({
 
   function parseAssignAction(
     fragment?: AssignActionFragment,
-    isMacro?: boolean
+    // Allow placeholders if we're editing a macro
+    isMacro?: boolean,
+    // Don't allow equals if we're filling in a macro placeholder
+    isPlaceholder?: boolean
   ) {
     let newFragment = fragment;
     if (typeof newFragment === "undefined" || newFragment.value === "missing") {
       switch (key) {
         case "=": {
-          newFragment = {
-            type: "assignAction",
-            value: "=",
-          };
-          increment = "cursor";
+          if (!isPlaceholder) {
+            newFragment = {
+              type: "assignAction",
+              value: "=",
+            };
+            increment = "cursor";
+          }
           break;
         }
         case "+": {
@@ -1475,7 +1480,7 @@ export function handleKeyStroke({
           }
           setInstructions(instructions.slice());
         } else if (fragment.type === "assignAction") {
-          const newAssignAction = parseAssignAction(fragment, isMacro);
+          const newAssignAction = parseAssignAction(fragment, isMacro, true);
           if (newAssignAction) {
             fragment.value = newAssignAction.value;
           }
