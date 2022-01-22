@@ -6,13 +6,11 @@ You can view the current main branch at [https://riverlanguage.org](https://rive
 
 ### Overview
 
-River is a programming language that that has three goals:
+River is a programming language that that has three core goals:
 
-- Super fast compilation (should be instant on any modern machine for any program of any size)
-- Very easy to write your own compiler or backend
-  - You should be able to write a VM to execute river code with no knowledge about how modern compilers work, or language constructs such as ASTs.
-  - With some knowledge of assembly you should be able to easily write your own compiler backend for a new target platform or architecture.
-- An extremely labourious, verbose and low level syntax is offset with a high level editor that allows you to write software with similar speed and ease as a higher level language like C.
+- **Fast and easy compilation** - should be functionally instant on any modern machine for any program of any size, and easy to write your own compiler or backend with no programming language experience.
+- **Not text based** - the language is built up from atomic tokens not ASCII text and needs to be written using a special editor. The goal is to avoid a number of issues caused by ASCII text such as typos, arguments about formatting / indentation, and compilation complexity.
+- **Customisable control flow** - the majority of the control flow and language structure is defined by the user as part of the program with the **macro** concept, instead of being built into the language.
 
 ### Controls
 
