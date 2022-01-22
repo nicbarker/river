@@ -9,7 +9,7 @@ You can view the current main branch at [https://riverlanguage.org](https://rive
 River is a programming language that that has three core goals:
 
 - **Fast and easy compilation** - should be functionally instant on any modern machine for any program of any size, and easy to write your own compiler or backend with no programming language experience.
-- **Not text based** - the language is built up from atomic tokens not ASCII text and needs to be written using a special editor. The goal is to avoid a number of issues caused by ASCII text such as typos, arguments about formatting / indentation, and compilation complexity.
+- **Not text based** - the language is built up from atomic tokens not ASCII text and needs to be written using a special editor. The goal is to avoid a number of issues caused by ASCII text such as typos, arguments about formatting / indentation, name resolution, and compilation complexity.
 - **Customisable control flow** - the majority of the control flow and language structure is defined by the user as part of the program with the **macro** concept, instead of being built into the language.
 
 ### Controls
