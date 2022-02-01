@@ -151,4 +151,97 @@ export const standardMacros: Macro[] = [
       },
     ],
   },
+  {
+    "name": "bool",
+    "instructions": [
+      {
+        "type": "defInstruction",
+        "fragments": [
+          {
+            "type": "instruction",
+            "value": "def"
+          },
+          {
+            "type": "defName",
+            "value": "bool"
+          },
+          {
+            "type": "size",
+            "value": 8
+          }
+        ]
+      },
+      {
+        "type": "assignInstruction",
+        "fragments": [
+          {
+            "type": "instruction",
+            "value": "assign"
+          },
+          {
+            "type": "varType",
+            "value": "var",
+            "stackPosition": 0
+          },
+          {
+            "type": "assignAction",
+            "value": "="
+          },
+          {
+            "type": "varType",
+            "value": "const",
+            "constValue": 0
+          }
+        ]
+      },
+      {
+        "type": "compareInstruction",
+        "fragments": [
+          {
+            "type": "instruction",
+            "value": "compare"
+          },
+          {
+            "type": "varType",
+            "value": "_",
+            "name": "left"
+          },
+          {
+            "type": "comparator",
+            "value": "_",
+            "name": "comparator"
+          },
+          {
+            "type": "varType",
+            "value": "_",
+            "name": "right"
+          },
+        ]
+      },
+      {
+        "type": "assignInstruction",
+        "fragments": [
+          {
+            "type": "instruction",
+            "value": "assign"
+          },
+          {
+            "type": "varType",
+            "value": "var",
+            "stackPosition": 0
+          },
+          {
+            "type": "assignAction",
+            "value": "="
+          },
+          {
+            "type": "varType",
+            "value": "const",
+            "constValue": 1
+          }
+        ]
+      }
+    ],
+    "inline": true
+  }
 ];

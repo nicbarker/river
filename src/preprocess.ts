@@ -65,9 +65,9 @@ function instructionsAreEqual(
       ((fragment.value === "var" &&
         macroFragment.value === "var" &&
         fragment.stackPosition !==
-          (typeof macroFragment.stackPosition === "undefined"
-            ? undefined
-            : macroFragment.stackPosition + stackPositionOffset)) ||
+        (typeof macroFragment.stackPosition === "undefined"
+          ? undefined
+          : macroFragment.stackPosition + stackPositionOffset)) ||
         (fragment.value === "const" &&
           macroFragment.value === "const" &&
           fragment.constValue !== macroFragment.constValue))
@@ -147,7 +147,8 @@ function macroRanges(
       if (
         macroFragment?.value === "_" &&
         (macroFragment.type === "varType" ||
-          macroFragment.type === "assignAction")
+          macroFragment.type === "assignAction" ||
+          macroFragment.type === "comparator")
       ) {
         placeholderFragments.push({
           name: macroFragment.name,

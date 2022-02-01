@@ -126,11 +126,10 @@ function renderFragments(
           }
           break;
         case "const":
-          fragmentContent = `const ${
-            typeof fragment.constValue === "undefined"
+          fragmentContent = `const ${typeof fragment.constValue === "undefined"
               ? "0.. value"
               : fragment.constValue
-          }`;
+            }`;
           break;
       }
     } else if (fragment?.type === "assignAction") {
@@ -147,6 +146,20 @@ function renderFragments(
           fragmentContent = fragment.value;
           break;
       }
+    } else if (fragment?.type === "comparator") {
+      switch (fragment?.value) {
+        case "_": {
+          fragmentContent = "_" + fragment.name;
+          break;
+        }
+        case "missing": {
+          fragmentContent = "_comparator";
+          break;
+        }
+        default:
+          fragmentContent = fragment.value;
+          break;
+      }
     } else if (fragment?.type === "instruction" && fragment.value === "_") {
       fragmentContent = "_block";
     } else if (fragment) {
@@ -156,7 +169,7 @@ function renderFragments(
         <div className={classnames("empty", "fragment")}>
           {selectionRange[0] === -1 &&
             getFragmentHints(instruction)
-              [cursorPos].split(" | ")
+            [cursorPos].split(" | ")
               .concat(isMacro ? ["_"] : [])
               .map((h) => (
                 <>
@@ -199,9 +212,9 @@ function renderFragments(
         </div>
       ),
       instruction.type === "macroInstruction" &&
-        i === instruction.fragments.length - 1 && (
-          <div className="macro-paren close">)</div>
-        ),
+      i === instruction.fragments.length - 1 && (
+        <div className="macro-paren close">)</div>
+      ),
       ((i > 0 && i < instruction.fragments.length - 1) ||
         instruction.type !== "macroInstruction") && (
         <div key={i + "-space"}> </div>
