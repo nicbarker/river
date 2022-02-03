@@ -1,7 +1,7 @@
 import { Output } from "./application";
 import { CompiledInstruction, dec2bin, Scope } from "./parse";
 
-const DEBUG = false;
+const DEBUG = true;
 const DOUBLE_DEBUG = false;
 
 export function execute(
@@ -231,7 +231,7 @@ export function execute(
         const newInstructionIndex =
           instruction.type === "start"
             ? instruction.scope.openInstruction.originalInstructionIndex
-            : instruction.scope.closeInstruction.originalInstructionIndex - 1;
+            : instruction.scope.closeInstruction.originalInstructionIndex;
         DEBUG &&
           console.log(
             `jumping from ${instructionIndex} to ${newInstructionIndex}`

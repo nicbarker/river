@@ -1,4 +1,13 @@
-import { Instruction } from "./editor_handler";
+import {
+  AssignInstruction,
+  CompareInstruction,
+  DefInstruction,
+  Instruction,
+  JumpInstruction,
+  OSInstruction,
+  ScopeInstruction,
+  VarTypeFragment,
+} from "./editor_handler";
 
 const DEBUG = false;
 
@@ -139,7 +148,8 @@ export function parse(file: string) {
       popped.openInstruction.stackOffset = popped.stackOffset;
       popped.closeInstruction.stackMemory = popped.stackMemory;
       popped.closeInstruction.stackOffset = popped.stackOffset;
-      popped.closeInstruction.originalInstructionIndex = originalInstructionIndex;
+      popped.closeInstruction.originalInstructionIndex =
+        originalInstructionIndex;
       instructions.push(popped.closeInstruction);
     }
   }
@@ -343,10 +353,174 @@ export function parse(file: string) {
   return [scopesFinal, instructions, maxMemory] as const;
 }
 
+export function parseTextFile(file: string): Instruction[] {
+  const lines = file.length === 0 ? [] : file.split("\n");
+  const toReturn: Instruction[] = [];
+  for (const line of lines) {
+    const tokens = line.split(" ");
+    switch (tokens[0]) {
+      case "scope": {
+        const instruction: ScopeInstruction = {
+          type: "scopeInstruction",
+          fragments: [
+            { type: "instruction", value: "scope" },
+            { type: "scopeAction", value: tokens[1] as "open" | "close" },
+          ],
+        };
+        toReturn.push(instruction);
+        break;
+      }
+      case "def": {
+        const instruction: DefInstruction = {
+          type: "defInstruction",
+          fragments: [
+            { type: "instruction", value: "def" },
+            { type: "defName", value: tokens[1] },
+            { type: "size", value: parseInt(tokens[2], 10) },
+          ],
+        };
+        toReturn.push(instruction);
+        break;
+      }
+      case "assign": {
+        const actionFragment = tokens[3];
+        let sourceFragment: VarTypeFragment;
+        if (tokens[4] === "var") {
+          sourceFragment = {
+            type: "varType",
+            value: "var",
+            stackPosition: parseInt(tokens[5], 10),
+          };
+        } else {
+          sourceFragment = {
+            type: "varType",
+            value: "const",
+            constValue: parseInt(tokens[5], 10),
+          };
+        }
+        const instruction: AssignInstruction = {
+          type: "assignInstruction",
+          fragments: [
+            { type: "instruction", value: "assign" },
+            {
+              type: "varType",
+              value: "var",
+              stackPosition: parseInt(tokens[2], 10),
+            },
+            {
+              type: "assignAction",
+              value: actionFragment as any, // TODO fix types
+            },
+            sourceFragment,
+          ],
+        };
+        toReturn.push(instruction);
+        break;
+      }
+      case "jump": {
+        const actionFragment = tokens[1];
+        const instruction: JumpInstruction = {
+          type: "jumpInstruction",
+          fragments: [
+            { type: "instruction", value: "jump" },
+            { type: "jumpPosition", value: actionFragment as any },
+          ],
+        };
+        toReturn.push(instruction);
+        break;
+      }
+      case "compare": {
+        let targetFragment: VarTypeFragment;
+        if (tokens[1] === "var") {
+          targetFragment = {
+            type: "varType",
+            value: "var",
+            stackPosition: parseInt(tokens[2], 10),
+          };
+        } else {
+          targetFragment = {
+            type: "varType",
+            value: "const",
+            constValue: parseInt(tokens[2], 10),
+          };
+        }
+        let sourceFragment: VarTypeFragment;
+        if (tokens[1] === "var") {
+          sourceFragment = {
+            type: "varType",
+            value: "var",
+            stackPosition: parseInt(tokens[2], 10),
+          };
+        } else {
+          sourceFragment = {
+            type: "varType",
+            value: "const",
+            constValue: parseInt(tokens[2], 10),
+          };
+        }
+        const instruction: CompareInstruction = {
+          type: "compareInstruction",
+          fragments: [
+            { type: "instruction", value: "compare" },
+            targetFragment,
+            {
+              type: "comparator",
+              value: tokens[3] as any,
+            },
+            sourceFragment,
+          ],
+        };
+        toReturn.push(instruction);
+        break;
+      }
+      case "os": {
+        switch (tokens[1]) {
+          case "stdout": {
+            let sourceFragment: VarTypeFragment;
+            if (tokens[2] === "var") {
+              sourceFragment = {
+                type: "varType",
+                value: "var",
+                stackPosition: parseInt(tokens[3], 10),
+              };
+            } else {
+              sourceFragment = {
+                type: "varType",
+                value: "const",
+                constValue: parseInt(tokens[3], 10),
+              };
+            }
+            const instruction: OSInstruction = {
+              type: "OSInstruction",
+              fragments: [
+                { type: "instruction", value: "os" },
+                { type: "OSAction", value: "stdout" },
+                sourceFragment,
+              ],
+            };
+            toReturn.push(instruction);
+            break;
+          }
+          default:
+            break;
+        }
+        break;
+      }
+      default:
+        break;
+    }
+  }
+  if (toReturn[toReturn.length - 1].type !== "emptyInstruction") {
+    toReturn.push({ type: "emptyInstruction", fragments: [undefined] });
+  }
+  console.log(toReturn);
+  return toReturn;
+}
+
 export function instructionsToText(instructions: Instruction[]) {
-  return (instructions.filter(
-    (i) => i.type !== "emptyInstruction"
-  ) as Instruction[])
+  return (
+    instructions.filter((i) => i.type !== "emptyInstruction") as Instruction[]
+  )
     .map((i) =>
       i.fragments
         .map((f) => {

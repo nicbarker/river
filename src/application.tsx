@@ -1,31 +1,46 @@
 import React, { useEffect, useState } from "react";
 import "./application.css";
-import { instructionsToText, parse } from "./parse";
+import { instructionsToText, parse, parseTextFile } from "./parse";
 import { execute } from "./vm";
 import classnames from "classnames";
 import { Editor } from "./editor";
 import { Instruction, Macro } from "./editor_handler";
 import { MacroEditor } from "./macro_editor";
-import { ASMTab } from "./asm_tab";
+import { ASMTab, downloadFile } from "./asm_tab";
 import { standardMacros } from "./standard_macros";
+import { InlineDropdown } from "./components/inline_dropdown";
+import { DismissMap, DismissProvider } from "./context/dismiss_context";
+import classNames from "classnames";
+import { examples } from "./examples/examples";
 
 export type Output = { value: string; lineNumber: number };
 
+export type File = {
+  name: string;
+  instructions: Instruction[];
+};
+
 export function App() {
   const [macros, setMacros] = useState<Macro[]>(standardMacros);
-  const [instructions, setInstructions] = useState<Instruction[]>([
-    { type: "emptyInstruction", fragments: [undefined] },
+  const [openFiles, setOpenFiles] = useState<File[]>([
+    {
+      name: "untitled.rvr",
+      instructions: [{ type: "emptyInstruction", fragments: [undefined] }],
+    },
   ]);
+  const [selectedFileIndex, setSelectedFileIndex] = useState(0);
+  const selectedFile = openFiles[selectedFileIndex];
+  const instructions = openFiles[selectedFileIndex].instructions;
   const [outputs, setOutputs] = useState<Output[]>([]);
   const [focusIndex, setFocusIndex] = useState<number>(0);
   const [activeRightTab, setActiveRightTab] = useState<
     "build" | "asm" | "macros"
   >("asm");
   const [instructionRange, setInstructionRange] = useState<[number, number]>([
-    0,
-    0,
+    0, 0,
   ]);
   const [macrosExpanded, setMacrosExpanded] = useState(false);
+  const [dismissMap] = useState<DismissMap>([]);
 
   useEffect(() => {
     const handle = (e: KeyboardEvent) => {
@@ -46,12 +61,23 @@ export function App() {
         e.preventDefault();
       }
       if (e.key === "Escape") {
-        setMacrosExpanded(!macrosExpanded);
+        if (dismissMap.length > 0) {
+          for (const func of dismissMap) {
+            func();
+          }
+        } else {
+          setMacrosExpanded(!macrosExpanded);
+        }
       }
     };
     window.addEventListener("keydown", handle);
     return () => window.removeEventListener("keydown", handle);
   });
+
+  function setInstructions(instructions: Instruction[]) {
+    selectedFile.instructions = instructions;
+    setOpenFiles(openFiles.slice());
+  }
 
   const editor = (
     <Editor
@@ -103,64 +129,165 @@ export function App() {
     setOutputs(outputs.slice());
   }
 
-  return (
-    <div className="App">
-      <div className={classnames("left", { hasFocus: focusIndex === 0 })}>
-        <div className="header">
-          <button className="active">untitled.rvr</button>
-        </div>
-        {editor}
-      </div>
-      <div className="right">
-        <div className="header">
-          <button
-            className={activeRightTab === "build" ? "active" : ""}
-            onClick={() => {
-              setActiveRightTab("build");
-            }}
-          >
-            VM
-          </button>
-          <button
-            className={activeRightTab === "asm" ? "active" : ""}
-            onClick={() => {
-              setActiveRightTab("asm");
-            }}
-          >
-            Assembly
-          </button>
-          <button
-            className={activeRightTab === "macros" ? "active" : ""}
-            onClick={() => {
-              setActiveRightTab("macros");
-            }}
-          >
-            Macros
-          </button>
-        </div>
-        {activeRightTab === "build" && (
-          <div className="buildContainer">
-            <div className="header subheader">
-              <button onClick={() => runInInterpreter()}>Run</button>
-            </div>
-            <div className="outputs">{outputsRendered}</div>
-          </div>
-        )}
-        {activeRightTab === "asm" && (
-          <ASMTab
-            instructions={instructions}
-            instructionRange={instructionRange}
-          />
-        )}
-        {activeRightTab === "macros" && (
-          <div className="macros">
-            <div className="header subheader">
-              <button>New Macro</button>
-            </div>
-            {macrosRendered}
-          </div>
-        )}
-      </div>
+  const openFileTabs = openFiles.map((file, index) => (
+    <button
+      className={classnames("headerButton", {
+        active: index === selectedFileIndex,
+      })}
+      onClick={() => setSelectedFileIndex(index)}
+    >
+      {file.name}
+    </button>
+  ));
+
+  const exampleMenuItems = examples.map((e) => (
+    <div
+      className="dropdownItem"
+      onClick={() => {
+        openFiles.splice(selectedFileIndex + 1, 0, {
+          name: e.name.toLocaleLowerCase().replaceAll(" ", "_") + ".rvr",
+          instructions: [{ type: "emptyInstruction", fragments: [undefined] }],
+        });
+        setOpenFiles(openFiles.slice());
+        setSelectedFileIndex(selectedFileIndex + 1);
+      }}
+    >
+      {e.name}
     </div>
+  ));
+
+  return (
+    <DismissProvider value={dismissMap}>
+      <div
+        className="App"
+        onClick={() => {
+          for (const func of dismissMap) {
+            func();
+          }
+        }}
+      >
+        <div className="topBar">
+          <InlineDropdown label="File" classNames={"menuButton"} dismissOnClick>
+            <div
+              className="dropdownItem"
+              onClick={() => {
+                openFiles.splice(selectedFileIndex, 0, {
+                  name: "untitled.rvr",
+                  instructions: [
+                    { type: "emptyInstruction", fragments: [undefined] },
+                  ],
+                });
+                setOpenFiles(openFiles.slice());
+                setSelectedFileIndex(selectedFileIndex + 1);
+              }}
+            >
+              New File
+            </div>
+            <div
+              className="dropdownItem"
+              onClick={() =>
+                downloadFile(
+                  instructionsToText(instructions),
+                  selectedFile.name,
+                  ".rvr"
+                )
+              }
+            >
+              Save To Disk...
+            </div>
+            <label className="dropdownItem">
+              Open File...
+              <input
+                type="file"
+                accept=".rvr,.rvrm,.rvrt"
+                onChange={async (e) => {
+                  if (e.target.files) {
+                    const text = await e.target.files[0].text();
+                    setInstructions(parseTextFile(text));
+                  }
+                }}
+              />
+            </label>
+          </InlineDropdown>
+          <InlineDropdown
+            label="Examples"
+            classNames={"menuButton"}
+            dismissOnClick
+          >
+            {exampleMenuItems}
+          </InlineDropdown>
+        </div>
+        <div className="editorContainer">
+          <div className={classnames("left", { hasFocus: focusIndex === 0 })}>
+            <div className="header">{openFileTabs}</div>
+            {editor}
+          </div>
+          <div className="right">
+            <div className="header">
+              <button
+                className={classNames(
+                  "headerButton",
+                  activeRightTab === "build" ? "active" : ""
+                )}
+                onClick={() => {
+                  setActiveRightTab("build");
+                }}
+              >
+                VM
+              </button>
+              <button
+                className={classNames(
+                  "headerButton",
+                  activeRightTab === "asm" ? "active" : ""
+                )}
+                onClick={() => {
+                  setActiveRightTab("asm");
+                }}
+              >
+                Assembly
+              </button>
+              <button
+                className={classNames(
+                  "headerButton",
+                  activeRightTab === "macros" ? "active" : ""
+                )}
+                onClick={() => {
+                  setActiveRightTab("macros");
+                }}
+              >
+                Macros
+              </button>
+            </div>
+            {activeRightTab === "build" && (
+              <div className="buildContainer">
+                <div className="header subheader">
+                  <button
+                    className="subheaderButton"
+                    onClick={() => runInInterpreter()}
+                  >
+                    Run
+                  </button>
+                </div>
+                <div className="outputs">{outputsRendered}</div>
+              </div>
+            )}
+            {activeRightTab === "asm" && (
+              <ASMTab
+                instructions={instructions}
+                instructionRange={instructionRange}
+              />
+            )}
+            {activeRightTab === "macros" && (
+              <div className="macros">
+                <div className="header subheader">
+                  <button className="subheaderButton">New Macro</button>
+                </div>
+                {macrosRendered}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </DismissProvider>
   );
 }

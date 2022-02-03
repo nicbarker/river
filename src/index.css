@@ -8,9 +8,10 @@ html,
 
 .App {
   display: flex;
+  flex-direction: column;
   padding: 12px;
   box-sizing: border-box;
-  background: #222;
+  background: #2d2a2f;
 }
 
 body {
@@ -29,11 +30,52 @@ code {
   white-space: pre;
 }
 
+button {
+  border: none;
+  font: inherit;
+  background: inherit;
+}
+
+.topBar {
+  display: flex;
+  color: #ccc;
+  padding: 0 0 12px;
+}
+
+.menuButton {
+  padding: 10px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  color: #ccc;
+  font-family: "Rubik";
+}
+
+.menuButton:hover:not(.open) {
+  background: #49424d;
+  color: #fff;
+}
+
+.menuButton.open {
+  color: #fff;
+}
+
+.dropdownItem input[type="file"] {
+  display: none;
+}
+
+.editorContainer {
+  display: flex;
+  flex-grow: 1;
+  height: 0;
+}
+
 .left {
   flex-grow: 1;
   border-radius: 8px 0 0 8px;
   overflow: hidden;
   background: #373f41;
+  display: flex;
+  flex-direction: column;
 }
 
 .left.hasFocus {
@@ -42,12 +84,10 @@ code {
 
 .header {
   display: flex;
-  height: 40px;
 }
 
-.header button {
-  height: 40px;
-  padding: 0 16px;
+.headerButton {
+  padding: 12px 16px;
   border: none;
   font-family: "Rubik";
   color: #fff;
@@ -56,14 +96,17 @@ code {
 }
 
 .left .header {
-  background: #282e2f;
+  background: #31383a;
 }
 
-.left .header button {
+.left .headerButton {
+  color: #ccc;
   background: #2e3637;
+  outline: none;
 }
 
-.left .header button.active {
+.left .headerButton.active {
+  color: #fff;
   background: #414b4d;
 }
 
@@ -71,11 +114,15 @@ code {
   background: #36354b;
 }
 
-.right .header button {
+.right .headerButton {
   background: #42405c;
 }
 
-.right .header button.active {
+.right .headerButton:hover {
+  background: #484666;
+}
+
+.right .headerButton.active {
   background: #4f4d6f;
 }
 
@@ -91,13 +138,14 @@ code {
 }
 
 .code {
-  height: 100%;
   padding: 16px;
+  flex-grow: 1;
   flex-shrink: 1;
   color: #fff;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
+  overflow: auto;
 }
 
 .macroOuter {
@@ -330,38 +378,25 @@ code {
   background: #4f4d6f;
 }
 
-.header.subheader button {
+.subheaderButton {
+  padding: 12px 16px;
+  border: none;
+  font-family: "Rubik";
+  font-size: 16px;
+  cursor: pointer;
+  color: #fff;
   background: #4f4d6f;
 }
-
-.header.subheader button.active {
-  background: #6cbcc7;
+.subheaderButton:hover {
+  background: #67658b;
 }
 
-.dropdownOuter {
-  position: relative;
-}
-
-.dropdownOuter > button {
-  width: 210px;
-  text-align: left;
+.subheaderButton.active {
+  background: #6d6b94;
 }
 
 .divider {
   flex-grow: 1;
-}
-
-.targetDropdown {
-  position: absolute;
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  width: 100%;
-}
-
-.dropdownOuter .targetDropdown .item {
-  text-align: left;
-  background: #6cbcc7;
 }
 
 .asmInner {

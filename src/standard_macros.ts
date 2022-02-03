@@ -152,96 +152,168 @@ export const standardMacros: Macro[] = [
     ],
   },
   {
-    "name": "bool",
-    "instructions": [
+    name: "bool",
+    instructions: [
       {
-        "type": "defInstruction",
-        "fragments": [
+        type: "defInstruction",
+        fragments: [
           {
-            "type": "instruction",
-            "value": "def"
+            type: "instruction",
+            value: "def",
           },
           {
-            "type": "defName",
-            "value": "bool"
+            type: "defName",
+            value: "bool",
           },
           {
-            "type": "size",
-            "value": 8
-          }
-        ]
+            type: "size",
+            value: 8,
+          },
+        ],
       },
       {
-        "type": "assignInstruction",
-        "fragments": [
+        type: "assignInstruction",
+        fragments: [
           {
-            "type": "instruction",
-            "value": "assign"
+            type: "instruction",
+            value: "assign",
           },
           {
-            "type": "varType",
-            "value": "var",
-            "stackPosition": 0
+            type: "varType",
+            value: "var",
+            stackPosition: 0,
           },
           {
-            "type": "assignAction",
-            "value": "="
+            type: "assignAction",
+            value: "=",
           },
           {
-            "type": "varType",
-            "value": "const",
-            "constValue": 0
-          }
-        ]
+            type: "varType",
+            value: "const",
+            constValue: 0,
+          },
+        ],
       },
       {
-        "type": "compareInstruction",
-        "fragments": [
+        type: "compareInstruction",
+        fragments: [
           {
-            "type": "instruction",
-            "value": "compare"
+            type: "instruction",
+            value: "compare",
           },
           {
-            "type": "varType",
-            "value": "_",
-            "name": "left"
+            type: "varType",
+            value: "_",
+            name: "left",
           },
           {
-            "type": "comparator",
-            "value": "_",
-            "name": "comparator"
+            type: "comparator",
+            value: "_",
+            name: "comparator",
           },
           {
-            "type": "varType",
-            "value": "_",
-            "name": "right"
+            type: "varType",
+            value: "_",
+            name: "right",
           },
-        ]
+        ],
       },
       {
-        "type": "assignInstruction",
-        "fragments": [
+        type: "assignInstruction",
+        fragments: [
           {
-            "type": "instruction",
-            "value": "assign"
+            type: "instruction",
+            value: "assign",
           },
           {
-            "type": "varType",
-            "value": "var",
-            "stackPosition": 0
+            type: "varType",
+            value: "var",
+            stackPosition: 0,
           },
           {
-            "type": "assignAction",
-            "value": "="
+            type: "assignAction",
+            value: "=",
           },
           {
-            "type": "varType",
-            "value": "const",
-            "constValue": 1
-          }
-        ]
-      }
+            type: "varType",
+            value: "const",
+            constValue: 1,
+          },
+        ],
+      },
     ],
-    "inline": true
-  }
+    inline: true,
+  },
+  {
+    name: "if",
+    instructions: [
+      {
+        type: "scopeInstruction",
+        fragments: [
+          {
+            type: "instruction",
+            value: "scope",
+          },
+          {
+            type: "scopeAction",
+            value: "open",
+          },
+        ],
+      },
+      {
+        type: "compareInstruction",
+        fragments: [
+          {
+            type: "instruction",
+            value: "compare",
+          },
+          {
+            type: "varType",
+            value: "_",
+            name: "bool",
+          },
+          {
+            type: "comparator",
+            value: "==",
+          },
+          {
+            type: "varType",
+            value: "const",
+            constValue: 0,
+          },
+        ],
+      },
+      {
+        type: "jumpInstruction",
+        fragments: [
+          {
+            type: "instruction",
+            value: "jump",
+          },
+          {
+            type: "jumpPosition",
+            value: "end",
+          },
+        ],
+      },
+      {
+        type: "placeholderInstruction",
+        fragments: [{ type: "instruction", value: "_", name: "block" }],
+      },
+      {
+        type: "scopeInstruction",
+        fragments: [
+          {
+            type: "instruction",
+            value: "scope",
+          },
+          {
+            type: "scopeAction",
+            value: "close",
+          },
+        ],
+      },
+    ],
+    inline: false,
+  },
 ];

@@ -126,10 +126,11 @@ function renderFragments(
           }
           break;
         case "const":
-          fragmentContent = `const ${typeof fragment.constValue === "undefined"
+          fragmentContent = `const ${
+            typeof fragment.constValue === "undefined"
               ? "0.. value"
               : fragment.constValue
-            }`;
+          }`;
           break;
       }
     } else if (fragment?.type === "assignAction") {
@@ -169,7 +170,7 @@ function renderFragments(
         <div className={classnames("empty", "fragment")}>
           {selectionRange[0] === -1 &&
             getFragmentHints(instruction)
-            [cursorPos].split(" | ")
+              [cursorPos].split(" | ")
               .concat(isMacro ? ["_"] : [])
               .map((h) => (
                 <>
@@ -207,14 +208,16 @@ function renderFragments(
         {fragmentContent}
       </div>,
       instruction.type === "macroInstruction" && i === 0 && (
-        <div className="macro-paren open">
+        <div className="macro-paren open" key={i + "-open"}>
           {instruction.fragments.length > 1 && !inlineMacro && " "}(
         </div>
       ),
       instruction.type === "macroInstruction" &&
-      i === instruction.fragments.length - 1 && (
-        <div className="macro-paren close">)</div>
-      ),
+        i === instruction.fragments.length - 1 && (
+          <div key={i + "-close"} className="macro-paren close">
+            )
+          </div>
+        ),
       ((i > 0 && i < instruction.fragments.length - 1) ||
         instruction.type !== "macroInstruction") && (
         <div key={i + "-space"}> </div>
@@ -418,8 +421,7 @@ export function Editor({
   const isMacro = !!sourceMacro;
   const [cursorPositions, setCursorPositions] = useState([0]);
   const [selectionRange, setSelectionRange] = useState<[number, number]>([
-    -1,
-    -1,
+    -1, -1,
   ]);
   const [instructionIndex, setInstructionIndex] = useState(0);
   const [macroSearchString, setMacroSearchString] = useState<
@@ -439,7 +441,11 @@ export function Editor({
     instructionIndex,
     collapsedInstructions.length - 1
   );
+  let fixedCursorPositions = cursorPositions;
   const instruction = collapsedInstructions[fixedInstructionIndex];
+  if (cursorPositions[0] > instruction.fragments.length - 1) {
+    fixedCursorPositions = [0];
+  }
 
   useEffect(() => {
     if (setInstructionRange) {
@@ -495,7 +501,7 @@ export function Editor({
           instruction,
           instructions,
           collapsedInstructions,
-          cursorPositions,
+          cursorPositions: fixedCursorPositions,
           instructionIndex: fixedInstructionIndex,
           selectionRange,
           isMacro,
@@ -538,14 +544,14 @@ export function Editor({
     fixedInstructionIndex,
     visibleVariables,
     variableSearchString,
-    cursorPositions,
+    fixedCursorPositions,
   ]);
 
   const instructionsRendered = renderInstructions(
     collapsedInstructions,
     selectionRange,
-    instructionIndex,
-    cursorPositions,
+    fixedInstructionIndex,
+    fixedCursorPositions,
     hasFocus,
     isMacro,
     macros,

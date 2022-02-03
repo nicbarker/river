@@ -442,7 +442,6 @@ function deleteInstruction(
       instructionIndex,
       instructions
     );
-    console.log(instructionIndex, instructions.length);
     for (let i = instructionIndex; i < instructions.length; i++) {
       for (let j = 0; j < instructions[i].fragments.length; j++) {
         const fragment = instructions[i].fragments[j];
@@ -1139,7 +1138,6 @@ export function handleKeyStroke({
     isMacro?: boolean
   ) {
     let newFragment = fragment;
-    console.log(fragment);
     if (newFragment?.value !== "_") {
       switch (key) {
         case "=": {

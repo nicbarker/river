@@ -7,11 +7,16 @@ import {
   formatASM,
   formatWASM,
 } from "./compiler/compiler";
+import { InlineDropdown } from "./components/inline_dropdown";
 import { Instruction } from "./editor_handler";
 import { instructionsToText, parse } from "./parse";
 import { validate } from "./validate";
 
-function downloadFile(data: string, fileName: string, type = "text/plain") {
+export function downloadFile(
+  data: string,
+  fileName: string,
+  type = "text/plain"
+) {
   // Create an invisible A element
   const a = document.createElement("a");
   a.style.display = "none";
@@ -154,10 +159,8 @@ export function ASMTab(props: {
   instructionRange: [number, number];
 }) {
   const [asm, setAsm] = useState<ASMBlock[]>([]);
-  const [targetDropdownVisible, setTargetDropdownVisible] = useState(false);
-  const [targetPlatform, setTargetPlatform] = useState<BackendTarget>(
-    "x64_win"
-  );
+  const [targetPlatform, setTargetPlatform] =
+    useState<BackendTarget>("x64_win");
 
   useEffect(() => {
     if (validate(props.instructions)) {
@@ -172,10 +175,9 @@ export function ASMTab(props: {
 
   const targets = targetValues.map((platform) => (
     <button
-      className={"item"}
+      className={"dropdownItem"}
       onClick={() => {
         setTargetPlatform(platform[0]);
-        setTargetDropdownVisible(false);
       }}
     >
       {platform[1]}
@@ -185,23 +187,19 @@ export function ASMTab(props: {
   return (
     <div className="assemblyContainer">
       <div className="header subheader">
-        <div className={"dropdownOuter"}>
-          <button
-            className={classNames({ active: targetDropdownVisible })}
-            onClick={() => setTargetDropdownVisible(true)}
-          >
-            {targetDropdownVisible
-              ? "Select Target"
-              : `Target: ${
-                  targetValues.find((t) => t[0] === targetPlatform)![1]
-                }`}
-          </button>
-          {targetDropdownVisible && (
-            <div className={"targetDropdown"}>{targets}</div>
-          )}
-        </div>
+        <InlineDropdown
+          classNames="subheaderButton"
+          label={`Target: ${
+            targetValues.find((t) => t[0] === targetPlatform)![1]
+          }`}
+          openLabel="Select Target"
+          dismissOnClick
+        >
+          {targets}
+        </InlineDropdown>
         <div className={"divider"} />
         <button
+          className="subheaderButton"
           onClick={() =>
             downloadFile(
               targetPlatform === "wasm" ? formatWASM(asm) : formatASM(asm),
