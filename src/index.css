@@ -148,6 +148,10 @@ button {
   overflow: auto;
 }
 
+.macros {
+  overflow: auto;
+}
+
 .macroOuter {
   display: flex;
   flex-direction: column;
@@ -159,13 +163,22 @@ button {
   background: #505d60;
 }
 
+.macroHeader {
+  display: flex;
+  align-items: center;
+  padding: 12px 12px 0;
+}
+
+.inline {
+  color: #ccc;
+}
+
 .macroTitle {
   color: #fff;
   background: #5f7174;
   font-size: 15px;
   text-align: left;
   padding: 8px 12px;
-  margin: 12px 0 0 12px;
   display: flex;
   align-self: flex-start;
   border-radius: 5px;

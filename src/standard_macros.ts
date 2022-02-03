@@ -167,7 +167,7 @@ export const standardMacros: Macro[] = [
           },
           {
             type: "size",
-            value: 8,
+            value: 64,
           },
         ],
       },

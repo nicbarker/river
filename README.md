@@ -225,7 +225,6 @@ It's starting to look a lot more like a programming language. You can see that w
 
 ![Jan-22-2022 13-14-00](https://user-images.githubusercontent.com/2264338/150615797-6b079b06-9186-4209-bc70-66d169fc1921.gif)
 
-
 ### Running your code
 
 You can run your .rvr code in two ways:
@@ -234,6 +233,7 @@ You can run your .rvr code in two ways:
 - The `Assembly` tab provides live output of the corresponding assembly for your chosen target architecture and platform. At the moment river compiles to [nasm](https://www.nasm.us/) assembly, but I'm not sure if it'll stay like that in future.
 
 Currently supported platforms:
+
 - x64 (Windows)
 - x64 (Mac OS X)
 - WebAssembly

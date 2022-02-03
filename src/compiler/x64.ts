@@ -454,7 +454,9 @@ export function compileX64(
             switch (instruction.action) {
               case "=":
               case "+":
-              case "-": {
+              case "-":
+              case "&&":
+              case "||": {
                 operands = [target, source];
                 break;
               }
@@ -580,6 +582,22 @@ export function compileX64(
                 targetWithOffset,
                 registerWithSize("rdx", instruction.size)
               ),
+            ]);
+            break;
+          }
+          case "&&": {
+            instructionOutputs[1].push([
+              ,
+              "and",
+              formatOp(operands[0], operands[1]),
+            ]);
+            break;
+          }
+          case "||": {
+            instructionOutputs[1].push([
+              ,
+              "or",
+              formatOp(operands[0], operands[1]),
             ]);
             break;
           }

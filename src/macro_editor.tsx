@@ -47,10 +47,16 @@ export function MacroEditor({
 
   return (
     <div className={classnames("macroOuter", { hasFocus })}>
-      <div
-        className={classnames("macroTitle", { hasFocus: internalFocus === 0 })}
-      >
-        {macro.name || "Macro Title"}
+      <div className="macroHeader">
+        <div
+          className={classnames("macroTitle", {
+            hasFocus: internalFocus === 0,
+          })}
+        >
+          {macro.name || "Macro Title"}
+        </div>
+        <div className="divider"></div>
+        {macro.inline && <div className="inline">inline</div>}
       </div>
       <Editor
         onCursorUnderflow={() => setInternalFocus(0)}

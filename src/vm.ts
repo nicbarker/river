@@ -1,7 +1,7 @@
 import { Output } from "./application";
 import { CompiledInstruction, dec2bin, Scope } from "./parse";
 
-const DEBUG = true;
+const DEBUG = false;
 const DOUBLE_DEBUG = false;
 
 export function execute(
@@ -76,7 +76,7 @@ export function execute(
         let sourceValue: number = 0;
         switch (instruction.source) {
           case "const": {
-            DEBUG &&
+            true &&
               console.log(
                 `set ${
                   instruction.action
@@ -96,7 +96,7 @@ export function execute(
                 instruction.address! + instruction.size
               )
               .join("");
-            DEBUG &&
+            true &&
               console.log(
                 `set ${instruction.action} with var value ${value} from address ${instruction.address} at offset ${instruction.target}`
               );
@@ -109,10 +109,12 @@ export function execute(
         let toWrite = 0;
         switch (instruction.action) {
           case "=": {
+            console.log(targetValue, sourceValue);
             toWrite = sourceValue;
             break;
           }
           case "+": {
+            // console.log(targetValue, sourceValue);
             toWrite = targetValue + sourceValue;
             break;
           }
@@ -130,6 +132,15 @@ export function execute(
           }
           case "%": {
             toWrite = targetValue % sourceValue;
+            break;
+          }
+          case "&&": {
+            toWrite = targetValue & sourceValue;
+            break;
+          }
+          case "||": {
+            console.log(targetValue, sourceValue);
+            toWrite = targetValue | sourceValue;
             break;
           }
           default:

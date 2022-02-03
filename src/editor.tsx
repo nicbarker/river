@@ -163,6 +163,8 @@ function renderFragments(
       }
     } else if (fragment?.type === "instruction" && fragment.value === "_") {
       fragmentContent = "_block";
+    } else if (fragment?.type === "block") {
+      fragmentContent = fragment.value === "open" ? "{" : "}";
     } else if (fragment) {
       fragmentContent = fragment.value;
     } else if (cursorPos === i && hasCursor) {
@@ -242,7 +244,6 @@ function renderInstructions(
   let instructionsRendered: React.ReactNode[] = [];
   let blockRanges: [number, number][] = [];
   for (let li = 0; li < instructions.length; li++) {
-    const previousInstruction = li > 0 ? instructions[li - 1] : undefined;
     const instruction = instructions[li];
     const fragments = renderFragments(
       instruction,
@@ -261,62 +262,26 @@ function renderInstructions(
       blockRanges = blockRanges.concat(instruction.blockRanges);
     }
 
-    let preLine: React.ReactNode = null;
-
     if (
-      instruction.type === "scopeInstruction" &&
-      instruction.fragments[1]?.value === "close"
+      (instruction.type === "scopeInstruction" &&
+        instruction.fragments[1]?.value === "close") ||
+      (instruction.type === "blockInstruction" &&
+        instruction.fragments[0]?.value === "close")
     ) {
       indent -= 2;
-    }
-
-    if (
-      blockRanges.find((br) => br[0] <= instruction.lineNumber) &&
-      (!previousInstruction ||
-        blockRanges.find((br) => br[0] > previousInstruction.lineNumber))
-    ) {
-      indent += 2;
-      preLine = <div>{"{"}</div>;
     }
 
     let indentRendered = Array(Math.max(indent, 0))
       .fill(0)
       .map(() => <div className="indent"> </div>);
 
-    let braceIndentRendered = Array(Math.max(indent - 2, 0))
-      .fill(0)
-      .map(() => <div className="indent"> </div>);
-
     if (
-      instruction.type === "scopeInstruction" &&
-      instruction.fragments[1]?.value === "open"
+      (instruction.type === "scopeInstruction" &&
+        instruction.fragments[1]?.value === "open") ||
+      (instruction.type === "blockInstruction" &&
+        instruction.fragments[0]?.value === "open")
     ) {
       indent += 2;
-    }
-
-    // [index, brace]
-    let postLine: [React.ReactNode, React.ReactNode][] = [];
-    if (blockRanges.find((br) => br[1] - 1 === instruction.lineNumber)) {
-      indent -= 2;
-      const braceIndent = Array(Math.max(indent, 0))
-        .fill(0)
-        .map(() => <div className="indent"> </div>);
-      postLine.push([braceIndent, <div>{"}"}</div>]);
-    }
-
-    if (
-      blockRanges.find(
-        (br) =>
-          li < instructions.length - 1 &&
-          br[1] - 1 > instruction.lineNumber &&
-          br[1] - 1 < instructions[li + 1].lineNumber
-      )
-    ) {
-      indent -= 2;
-      const braceIndent = Array(Math.max(indent, 0))
-        .fill(0)
-        .map(() => <div className="indent"> </div>);
-      postLine.push([braceIndent, <div>{"}"}</div>]);
     }
 
     let contents: React.ReactElement;
@@ -364,12 +329,6 @@ function renderInstructions(
     }
 
     instructionsRendered.push([
-      preLine && (
-        <div className="macro-block-braces">
-          {braceIndentRendered}
-          {preLine}
-        </div>
-      ),
       <div
         className={classnames("line", {
           selected:
@@ -379,15 +338,13 @@ function renderInstructions(
         })}
         key={li}
       >
-        <div className="lineNumber">{instruction.lineNumber + 1}</div>
+        <div className="lineNumber">
+          {instruction.type === "blockInstruction"
+            ? ""
+            : instruction.lineNumber + 1}
+        </div>
         <div className="instruction">{contents}</div>
       </div>,
-      postLine.map((l) => (
-        <div className="macro-block-braces">
-          {l[0]}
-          {l[1]}
-        </div>
-      )),
     ]);
   }
   return instructionsRendered;
@@ -421,7 +378,8 @@ export function Editor({
   const isMacro = !!sourceMacro;
   const [cursorPositions, setCursorPositions] = useState([0]);
   const [selectionRange, setSelectionRange] = useState<[number, number]>([
-    -1, -1,
+    -1,
+    -1,
   ]);
   const [instructionIndex, setInstructionIndex] = useState(0);
   const [macroSearchString, setMacroSearchString] = useState<

@@ -37,7 +37,8 @@ export function App() {
     "build" | "asm" | "macros"
   >("asm");
   const [instructionRange, setInstructionRange] = useState<[number, number]>([
-    0, 0,
+    0,
+    0,
   ]);
   const [macrosExpanded, setMacrosExpanded] = useState(false);
   const [dismissMap] = useState<DismissMap>([]);
@@ -146,7 +147,7 @@ export function App() {
       onClick={() => {
         openFiles.splice(selectedFileIndex + 1, 0, {
           name: e.name.toLocaleLowerCase().replaceAll(" ", "_") + ".rvr",
-          instructions: [{ type: "emptyInstruction", fragments: [undefined] }],
+          instructions: parseTextFile(e.file),
         });
         setOpenFiles(openFiles.slice());
         setSelectedFileIndex(selectedFileIndex + 1);
@@ -280,7 +281,24 @@ export function App() {
             {activeRightTab === "macros" && (
               <div className="macros">
                 <div className="header subheader">
-                  <button className="subheaderButton">New Macro</button>
+                  <button
+                    className="subheaderButton"
+                    onClick={() => {
+                      macros.push({
+                        name: "New Macro",
+                        instructions: [
+                          {
+                            type: "emptyInstruction",
+                            fragments: [undefined],
+                          },
+                        ],
+                        inline: false,
+                      });
+                      setMacros(macros.slice());
+                    }}
+                  >
+                    New Macro
+                  </button>
                 </div>
                 {macrosRendered}
               </div>

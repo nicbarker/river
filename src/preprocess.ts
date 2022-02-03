@@ -65,9 +65,9 @@ function instructionsAreEqual(
       ((fragment.value === "var" &&
         macroFragment.value === "var" &&
         fragment.stackPosition !==
-        (typeof macroFragment.stackPosition === "undefined"
-          ? undefined
-          : macroFragment.stackPosition + stackPositionOffset)) ||
+          (typeof macroFragment.stackPosition === "undefined"
+            ? undefined
+            : macroFragment.stackPosition + stackPositionOffset)) ||
         (fragment.value === "const" &&
           macroFragment.value === "const" &&
           fragment.constValue !== macroFragment.constValue))
@@ -104,6 +104,9 @@ function macroRanges(
     instructionIndex,
     instructions
   );
+  if (macro.instructions.length > instructions.length - newInstructionIndex) {
+    return;
+  }
   for (
     let i = 0;
     i < macro.instructions.length && newInstructionIndex < instructions.length;
@@ -193,15 +196,50 @@ export function preProcess(
   expandMacros?: boolean
 ): CollapsedInstruction[] {
   const collapse: [number, number][][] = [];
+  const blocks: [number, number][] = [];
   let unplacedInlineMacros: {
+    lineNumber: number;
     instruction: MacroInstruction & CollapsedData;
     stackPosition: number;
   }[] = [];
-  return instructions
-    .map((instruction, index): CollapsedInstruction | undefined => {
-      const macroRanges = macroAtLine(instructions, index, macros, sourceMacro);
+  const collapsed: CollapsedInstruction[] = [];
+  const macrosByLength = macros
+    .slice()
+    .sort((a, b) => b.instructions.length - a.instructions.length);
+  for (let i = 0; i < instructions.length; i++) {
+    const instruction = instructions[i];
+    const macroRanges = macroAtLine(
+      instructions,
+      i,
+      macrosByLength,
+      sourceMacro
+    );
+    if (
+      collapse.length > 0 &&
+      collapse.find(
+        (c) => c.find((range) => range[0] <= i && range[1] > i) && !expandMacros
+      )
+    ) {
+      if (blocks.find((b) => b[0] === i)) {
+        collapsed.push({
+          type: "blockInstruction",
+          fragments: [{ type: "block", value: "open" }],
+          inlineMacros: [],
+          lineNumber: i,
+        });
+      }
+      if (blocks.find((b) => b[1] === i)) {
+        collapsed.push({
+          type: "blockInstruction",
+          fragments: [{ type: "block", value: "close" }],
+          inlineMacros: [],
+          lineNumber: i,
+        });
+      }
+    } else {
       if (macroRanges && !expandMacros) {
         collapse.push(macroRanges[1].ranges);
+        blocks.push(...macroRanges[1].blockRanges);
         const macroInstruction: CollapsedInstruction = {
           type: "macroInstruction",
           fragments: [
@@ -211,7 +249,7 @@ export function preProcess(
           placeholders: macroRanges[1].placeholderFragments.map((p) => p.name),
           macro: macroRanges[0],
           blockRanges: macroRanges[1].blockRanges,
-          lineNumber: index,
+          lineNumber: i,
           endLineNumber: macroRanges[1].endLineNumber,
           macroType: macroRanges[0].inline ? "inline" : "function",
           inlineMacros: [],
@@ -227,36 +265,35 @@ export function preProcess(
             ) {
               macroInstruction.inlineMacros[cursorPos] = macro;
               unplacedInlineMacros.splice(i, 1);
-              i--;
+              if (i > -1) {
+                i--;
+              }
             }
             cursorPos++;
           }
         }
         if (macroRanges[0].inline) {
           unplacedInlineMacros.push({
+            lineNumber: i,
             instruction: macroInstruction,
-            stackPosition: getStackPositionAtInstructionIndex(
-              index,
-              instructions
-            ),
+            stackPosition: getStackPositionAtInstructionIndex(i, instructions),
           });
-          return undefined;
         } else {
-          return macroInstruction;
+          const toReturn: CollapsedInstruction[] = [macroInstruction];
+          if (macroRanges[1].blockRanges.length > 0) {
+            toReturn.push({
+              type: "blockInstruction",
+              fragments: [{ type: "block", value: "open" }],
+              inlineMacros: [],
+              lineNumber: macroRanges[1].blockRanges[0][0] - 1,
+            });
+          }
+          collapsed.push(...toReturn);
         }
-      } else if (
-        collapse.length > 0 &&
-        collapse.find(
-          (c) =>
-            c.find((range) => range[0] <= index && range[1] > index) &&
-            !expandMacros
-        )
-      ) {
-        return undefined;
       } else if (unplacedInlineMacros.length > 0) {
         const toReturn: CollapsedInstruction = {
           ...instruction,
-          lineNumber: index,
+          lineNumber: i,
           inlineMacros: [],
         };
         for (let i = 0; i < unplacedInlineMacros.length; i++) {
@@ -270,16 +307,39 @@ export function preProcess(
             ) {
               toReturn.inlineMacros[cursorPos] = macro;
               unplacedInlineMacros.splice(i, 1);
-              i--;
+              if (i > -1) {
+                i--;
+              }
             }
             cursorPos++;
           }
         }
+        for (const macro of unplacedInlineMacros) {
+          collapsed.splice(
+            macro.lineNumber,
+            0,
+            ...instructions
+              .slice(
+                macro.instruction.lineNumber,
+                macro.instruction.endLineNumber
+              )
+              .map((ins, index) => ({
+                ...ins,
+                lineNumber: macro.instruction.lineNumber + index,
+                inlineMacros: [],
+              }))
+          );
+        }
         unplacedInlineMacros = [];
-        return toReturn;
+        collapsed.push(toReturn);
       } else {
-        return { ...instruction, lineNumber: index, inlineMacros: [] };
+        collapsed.push({
+          ...instruction,
+          lineNumber: i,
+          inlineMacros: [],
+        });
       }
-    })
-    .filter((i) => !!i) as CollapsedInstruction[];
+    }
+  }
+  return collapsed;
 }

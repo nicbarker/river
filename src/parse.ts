@@ -148,8 +148,7 @@ export function parse(file: string) {
       popped.openInstruction.stackOffset = popped.stackOffset;
       popped.closeInstruction.stackMemory = popped.stackMemory;
       popped.closeInstruction.stackOffset = popped.stackOffset;
-      popped.closeInstruction.originalInstructionIndex =
-        originalInstructionIndex;
+      popped.closeInstruction.originalInstructionIndex = originalInstructionIndex;
       instructions.push(popped.closeInstruction);
     }
   }
@@ -445,17 +444,17 @@ export function parseTextFile(file: string): Instruction[] {
           };
         }
         let sourceFragment: VarTypeFragment;
-        if (tokens[1] === "var") {
+        if (tokens[4] === "var") {
           sourceFragment = {
             type: "varType",
             value: "var",
-            stackPosition: parseInt(tokens[2], 10),
+            stackPosition: parseInt(tokens[5], 10),
           };
         } else {
           sourceFragment = {
             type: "varType",
             value: "const",
-            constValue: parseInt(tokens[2], 10),
+            constValue: parseInt(tokens[5], 10),
           };
         }
         const instruction: CompareInstruction = {
@@ -518,9 +517,9 @@ export function parseTextFile(file: string): Instruction[] {
 }
 
 export function instructionsToText(instructions: Instruction[]) {
-  return (
-    instructions.filter((i) => i.type !== "emptyInstruction") as Instruction[]
-  )
+  return (instructions.filter(
+    (i) => i.type !== "emptyInstruction"
+  ) as Instruction[])
     .map((i) =>
       i.fragments
         .map((f) => {

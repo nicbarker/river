@@ -1,0 +1,33 @@
+def sum 64
+scope open
+def index 64
+assign var 1 = const 0
+scope open
+def output2 64
+assign var 2 = var 1
+assign var 2 % const 3
+def bool 64
+assign var 3 = const 0
+compare var 2 == const 0
+assign var 3 = const 1
+def output3 64
+assign var 4 = var 1
+assign var 4 % const 5
+def bool2 64
+assign var 5 = const 0
+compare var 4 == const 0
+assign var 5 = const 1
+def output 64
+assign var 6 = var 3
+assign var 6 || var 5
+scope open
+compare var 6 == const 0
+jump end
+assign var 0 + var 1
+scope close
+assign var 1 + const 1
+compare var 1 < const 1000
+jump start
+scope close
+scope close
+os stdout var 0
