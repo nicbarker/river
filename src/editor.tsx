@@ -273,7 +273,11 @@ function renderInstructions(
 
     let indentRendered = Array(Math.max(indent, 0))
       .fill(0)
-      .map(() => <div className="indent"> </div>);
+      .map((_, index) => (
+        <div className="indent" key={index}>
+          {" "}
+        </div>
+      ));
 
     if (
       (instruction.type === "scopeInstruction" &&
@@ -328,7 +332,7 @@ function renderInstructions(
       );
     }
 
-    instructionsRendered.push([
+    instructionsRendered.push(
       <div
         className={classnames("line", {
           selected:
@@ -344,8 +348,8 @@ function renderInstructions(
             : instruction.lineNumber + 1}
         </div>
         <div className="instruction">{contents}</div>
-      </div>,
-    ]);
+      </div>
+    );
   }
   return instructionsRendered;
 }

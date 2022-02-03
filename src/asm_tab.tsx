@@ -159,8 +159,9 @@ export function ASMTab(props: {
   instructionRange: [number, number];
 }) {
   const [asm, setAsm] = useState<ASMBlock[]>([]);
-  const [targetPlatform, setTargetPlatform] =
-    useState<BackendTarget>("x64_win");
+  const [targetPlatform, setTargetPlatform] = useState<BackendTarget>(
+    "x64_win"
+  );
 
   useEffect(() => {
     if (validate(props.instructions)) {
@@ -173,12 +174,13 @@ export function ASMTab(props: {
       ? renderWasm({ asm, instructionRange: props.instructionRange })
       : renderX64({ asm, instructionRange: props.instructionRange });
 
-  const targets = targetValues.map((platform) => (
+  const targets = targetValues.map((platform, index) => (
     <button
       className={"dropdownItem"}
       onClick={() => {
         setTargetPlatform(platform[0]);
       }}
+      key={index}
     >
       {platform[1]}
     </button>

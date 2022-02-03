@@ -512,7 +512,6 @@ export function parseTextFile(file: string): Instruction[] {
   if (toReturn[toReturn.length - 1].type !== "emptyInstruction") {
     toReturn.push({ type: "emptyInstruction", fragments: [undefined] });
   }
-  console.log(toReturn);
   return toReturn;
 }
 

@@ -136,12 +136,13 @@ export function App() {
         active: index === selectedFileIndex,
       })}
       onClick={() => setSelectedFileIndex(index)}
+      key={index}
     >
       {file.name}
     </button>
   ));
 
-  const exampleMenuItems = examples.map((e) => (
+  const exampleMenuItems = examples.map((e, index) => (
     <div
       className="dropdownItem"
       onClick={() => {
@@ -152,6 +153,7 @@ export function App() {
         setOpenFiles(openFiles.slice());
         setSelectedFileIndex(selectedFileIndex + 1);
       }}
+      key={index}
     >
       {e.name}
     </div>
