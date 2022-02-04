@@ -455,6 +455,7 @@ function deleteInstruction(
   instructions: Instruction[],
   matchScopes: boolean = true
 ) {
+  let extraDeleted = 0;
   const instruction = instructions[instructionIndex];
   instructions.splice(instructionIndex, 1);
   if (instruction.type === "scopeInstruction" && matchScopes) {
@@ -465,6 +466,7 @@ function deleteInstruction(
         if (instruction.fragments[1]?.value === "close") {
           if (numOpen === 0) {
             instructions.splice(i, 1);
+            extraDeleted++;
             break;
           } else {
             numOpen--;
@@ -499,6 +501,7 @@ function deleteInstruction(
     // Decrement the stack position of all variable references after the one we're deleting
     modifyStackPositionsAfter(-1, instructionIndex, instructions);
   }
+  return extraDeleted;
 }
 
 export enum CursorMovement {
@@ -1652,7 +1655,7 @@ export function handleKeyStroke({
       }
 
       for (let i = startLine; i < endLine; i++) {
-        deleteInstruction(startLine, instructions, false);
+        endLine -= deleteInstruction(startLine, instructions);
       }
 
       // If this was the only instruction in a macro placeholder block, replace it with an empty instruction

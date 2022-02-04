@@ -333,8 +333,8 @@ function moveAndLabelForSize(instructionSize: number) {
       size = "qword";
       mov = "mov";
       break;
-    default:
-      throw Error(`Bad size ${instructionSize} passed to moveAndLabelForSize`);
+    // default:
+    //   throw Error(`Bad size ${instructionSize} passed to moveAndLabelForSize`);
   }
   return [mov, size];
 }
