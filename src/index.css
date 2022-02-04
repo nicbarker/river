@@ -93,6 +93,7 @@ button {
   color: #fff;
   font-size: 16px;
   cursor: pointer;
+  outline: none;
 }
 
 .left .header {
@@ -102,7 +103,6 @@ button {
 .left .headerButton {
   color: #ccc;
   background: #2e3637;
-  outline: none;
 }
 
 .left .headerButton.active {
