@@ -28,6 +28,7 @@ export function compileWasm(
   ];
 
   let printEnd = 0;
+  let blockDepth = 0;
   let loopDepth = 0;
   for (
     let instructionIndex = 0;
@@ -39,12 +40,12 @@ export function compileWasm(
       instruction.originalInstructionIndex,
       [],
     ];
+    instructionOutputs[1].push([
+      ,
+      `;; ${instructionIndex}: ${instruction.serialized}`,
+    ]);
     switch (instruction.instruction) {
       case "assign": {
-        instructionOutputs[1].push([
-          ,
-          `;; ${instructionIndex}: ${instruction.serialized}`,
-        ]);
         const targetSize = instruction.targetSize === 64 ? 64 : 32;
         const sourceSize = instruction.sourceSize === 64 ? 64 : 32;
         let source = "";
@@ -96,46 +97,48 @@ export function compileWasm(
             action = "rem_u";
             break;
           }
+          case "&&": {
+            action = "and";
+            break;
+          }
+          case "||": {
+            action = "or";
+            break;
+          }
           default:
             break;
         }
         if (action) {
           instructionOutputs[1].push([...indent, `i${sourceSize}.${action}`]);
         }
-        instructionOutputs[1].push([...indent, `i${sourceSize}.store`]);
+        instructionOutputs[1].push([
+          ...indent,
+          `i${Math.max(sourceSize, targetSize)}.store`,
+        ]);
 
         break;
       }
       case "jump": {
+        let branch = "br";
+        if (printEnd === 1) {
+          branch = "br_if";
+          printEnd--;
+          indent.pop();
+        }
         if (instruction.type === "start") {
-          let branch = "br";
-          if (printEnd === 1) {
-            branch = "br_if";
-            printEnd--;
-            indent.pop();
-          }
-          instructionOutputs[1].push([...indent, `${branch} $${loopDepth}`]);
+          instructionOutputs[1].push([
+            ...indent,
+            `${branch} $${blockDepth}_${loopDepth}`,
+          ]);
           loopDepth -= 1;
           indent.pop();
           instructionOutputs[1].push([...indent, `end`]);
-        }
-        if (instruction.type === "end") {
-          instructionOutputs[1].push([
-            ,
-            `;; ${instructionIndex}: ${instruction.serialized}`,
-          ]);
-          instructionOutputs[1].push([
-            ...indent,
-            `br $${instruction.scope.openInstruction.originalInstructionIndex}`,
-          ]);
+        } else {
+          instructionOutputs[1].push([...indent, `br_if $${blockDepth}`]);
         }
         break;
       }
       case "compare": {
-        instructionOutputs[1].push([
-          ,
-          `;; ${instructionIndex}: ${instruction.serialized}`,
-        ]);
         let comp = "";
         switch (instruction.action) {
           case "==":
@@ -206,9 +209,11 @@ export function compileWasm(
         instructionOutputs[1].push([...indent, `i${leftSize}.${comp}`]);
 
         if (instructionIndex < instructions.length - 1) {
+          const nextInstruction = instructions[instructionIndex + 1];
           // We use a br_if instead of an if statement in the case of compare then jump
-          instructions[instructionIndex + 1].instruction !== "jump" &&
+          if (nextInstruction.instruction !== "jump") {
             instructionOutputs[1].push([...indent, `if`]);
+          }
           indent.push(undefined);
           printEnd = 2;
           break;
@@ -218,10 +223,6 @@ export function compileWasm(
       case "os": {
         switch (instruction.action) {
           case "stdout": {
-            instructionOutputs[1].push([
-              ,
-              `;; ${instructionIndex}: ${instruction.serialized}`,
-            ]);
             switch (instruction.source) {
               case "var": {
                 const sourceSize = instruction.size === 64 ? 64 : 32;
@@ -258,16 +259,19 @@ export function compileWasm(
             : `;; ${instruction.originalInstructionIndex}: ${instruction.serialized}`,
         ]);
         if (instruction.action === "open") {
-          loopDepth += 1;
-          instructionOutputs[1].push([...indent, `${"block"} $${loopDepth}`]);
+          blockDepth += 1;
+          instructionOutputs[1].push([...indent, `${"block"} $${blockDepth}`]);
           indent.push(undefined);
           for (let i = 0; i < instruction.loopCount; i++) {
             loopDepth += 1;
-            instructionOutputs[1].push([...indent, `loop $${loopDepth}`]);
+            instructionOutputs[1].push([
+              ...indent,
+              `loop $${blockDepth}_${loopDepth}`,
+            ]);
             indent.push(undefined);
           }
         } else {
-          loopDepth--;
+          blockDepth--;
           indent.pop();
           instructionOutputs[1].push([...indent, `end`]);
         }
