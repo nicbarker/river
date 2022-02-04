@@ -34,8 +34,9 @@ export type CompiledInstructionAssign = {
   instruction: "assign";
   action: string;
   target: number;
+  targetSize: number;
   source: string;
-  size: number;
+  sourceSize: number;
   value?: number;
   address?: number;
 } & CompiledInstructionSharedAttributes;
@@ -195,25 +196,28 @@ export function parse(file: string) {
         const scope = scopes[scopes.length - 1];
         const targetIndex = parseInt(tokens[2], 10);
         const target = scope.variables[targetIndex];
-        const size = scope.sizes[targetIndex];
+        const targetSize = scope.sizes[targetIndex];
         const source = tokens[4];
         const instruction: CompiledInstructionAssign = {
           instruction: "assign",
           action: tokens[3],
           target,
+          targetSize,
           source,
-          size,
+          sourceSize: 0,
           serialized: line,
           originalInstructionIndex: i,
         };
         switch (source) {
           case "const": {
             instruction.value = parseInt(tokens[5], 10);
+            instruction.sourceSize = instruction.targetSize;
             break;
           }
           case "var": {
             const targetIndex = parseInt(tokens[5], 10);
             instruction.address = scope.variables[targetIndex];
+            instruction.sourceSize = scope.sizes[targetIndex];
             break;
           }
           default:

@@ -440,12 +440,19 @@ export function compileX64(
           ,
           `; ${instructionIndex}: ${instruction.serialized}`,
         ]);
-        const [mov, size] = moveAndLabelForSize(instruction.size);
+        const [sourceMov, sourceSize] = moveAndLabelForSize(
+          instruction.sourceSize
+        );
+        const [targetMov, targetSize] = moveAndLabelForSize(
+          instruction.targetSize
+        );
         let source = "";
         let target = "";
         let targetWithOffset: number | string = "";
-        const address = instruction.target / 8;
-        target = `${size} [r12${address > 0 ? " + " + address : ""}]`;
+        const targetAddress = instruction.target / 8;
+        target = `${targetSize} [r12${
+          targetAddress > 0 ? " + " + targetAddress : ""
+        }]`;
         targetWithOffset = memoryOffset(instruction.target / 8);
         let operands: string[] = [];
         switch (instruction.source) {
@@ -463,7 +470,7 @@ export function compileX64(
               case "*": {
                 instructionOutputs[1].push([
                   ,
-                  mov,
+                  sourceMov,
                   formatOp("r13", targetWithOffset),
                 ]);
                 operands = ["r13", source];
@@ -472,10 +479,14 @@ export function compileX64(
               case "/":
               case "%": {
                 instructionOutputs[1].push([, "xor", "rdx, rdx"]);
-                instructionOutputs[1].push([, mov, formatOp("r13", source)]);
                 instructionOutputs[1].push([
                   ,
-                  mov,
+                  sourceMov,
+                  formatOp("r13", source),
+                ]);
+                instructionOutputs[1].push([
+                  ,
+                  targetMov,
                   formatOp("rax", targetWithOffset),
                 ]);
                 operands = ["r13"];
@@ -491,27 +502,27 @@ export function compileX64(
               case "=": {
                 instructionOutputs[1].push([
                   ,
-                  mov,
+                  sourceMov,
                   formatOp(
                     "r13",
-                    `${size} ${memoryOffset(instruction.address! / 8)}`
+                    `${sourceSize} ${memoryOffset(instruction.address! / 8)}`
                   ),
                 ]);
                 operands = [
                   targetWithOffset,
-                  registerWithSize("r13", instruction.size),
+                  registerWithSize("r13", instruction.targetSize),
                 ];
                 break;
               }
               default: {
                 instructionOutputs[1].push([
                   ,
-                  mov,
+                  targetMov,
                   formatOp("r13", targetWithOffset),
                 ]);
                 operands = [
-                  "r13",
-                  `${size} ${memoryOffset(instruction.address! / 8)}`,
+                  registerWithSize("r13", instruction.sourceSize),
+                  `${sourceSize} ${memoryOffset(instruction.address! / 8)}`,
                 ];
               }
             }
@@ -535,6 +546,16 @@ export function compileX64(
               "add",
               formatOp(operands[0], operands[1]),
             ]);
+            if (instruction.source === "var") {
+              instructionOutputs[1].push([
+                ,
+                "mov",
+                formatOp(
+                  targetWithOffset,
+                  registerWithSize("r13", instruction.targetSize)
+                ),
+              ]);
+            }
             break;
           }
           case "-": {
@@ -543,6 +564,16 @@ export function compileX64(
               "sub",
               formatOp(operands[0], operands[1]),
             ]);
+            if (instruction.source === "var") {
+              instructionOutputs[1].push([
+                ,
+                "mov",
+                formatOp(
+                  targetWithOffset,
+                  registerWithSize("r13", instruction.targetSize)
+                ),
+              ]);
+            }
             break;
           }
           case "*": {
@@ -556,7 +587,7 @@ export function compileX64(
               "mov",
               formatOp(
                 targetWithOffset,
-                registerWithSize("r13", instruction.size)
+                registerWithSize("r13", instruction.targetSize)
               ),
             ]);
             break;
@@ -568,7 +599,7 @@ export function compileX64(
               "mov",
               formatOp(
                 targetWithOffset,
-                registerWithSize("rax", instruction.size)
+                registerWithSize("rax", instruction.targetSize)
               ),
             ]);
             break;
@@ -580,7 +611,7 @@ export function compileX64(
               "mov",
               formatOp(
                 targetWithOffset,
-                registerWithSize("rdx", instruction.size)
+                registerWithSize("rdx", instruction.targetSize)
               ),
             ]);
             break;
@@ -591,6 +622,14 @@ export function compileX64(
               "and",
               formatOp(operands[0], operands[1]),
             ]);
+            instructionOutputs[1].push([
+              ,
+              "mov",
+              formatOp(
+                targetWithOffset,
+                registerWithSize("r13", instruction.targetSize)
+              ),
+            ]);
             break;
           }
           case "||": {
@@ -598,6 +637,14 @@ export function compileX64(
               ,
               "or",
               formatOp(operands[0], operands[1]),
+            ]);
+            instructionOutputs[1].push([
+              ,
+              "mov",
+              formatOp(
+                targetWithOffset,
+                registerWithSize("r13", instruction.targetSize)
+              ),
             ]);
             break;
           }

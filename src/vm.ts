@@ -69,7 +69,10 @@ export function execute(
       case "assign": {
         let targetValue = parseInt(
           memory
-            .slice(instruction.target, instruction.target + instruction.size)
+            .slice(
+              instruction.target,
+              instruction.target + instruction.targetSize
+            )
             .join(""),
           2
         );
@@ -82,7 +85,7 @@ export function execute(
                   instruction.action
                 } with constant value ${instruction.value
                   ?.toString()
-                  .padStart(instruction.size, "0")} at offset ${
+                  .padStart(instruction.sourceSize, "0")} at offset ${
                   instruction.target
                 }`
               );
@@ -93,7 +96,7 @@ export function execute(
             const value = memory
               .slice(
                 instruction.address,
-                instruction.address! + instruction.size
+                instruction.address! + instruction.sourceSize
               )
               .join("");
             true &&
@@ -139,7 +142,6 @@ export function execute(
             break;
           }
           case "||": {
-            console.log(targetValue, sourceValue);
             toWrite = targetValue | sourceValue;
             break;
           }
@@ -147,7 +149,7 @@ export function execute(
             break;
         }
         writeBinaryToStack(
-          dec2bin(toWrite, instruction.size)
+          dec2bin(toWrite, instruction.targetSize)
             .split("")
             .map((v) => parseInt(v, 10)),
           instruction.target

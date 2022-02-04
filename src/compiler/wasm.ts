@@ -45,8 +45,8 @@ export function compileWasm(
           ,
           `;; ${instructionIndex}: ${instruction.serialized}`,
         ]);
-        const targetSize = instruction.size === 64 ? 64 : 32;
-        const sourceSize = instruction.size === 64 ? 64 : 32;
+        const targetSize = instruction.targetSize === 64 ? 64 : 32;
+        const sourceSize = instruction.sourceSize === 64 ? 64 : 32;
         let source = "";
         const target = instruction.target / 8;
         instructionOutputs[1].push([...indent, `i32.const ${target}`]);

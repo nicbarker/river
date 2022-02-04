@@ -39,6 +39,7 @@ function renderFragments(
             .toLocaleLowerCase()
             .startsWith(variableSearchString.toLocaleLowerCase())
         )
+        .sort((a, b) => a.name.length - b.name.length)
         .map((m) => (
           <>
             <b className="bold-hint">

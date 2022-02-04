@@ -716,13 +716,15 @@ export function handleKeyStroke({
         parentInstruction.inlineMacros[cursorPositions[depth]].instruction;
       depth++;
     }
-    const found = macros.filter(
-      (m) =>
-        ((isInline && m.inline) || (!isInline && !m.inline)) &&
-        m.name
-          .toLocaleLowerCase()
-          .startsWith(macroSearchString.toLocaleLowerCase())
-    );
+    const found = macros
+      .filter(
+        (m) =>
+          ((isInline && m.inline) || (!isInline && !m.inline)) &&
+          m.name
+            .toLocaleLowerCase()
+            .startsWith(macroSearchString.toLocaleLowerCase())
+      )
+      .sort((a, b) => b.name.length - a.name.length);
     if (key.match(/^[ -~]$/)) {
       setMacroSearchString(macroSearchString + key);
     } else {
@@ -894,13 +896,15 @@ export function handleKeyStroke({
   }
 
   if (typeof variableSearchString !== "undefined") {
-    const found = visibleVariables.filter(
-      (m) =>
-        m.visible &&
-        m.name
-          .toLocaleLowerCase()
-          .startsWith(variableSearchString.toLocaleLowerCase())
-    );
+    const found = visibleVariables
+      .filter(
+        (m) =>
+          m.visible &&
+          m.name
+            .toLocaleLowerCase()
+            .startsWith(variableSearchString.toLocaleLowerCase())
+      )
+      .sort((a, b) => a.name.length - b.name.length);
     if (key !== " " && key.match(/^[ -~]$/)) {
       setVariableSearchString(variableSearchString + key);
     } else {
