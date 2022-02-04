@@ -41,7 +41,10 @@ function compileAsm(
   target: BackendTarget,
   fileName: string
 ) {
-  const [, pInstructions, pMaxMemory] = parse(instructionsToText(instructions));
+  const [, pInstructions, pMaxMemory] = parse(
+    instructionsToText(instructions),
+    target === "wasm" ? 32 : 8
+  );
   const compiled = compile(target, fileName, pInstructions, pMaxMemory);
   return compiled;
 }

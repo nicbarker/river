@@ -64,43 +64,37 @@ j20:
           or        r13b, byte [r12 + 33]
           mov       [r12 + 34], r13
 j23:                
-          ; 24: os stdout var 6
-          push      rbx
-          lea       rdi, [rel message]
-          mov       rsi, qword [r12 + 34]
-          call      _printf
-          pop       rbx
-          ; 25: compare var 6 == const 0
+          ; 24: compare var 6 == const 0
           mov       r13, [r12 + 34]
           mov       r14, 0
           cmp       r13, r14
-          jne       j27
-          ; 26: jump end
-          jmp       j28
-j27:                
-          ; 27: assign var 0 + var 1
+          jne       j26
+          ; 25: jump end
+          jmp       j27
+j26:                
+          ; 26: assign var 0 + var 1
           mov       r13, [r12]
           add       r13, qword [r12 + 8]
           mov       [r12], r13
-j28:                
-          ; 29: assign var 1 + const 1
+j27:                
+          ; 28: assign var 1 + const 1
           add       qword [r12 + 8], 1
-          ; 30: compare var 1 < const 1000
+          ; 29: compare var 1 < const 1000
           mov       r13, [r12 + 8]
           mov       r14, 1000
           cmp       r13, r14
-          jge       j32
-          ; 31: jump start
+          jge       j31
+          ; 30: jump start
           jmp       j5
+j31:                
 j32:                
-j33:                
-          ; 34: os stdout var 0
+          ; 33: os stdout var 0
           push      rbx
           lea       rdi, [rel message]
           mov       rsi, qword [r12]
           call      _printf
           pop       rbx
-j35:                
+j34:                
           ret       
                     
           section   .data

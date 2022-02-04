@@ -101,7 +101,7 @@ export type Scope = {
   closeInstruction: CompiledInstructionScope & { action: "close" };
 };
 
-export function parse(file: string) {
+export function parse(file: string, minRegisterSize: number = 8) {
   const lines = file.length === 0 ? [] : file.split("\n");
   const scopes: Scope[] = [];
   const scopesFinal: Scope[] = [];
@@ -179,7 +179,7 @@ export function parse(file: string) {
       }
       case "def": {
         const scope = scopes[scopes.length - 1];
-        const memory = parseInt(tokens[2], 10);
+        const memory = Math.max(parseInt(tokens[2], 10), minRegisterSize);
         maxMemory += memory;
         const newVarLocation = scope.stackOffset + scope.stackMemory;
         scope.variables.push(newVarLocation);

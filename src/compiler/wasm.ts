@@ -40,12 +40,12 @@ export function compileWasm(
       instruction.originalInstructionIndex,
       [],
     ];
-    instructionOutputs[1].push([
-      ,
-      `;; ${instructionIndex}: ${instruction.serialized}`,
-    ]);
     switch (instruction.instruction) {
       case "assign": {
+        instructionOutputs[1].push([
+          ,
+          `;; ${instructionIndex}: ${instruction.serialized}`,
+        ]);
         const targetSize = instruction.targetSize === 64 ? 64 : 32;
         const sourceSize = instruction.sourceSize === 64 ? 64 : 32;
         let source = "";
@@ -108,17 +108,23 @@ export function compileWasm(
           default:
             break;
         }
-        if (action) {
-          instructionOutputs[1].push([...indent, `i${sourceSize}.${action}`]);
+        if (targetSize === 64 && sourceSize === 32) {
+          instructionOutputs[1].push([...indent, `i64.extend_i32_u`]);
+        } else if (targetSize === 32 && sourceSize === 64) {
+          instructionOutputs[1].push([...indent, `i32.wrap_i64`]);
         }
-        instructionOutputs[1].push([
-          ...indent,
-          `i${Math.max(sourceSize, targetSize)}.store`,
-        ]);
+        if (action) {
+          instructionOutputs[1].push([...indent, `i${targetSize}.${action}`]);
+        }
+        instructionOutputs[1].push([...indent, `i${targetSize}.store`]);
 
         break;
       }
       case "jump": {
+        instructionOutputs[1].push([
+          ,
+          `;; ${instructionIndex}: ${instruction.serialized}`,
+        ]);
         let branch = "br";
         if (printEnd === 1) {
           branch = "br_if";
@@ -139,6 +145,10 @@ export function compileWasm(
         break;
       }
       case "compare": {
+        instructionOutputs[1].push([
+          ,
+          `;; ${instructionIndex}: ${instruction.serialized}`,
+        ]);
         let comp = "";
         switch (instruction.action) {
           case "==":
@@ -221,6 +231,10 @@ export function compileWasm(
         break;
       }
       case "os": {
+        instructionOutputs[1].push([
+          ,
+          `;; ${instructionIndex}: ${instruction.serialized}`,
+        ]);
         switch (instruction.action) {
           case "stdout": {
             switch (instruction.source) {
