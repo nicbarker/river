@@ -225,6 +225,27 @@ button {
   position: relative;
 }
 
+.indent {
+  position: relative;
+  height: 100%;
+  width: 30px;
+}
+
+.indent:after {
+  content: " ";
+  position: absolute;
+  right: 12px;
+  top: -2px;
+  width: 2px;
+  /* top: -15px; */
+  height: calc(100% + 4px);
+  border-right: 2px solid #307580;
+}
+
+.indent.compare:after {
+  border-right: 2px solid #308054;
+}
+
 .fragment.highlight:after {
   content: " ";
   position: absolute;

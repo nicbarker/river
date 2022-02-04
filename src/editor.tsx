@@ -269,7 +269,7 @@ function renderInstructions(
       (instruction.type === "blockInstruction" &&
         instruction.fragments[0]?.value === "close")
     ) {
-      indent -= 2;
+      indent -= 1;
     }
 
     let indentRendered = Array(Math.max(indent, 0))
@@ -280,13 +280,21 @@ function renderInstructions(
         </div>
       ));
 
+    if (li > 0 && instructions[li - 1].type === "compareInstruction") {
+      indentRendered.push(
+        <div className="indent compare" key={"compare"}>
+          {" "}
+        </div>
+      );
+    }
+
     if (
       (instruction.type === "scopeInstruction" &&
         instruction.fragments[1]?.value === "open") ||
       (instruction.type === "blockInstruction" &&
         instruction.fragments[0]?.value === "open")
     ) {
-      indent += 2;
+      indent += 1;
     }
 
     let contents: React.ReactElement;
