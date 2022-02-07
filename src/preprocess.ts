@@ -1,3 +1,4 @@
+import { VisibleVariable } from "./editor";
 import {
   Instruction,
   Fragment,
@@ -191,10 +192,17 @@ function macroAtLine(
 
 export function preProcess(
   instructions: Instruction[],
+  instructionIndex: number,
   macros: Macro[],
   sourceMacro?: Macro,
   expandMacros?: boolean
-): CollapsedInstruction[] {
+): {
+  collapsedInstructions: CollapsedInstruction[];
+  visibleVariables: VisibleVariable[];
+} {
+  const namedVariables: VisibleVariable[] = [];
+  const visibleVariables: VisibleVariable[] = [];
+  const scopeLengths: number[] = [0];
   const collapse: [number, number][][] = [];
   const blocks: [number, number][] = [];
   let unplacedInlineMacros: {
@@ -208,6 +216,42 @@ export function preProcess(
     .sort((a, b) => b.instructions.length - a.instructions.length);
   for (let i = 0; i < instructions.length; i++) {
     const instruction = instructions[i];
+    if (instruction.type === "defInstruction" && instruction.fragments[1]) {
+      const namedVariable = {
+        name: instruction.fragments[1].value || "",
+        index: scopeLengths.reduce((prev, curr) => prev + curr, 0),
+      };
+      if (collapsed.length <= instructionIndex) {
+        visibleVariables.push(namedVariable);
+      }
+      namedVariables.push(namedVariable);
+      scopeLengths[scopeLengths.length - 1]++;
+    } else if (
+      instruction.type === "scopeInstruction" &&
+      instruction.fragments[1]
+    ) {
+      if (instruction.fragments[1].value === "open") {
+        scopeLengths.push(0);
+      } else {
+        if (visibleVariables.length > 0) {
+          const scopeLength = scopeLengths.pop()!;
+          if (collapsed.length <= instructionIndex) {
+            visibleVariables.splice(-scopeLength, scopeLength);
+          }
+          namedVariables.splice(-scopeLength, scopeLength);
+        }
+      }
+    } else {
+      for (const fragment of instruction.fragments) {
+        if (
+          fragment?.type === "varType" &&
+          fragment.value === "var" &&
+          typeof fragment.stackPosition !== "undefined"
+        ) {
+          fragment.varName = namedVariables[fragment.stackPosition].name;
+        }
+      }
+    }
     const macroRanges = macroAtLine(
       instructions,
       i,
@@ -341,5 +385,8 @@ export function preProcess(
       }
     }
   }
-  return collapsed;
+  return {
+    collapsedInstructions: collapsed,
+    visibleVariables,
+  };
 }

@@ -10,7 +10,7 @@ import {
 } from "./editor_handler";
 import { preProcess } from "./preprocess";
 
-export type VisibleVariable = { index: number; name: string; visible: boolean };
+export type VisibleVariable = { index: number; name: string };
 function renderFragments(
   instruction: CollapsedInstruction,
   hasCursor: boolean,
@@ -122,7 +122,7 @@ function renderFragments(
                 </div>
               );
             } else {
-              fragmentContent = visibleVariables[fragment.stackPosition].name;
+              fragmentContent = fragment.varName;
             }
           }
           break;
@@ -401,8 +401,9 @@ export function Editor({
   const [variableSearchString, setVariableSearchString] = useState<
     string | undefined
   >(undefined);
-  const collapsedInstructions = preProcess(
+  const { collapsedInstructions, visibleVariables } = preProcess(
     instructions,
+    instructionIndex,
     macros,
     sourceMacro,
     macrosExpanded
@@ -443,21 +444,6 @@ export function Editor({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [instructions, instructions.length, instructionIndex]);
-
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const visibleVariables: VisibleVariable[] = [];
-  // Gather up visible variables from scope
-  for (let i = 0; i < instructions.length; i++) {
-    const inst = instructions[i];
-    if (inst.type === "defInstruction") {
-      const name = inst.fragments[1];
-      visibleVariables.push({
-        name: name?.value || "",
-        index: visibleVariables.length,
-        visible: i < instruction.lineNumber,
-      });
-    }
-  }
 
   useEffect(() => {
     const handle = (e: KeyboardEvent) => {

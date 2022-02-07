@@ -120,6 +120,7 @@ export type VarTypeVar = {
   type: "varType";
   value: "var";
   stackPosition?: number;
+  varName?: string; // The editor annotates variable references, which usually only have a stack position, with their name
 };
 export type VarTypeConst = {
   type: "varType";
@@ -900,12 +901,10 @@ export function handleKeyStroke({
 
   if (typeof variableSearchString !== "undefined") {
     const found = visibleVariables
-      .filter(
-        (m) =>
-          m.visible &&
-          m.name
-            .toLocaleLowerCase()
-            .startsWith(variableSearchString.toLocaleLowerCase())
+      .filter((m) =>
+        m.name
+          .toLocaleLowerCase()
+          .startsWith(variableSearchString.toLocaleLowerCase())
       )
       .sort((a, b) => a.name.length - b.name.length);
     if (key !== " " && key.match(/^[ -~]$/)) {
