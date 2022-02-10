@@ -103,6 +103,20 @@ button {
 .left .headerButton {
   color: #ccc;
   background: #2e3637;
+  border: 1px solid #414b4d;
+  border-width: 0 1px;
+}
+
+.left .headerButton:first-child {
+  border-left-width: 0;
+}
+
+.left .headerButton:last-child {
+  border-right-width: 0;
+}
+
+.left .headerButton:hover {
+  background: #343c3e;
 }
 
 .left .headerButton.active {
