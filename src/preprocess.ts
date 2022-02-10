@@ -32,13 +32,13 @@ function instructionsAreEqual(
     return false;
   }
   for (
-    let j = 0;
-    j < macroInstruction.fragments.length ||
-    j < programInstruction.fragments.length;
-    j++
+    let i = 0;
+    i < macroInstruction.fragments.length ||
+    i < programInstruction.fragments.length;
+    i++
   ) {
-    const fragment = programInstruction.fragments[j];
-    const macroFragment = macroInstruction.fragments[j];
+    const fragment = programInstruction.fragments[i];
+    const macroFragment = macroInstruction.fragments[i];
     // This allows us to modify return values or internal names in macros to prevent collisions
     if (
       fragment?.type === "defName" &&
@@ -76,7 +76,7 @@ function instructionsAreEqual(
       return false;
     }
 
-    if (!fragment || !programInstruction.fragments[j]) {
+    if (!fragment || !programInstruction.fragments[i]) {
       return false;
     }
   }

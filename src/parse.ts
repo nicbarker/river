@@ -12,7 +12,14 @@ import {
 const DEBUG = false;
 
 export function dec2bin(dec: number, pad: number) {
-  return (dec >>> 0).toString(2).padStart(pad, "0");
+  if (!Number.isSafeInteger(dec)) {
+    throw new TypeError("value must be a safe integer");
+  }
+
+  const negative = dec < 0;
+  const twosComplement = negative ? Number.MAX_SAFE_INTEGER + dec + 1 : dec;
+
+  return twosComplement.toString(2).padStart(pad, "0");
 }
 
 export type CompiledInstructionScope = {

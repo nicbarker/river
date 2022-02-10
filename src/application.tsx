@@ -116,11 +116,18 @@ export function App() {
 
   function runInInterpreter() {
     outputs.splice(0, outputs.length);
-    const [pScopes, pInstructions] = parse(instructionsToText(instructions));
-    const { peakMemory } = execute(pScopes, pInstructions, (output: Output) => {
-      outputs.push(output);
-      setOutputs(outputs.slice());
-    });
+    const [pScopes, pInstructions, maxMemory] = parse(
+      instructionsToText(instructions)
+    );
+    const { peakMemory } = execute(
+      pScopes,
+      maxMemory,
+      pInstructions,
+      (output: Output) => {
+        outputs.push(output);
+        setOutputs(outputs.slice());
+      }
+    );
     outputs.push({
       lineNumber: instructions.length,
       value: `Execution finished. Peak memory usage: ${peakMemory / 8} byte${

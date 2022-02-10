@@ -457,7 +457,17 @@ export function compileX64(
         let operands: string[] = [];
         switch (instruction.source) {
           case "const": {
-            source = instruction.value?.toString() || "0";
+            // 64 bit immediate values need to go through a register first
+            if (instruction.value && instruction.value > 2147483647) {
+              instructionOutputs[1].push([
+                ,
+                "mov",
+                formatOp("rax", instruction.value.toString()),
+              ]);
+              source = "rax";
+            } else {
+              source = instruction.value?.toString() || "0";
+            }
             switch (instruction.action) {
               case "=":
               case "+":
@@ -512,6 +522,25 @@ export function compileX64(
                   targetWithOffset,
                   registerWithSize("r13", instruction.targetSize),
                 ];
+                break;
+              }
+              case "/":
+              case "%": {
+                instructionOutputs[1].push([, "xor", "rdx, rdx"]);
+                instructionOutputs[1].push([
+                  ,
+                  sourceMov,
+                  formatOp(
+                    "r13",
+                    `${sourceSize} ${memoryOffset(instruction.address! / 8)}`
+                  ),
+                ]);
+                instructionOutputs[1].push([
+                  ,
+                  targetMov,
+                  formatOp("rax", `${targetSize} ${targetWithOffset}`),
+                ]);
+                operands = ["r13"];
                 break;
               }
               default: {

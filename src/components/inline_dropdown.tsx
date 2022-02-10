@@ -34,14 +34,12 @@ export function InlineDropdown(props: {
       className={classNames(props.classNames, "dropdownOuter", { open })}
     >
       {props.openLabel && open ? props.openLabel : props.label}
-      {open && (
-        <div
-          className="dropdownInner"
-          onClick={(e) => !props.dismissOnClick && e.stopPropagation()}
-        >
-          {props.children}
-        </div>
-      )}
+      <div
+        className={classNames("dropdownInner", { visible: open })}
+        onClick={(e) => !props.dismissOnClick && e.stopPropagation()}
+      >
+        {props.children}
+      </div>
     </button>
   );
 }

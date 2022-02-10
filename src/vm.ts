@@ -6,10 +6,12 @@ const DOUBLE_DEBUG = false;
 
 export function execute(
   scopesFinal: Scope[],
+  maxMemory: number,
   instructions: CompiledInstruction[],
   outputCallback: (output: Output) => void
 ) {
-  const memory = Array(200).fill(undefined);
+  console.log(maxMemory);
+  const memory = Array(maxMemory * 8).fill(undefined);
 
   function writeBinaryToStack(value: number[], offset: number) {
     for (let i = 0; i < value.length; i++) {
@@ -25,7 +27,7 @@ export function execute(
     instructionIndex++
   ) {
     executionCount++;
-    if (executionCount > 100000) {
+    if (executionCount > 1000000) {
       console.log("Error: possible infinite loop");
       break;
     }
@@ -79,12 +81,13 @@ export function execute(
         let sourceValue: number = 0;
         switch (instruction.source) {
           case "const": {
-            true &&
+            DEBUG &&
               console.log(
-                `set ${
-                  instruction.action
-                } with constant value ${instruction.value
-                  ?.toString()
+                `set ${instruction.action} with constant value ${dec2bin(
+                  instruction.value || 0,
+                  instruction.sourceSize
+                )
+                  .toString()
                   .padStart(instruction.sourceSize, "0")} at offset ${
                   instruction.target
                 }`
@@ -99,7 +102,7 @@ export function execute(
                 instruction.address! + instruction.sourceSize
               )
               .join("");
-            true &&
+            DEBUG &&
               console.log(
                 `set ${instruction.action} with var value ${value} from address ${instruction.address} at offset ${instruction.target}`
               );
@@ -112,12 +115,10 @@ export function execute(
         let toWrite = 0;
         switch (instruction.action) {
           case "=": {
-            console.log(targetValue, sourceValue);
             toWrite = sourceValue;
             break;
           }
           case "+": {
-            // console.log(targetValue, sourceValue);
             toWrite = targetValue + sourceValue;
             break;
           }
@@ -131,10 +132,12 @@ export function execute(
           }
           case "/": {
             toWrite = targetValue / sourceValue;
+            console.log(targetValue, "/", sourceValue, "=", toWrite);
             break;
           }
           case "%": {
             toWrite = targetValue % sourceValue;
+            console.log(targetValue, "%", sourceValue, "=", toWrite);
             break;
           }
           case "&&": {

@@ -14,4 +14,8 @@ export const examples = [
     name: "Even Fibonacci numbers",
     file: raw("./sum_of_even_fibonacci.rvr"),
   },
+  {
+    name: "Largest Prime Factor",
+    file: raw("./largest_prime_factor.rvr"),
+  },
 ];
