@@ -7,11 +7,11 @@ import { Editor } from "./editor";
 import { Instruction, Macro } from "./editor_handler";
 import { MacroEditor } from "./macro_editor";
 import { ASMTab, downloadFile } from "./asm_tab";
-import { standardMacros } from "./standard_macros";
 import { InlineDropdown } from "./components/inline_dropdown";
 import { DismissMap, DismissProvider } from "./context/dismiss_context";
 import classNames from "classnames";
 import { examples } from "./examples/examples";
+import { standardMacros } from "./macros/macros";
 
 export type Output = { value: string; lineNumber: number };
 

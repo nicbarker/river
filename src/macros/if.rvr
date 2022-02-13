@@ -1,0 +1,5 @@
+scope open
+compare _bool 0 == const 0
+jump end
+_block
+scope close

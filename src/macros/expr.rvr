@@ -1,0 +1,3 @@
+def output 64
+assign var 0 = _left 0
+assign var 0 _op _right 0

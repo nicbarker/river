@@ -1,10 +1,13 @@
 import {
+  AssignActionFragment,
   AssignInstruction,
+  ComparatorFragment,
   CompareInstruction,
   DefInstruction,
   Instruction,
   JumpInstruction,
   OSInstruction,
+  PlaceholderInstruction,
   ScopeInstruction,
   VarTypeFragment,
 } from "./editor_handler";
@@ -363,7 +366,7 @@ export function parse(file: string, minRegisterSize: number = 8) {
   return [scopesFinal, instructions, maxMemory] as const;
 }
 
-export function parseTextFile(file: string): Instruction[] {
+export function parseTextFile(file: string, isMacro?: boolean): Instruction[] {
   const lines = file.length === 0 ? [] : file.split("\n");
   const toReturn: Instruction[] = [];
   for (const line of lines) {
@@ -393,7 +396,6 @@ export function parseTextFile(file: string): Instruction[] {
         break;
       }
       case "assign": {
-        const actionFragment = tokens[3];
         let sourceFragment: VarTypeFragment;
         if (tokens[4] === "var") {
           sourceFragment = {
@@ -401,26 +403,53 @@ export function parseTextFile(file: string): Instruction[] {
             value: "var",
             stackPosition: parseInt(tokens[5], 10),
           };
-        } else {
+        } else if (tokens[4] === "const") {
           sourceFragment = {
             type: "varType",
             value: "const",
             constValue: parseInt(tokens[5], 10),
+          };
+        } else {
+          sourceFragment = {
+            type: "varType",
+            value: "_",
+            name: tokens[4].split("_")[1],
+          };
+        }
+        let targetFragment: VarTypeFragment;
+        if (tokens[1] === "var") {
+          targetFragment = {
+            type: "varType",
+            value: "var",
+            stackPosition: parseInt(tokens[2], 10),
+          };
+        } else {
+          targetFragment = {
+            type: "varType",
+            value: "_",
+            name: tokens[1].split("_")[1],
+          };
+        }
+
+        let assignActionFragment: AssignActionFragment;
+        if (!tokens[3].startsWith("_")) {
+          assignActionFragment = {
+            type: "assignAction",
+            value: tokens[3] as any,
+          };
+        } else {
+          assignActionFragment = {
+            type: "assignAction",
+            value: "_",
+            name: tokens[3].split("_")[1],
           };
         }
         const instruction: AssignInstruction = {
           type: "assignInstruction",
           fragments: [
             { type: "instruction", value: "assign" },
-            {
-              type: "varType",
-              value: "var",
-              stackPosition: parseInt(tokens[2], 10),
-            },
-            {
-              type: "assignAction",
-              value: actionFragment as any, // TODO fix types
-            },
+            targetFragment,
+            assignActionFragment,
             sourceFragment,
           ],
         };
@@ -447,13 +476,20 @@ export function parseTextFile(file: string): Instruction[] {
             value: "var",
             stackPosition: parseInt(tokens[2], 10),
           };
-        } else {
+        } else if (tokens[1] === "const") {
           targetFragment = {
             type: "varType",
             value: "const",
             constValue: parseInt(tokens[2], 10),
           };
+        } else {
+          targetFragment = {
+            type: "varType",
+            value: "_",
+            name: tokens[1].split("_")[1],
+          };
         }
+
         let sourceFragment: VarTypeFragment;
         if (tokens[4] === "var") {
           sourceFragment = {
@@ -461,22 +497,40 @@ export function parseTextFile(file: string): Instruction[] {
             value: "var",
             stackPosition: parseInt(tokens[5], 10),
           };
-        } else {
+        } else if (tokens[4] === "const") {
           sourceFragment = {
             type: "varType",
             value: "const",
             constValue: parseInt(tokens[5], 10),
           };
+        } else {
+          sourceFragment = {
+            type: "varType",
+            value: "_",
+            name: tokens[4].split("_")[1],
+          };
         }
+
+        let comparatorFragment: ComparatorFragment;
+        if (!tokens[3].startsWith("_")) {
+          comparatorFragment = {
+            type: "comparator",
+            value: tokens[3] as any, // todo: fix types,
+          };
+        } else {
+          comparatorFragment = {
+            type: "comparator",
+            value: "_",
+            name: tokens[3].split("_")[1],
+          };
+        }
+
         const instruction: CompareInstruction = {
           type: "compareInstruction",
           fragments: [
             { type: "instruction", value: "compare" },
             targetFragment,
-            {
-              type: "comparator",
-              value: tokens[3] as any,
-            },
+            comparatorFragment,
             sourceFragment,
           ],
         };
@@ -517,10 +571,23 @@ export function parseTextFile(file: string): Instruction[] {
         break;
       }
       default:
+        if (tokens[0].startsWith("_")) {
+          const instruction: PlaceholderInstruction = {
+            type: "placeholderInstruction",
+            fragments: [
+              {
+                type: "instruction",
+                value: "_",
+                name: tokens[0].split("_")[1],
+              },
+            ],
+          };
+          toReturn.push(instruction);
+        }
         break;
     }
   }
-  if (toReturn[toReturn.length - 1].type !== "emptyInstruction") {
+  if (!isMacro && toReturn[toReturn.length - 1].type !== "emptyInstruction") {
     toReturn.push({ type: "emptyInstruction", fragments: [undefined] });
   }
   return toReturn;

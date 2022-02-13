@@ -10,7 +10,6 @@ export function execute(
   instructions: CompiledInstruction[],
   outputCallback: (output: Output) => void
 ) {
-  console.log(maxMemory);
   const memory = Array(maxMemory * 8).fill(undefined);
 
   function writeBinaryToStack(value: number[], offset: number) {
@@ -132,12 +131,10 @@ export function execute(
           }
           case "/": {
             toWrite = targetValue / sourceValue;
-            console.log(targetValue, "/", sourceValue, "=", toWrite);
             break;
           }
           case "%": {
             toWrite = targetValue % sourceValue;
-            console.log(targetValue, "%", sourceValue, "=", toWrite);
             break;
           }
           case "&&": {
