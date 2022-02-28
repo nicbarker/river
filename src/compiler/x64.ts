@@ -1,5 +1,6 @@
 /* eslint-disable no-sparse-arrays */
 import { CompiledInstruction } from "../parse";
+import { NumberType } from "../types/river_types";
 import { ASMBlock, ASMLine } from "./compiler";
 
 function registerWithSize(reg: string, size: number) {
@@ -309,34 +310,120 @@ function registerWithSize(reg: string, size: number) {
       }
       break;
     }
+    case "xmm0":
+    case "xmm1":
+      return reg;
   }
   return output;
 }
 
-function moveAndLabelForSize(instructionSize: number) {
+function moveAndLabelForSize(instructionSize: number, numberType: NumberType) {
   let size = "";
   let mov = "";
   switch (instructionSize) {
     case 8:
       size = "byte";
-      mov = "movsx";
+      switch (numberType) {
+        case NumberType.UINT:
+          mov = "movzx";
+          break;
+        case NumberType.INT:
+          mov = "movsx";
+          break;
+      }
       break;
     case 16:
       size = "word";
-      mov = "movsx";
+      switch (numberType) {
+        case NumberType.UINT:
+          mov = "movzx";
+          break;
+        case NumberType.INT:
+          mov = "movsx";
+          break;
+      }
       break;
     case 32:
       size = "dword";
-      mov = "movsxd";
+      switch (numberType) {
+        case NumberType.UINT:
+          mov = "mov";
+          break;
+        case NumberType.INT:
+          mov = "movsxd";
+          break;
+        case NumberType.FLOAT:
+          mov = "movss";
+          break;
+      }
       break;
     case 64:
       size = "qword";
-      mov = "mov";
+      switch (numberType) {
+        case NumberType.UINT:
+        case NumberType.INT:
+          mov = "mov";
+          break;
+        case NumberType.FLOAT:
+          mov = "movsd";
+          break;
+      }
       break;
     // default:
     //   throw Error(`Bad size ${instructionSize} passed to moveAndLabelForSize`);
   }
   return [mov, size];
+}
+
+function operatorForType(
+  operator: string,
+  numberType: NumberType,
+  size: number
+) {
+  switch (operator) {
+    case "+": {
+      switch (numberType) {
+        case NumberType.UINT:
+        case NumberType.INT:
+          return "add";
+        case NumberType.FLOAT:
+          return size === 32 ? "addss" : "addsd";
+      }
+      break;
+    }
+    case "-": {
+      switch (numberType) {
+        case NumberType.UINT:
+        case NumberType.INT:
+          return "sub";
+        case NumberType.FLOAT:
+          return size === 32 ? "subss" : "subsd";
+      }
+      break;
+    }
+    case "*": {
+      switch (numberType) {
+        case NumberType.UINT:
+          return "mul";
+        case NumberType.INT:
+          return "imul";
+        case NumberType.FLOAT:
+          return size === 32 ? "mulss" : "mulsd";
+      }
+      break;
+    }
+    case "/": {
+      switch (numberType) {
+        case NumberType.UINT:
+          return "div";
+        case NumberType.INT:
+          return "idiv";
+        case NumberType.FLOAT:
+          return size === 32 ? "divss" : "divsd";
+      }
+      break;
+    }
+  }
 }
 
 function formatOp(firstOperand: string, secondOperand?: string) {
@@ -360,17 +447,21 @@ const nasmInstructions = (target: x64Flavour, fileName: string) => {
   }
 };
 
-function syscallArgumentRegisters(target: x64Flavour, index: number) {
+function syscallArgumentRegisters(
+  target: x64Flavour,
+  index: number,
+  numberType: NumberType
+) {
   const isMac = target === "x64_OSX";
   switch (index) {
     case 0:
       return isMac ? "rdi" : "rcx";
     case 1:
-      return isMac ? "rsi" : "rdx";
+      return numberType === NumberType.FLOAT ? "xmm0" : isMac ? "rsi" : "rdx";
     case 2:
-      return isMac ? "rdx" : "r8";
+      return numberType === NumberType.FLOAT ? "xmm1" : isMac ? "rdx" : "r8";
     case 3:
-      return isMac ? "r10" : "r9";
+      return numberType === NumberType.FLOAT ? "xmm2" : isMac ? "r10" : "r9";
   }
 }
 
@@ -408,7 +499,13 @@ export function compileX64(
         [, "section", ".text"],
         [`${mainLabel}:`],
         preSysCall,
-        [, "mov", `${syscallArgumentRegisters(target, 0)}, ${maxMemory / 8}`],
+        [
+          ,
+          "mov",
+          `${syscallArgumentRegisters(target, 0, NumberType.UINT)}, ${
+            maxMemory / 8
+          }`,
+        ],
         [, "call", `${mallocLabel}`],
         postSysCall,
         [, "mov", "r12, rax"],
@@ -440,246 +537,235 @@ export function compileX64(
           ,
           `; ${instructionIndex}: ${instruction.serialized}`,
         ]);
-        const [sourceMov, sourceSize] = moveAndLabelForSize(
-          instruction.sourceSize
+        const [rightMov, rightSize] = moveAndLabelForSize(
+          instruction.right.size,
+          instruction.right.numberType
         );
-        const [targetMov, targetSize] = moveAndLabelForSize(
-          instruction.targetSize
+        const [leftMov, leftSize] = moveAndLabelForSize(
+          instruction.left.size,
+          instruction.left.numberType
         );
-        let source = "";
-        let target = "";
-        let targetWithOffset: number | string = "";
-        const targetAddress = instruction.target / 8;
-        target = `${targetSize} [r12${
-          targetAddress > 0 ? " + " + targetAddress : ""
-        }]`;
-        targetWithOffset = memoryOffset(instruction.target / 8);
-        let operands: string[] = [];
-        switch (instruction.source) {
-          case "const": {
-            // 64 bit immediate values need to go through a register first
-            if (instruction.value && instruction.value > 2147483647) {
-              instructionOutputs[1].push([
-                ,
-                "mov",
-                formatOp("rax", instruction.value.toString()),
-              ]);
-              source = "rax";
-            } else {
-              source = instruction.value?.toString() || "0";
-            }
-            switch (instruction.action) {
-              case "=":
-              case "+":
-              case "-":
-              case "&&":
-              case "||": {
-                operands = [target, source];
-                break;
-              }
-              case "*": {
-                instructionOutputs[1].push([
-                  ,
-                  sourceMov,
-                  formatOp("r13", targetWithOffset),
-                ]);
-                operands = ["r13", source];
-                break;
-              }
-              case "/":
-              case "%": {
-                instructionOutputs[1].push([, "xor", "rdx, rdx"]);
-                instructionOutputs[1].push([
-                  ,
-                  sourceMov,
-                  formatOp("r13", source),
-                ]);
-                instructionOutputs[1].push([
-                  ,
-                  targetMov,
-                  formatOp("rax", targetWithOffset),
-                ]);
-                operands = ["r13"];
-                break;
-              }
-              default:
-                break;
-            }
-            break;
-          }
-          case "var": {
-            switch (instruction.action) {
-              case "=": {
-                instructionOutputs[1].push([
-                  ,
-                  sourceMov,
-                  formatOp(
-                    "r13",
-                    `${sourceSize} ${memoryOffset(instruction.address! / 8)}`
-                  ),
-                ]);
-                operands = [
-                  targetWithOffset,
-                  registerWithSize("r13", instruction.targetSize),
-                ];
-                break;
-              }
-              case "/":
-              case "%": {
-                instructionOutputs[1].push([, "xor", "rdx, rdx"]);
-                instructionOutputs[1].push([
-                  ,
-                  sourceMov,
-                  formatOp(
-                    "r13",
-                    `${sourceSize} ${memoryOffset(instruction.address! / 8)}`
-                  ),
-                ]);
-                instructionOutputs[1].push([
-                  ,
-                  targetMov,
-                  formatOp("rax", `${targetSize} ${targetWithOffset}`),
-                ]);
-                operands = ["r13"];
-                break;
-              }
-              default: {
-                instructionOutputs[1].push([
-                  ,
-                  targetMov,
-                  formatOp("r13", targetWithOffset),
-                ]);
-                operands = [
-                  registerWithSize("r13", instruction.sourceSize),
-                  `${sourceSize} ${memoryOffset(instruction.address! / 8)}`,
-                ];
-              }
-            }
-            break;
-          }
-          default:
-            break;
-        }
-        switch (instruction.action) {
-          case "=": {
+        let right = "";
+        const leftWithOffset = memoryOffset(instruction.left.value / 8);
+        const leftWithSize = `${leftSize} ${leftWithOffset}`;
+        if (instruction.right.type === "const") {
+          right = instruction.right.value.toString() || "0";
+          // 64 bit immediate values need to go through a register first
+          if (
+            (instruction.right.numberType === NumberType.INT &&
+              instruction.right.value > 2147483647) ||
+            (instruction.right.numberType === NumberType.UINT &&
+              instruction.right.value > 4294967295)
+          ) {
             instructionOutputs[1].push([
               ,
               "mov",
-              formatOp(operands[0], operands[1]),
+              formatOp("r14", instruction.right.value.toString()),
             ]);
-            break;
-          }
-          case "+": {
-            instructionOutputs[1].push([
-              ,
-              "add",
-              formatOp(operands[0], operands[1]),
-            ]);
-            if (instruction.source === "var") {
+            right = "r14";
+          } else if (instruction.right.numberType === NumberType.FLOAT) {
+            if (instruction.right.size === 64) {
+              // TODO move these to data section
               instructionOutputs[1].push([
                 ,
                 "mov",
                 formatOp(
-                  targetWithOffset,
-                  registerWithSize("r13", instruction.targetSize)
+                  "r14",
+                  `__?float64?__(${
+                    !right.includes(".") ? right + ".0" : right
+                  })`
                 ),
               ]);
+              right = "r14";
+            } else {
+              right = `__?float32?__(${
+                !right.includes(".") ? right + ".0" : right
+              })`;
             }
-            break;
           }
-          case "-": {
-            instructionOutputs[1].push([
-              ,
-              "sub",
-              formatOp(operands[0], operands[1]),
-            ]);
-            if (instruction.source === "var") {
+        } else {
+          let rightWithSize = `${rightSize} ${memoryOffset(
+            instruction.right.value / 8
+          )}`;
+          right = rightWithSize;
+          // Convert between different data types and sizes
+          if (instruction.right.numberType === NumberType.FLOAT) {
+            if (instruction.left.numberType !== NumberType.FLOAT) {
               instructionOutputs[1].push([
                 ,
-                "mov",
+                `cvtts${instruction.right.size === 64 ? "d" : "s"}2si`,
+                formatOp("r14", rightWithSize),
+              ]);
+              right = "r14";
+            } else if (instruction.left.size !== instruction.right.size) {
+              instructionOutputs[1].push([
+                ,
+                `cvt${instruction.left.size === 32 ? "sd2ss" : "ss2sd"}`,
+                formatOp("xmm1", rightWithSize),
+              ]);
+              right = "xmm1";
+            }
+            // Right is int and left is float
+          } else {
+            if (instruction.left.numberType === NumberType.FLOAT) {
+              if (instruction.right.size < 32) {
+                instructionOutputs[1].push([
+                  ,
+                  rightMov,
+                  formatOp("r14", rightWithSize),
+                ]);
+                rightWithSize = "r14";
+              }
+              instructionOutputs[1].push([
+                ,
+                `cvtsi2s${instruction.left.size === 32 ? "s" : "d"}`,
+                formatOp("xmm1", rightWithSize),
+              ]);
+              right = "xmm1";
+            }
+          }
+        }
+
+        let finalMov: string | undefined;
+        switch (instruction.action) {
+          case "=":
+            finalMov = "mov";
+            break;
+          case "-":
+          case "+": {
+            if (instruction.left.numberType === NumberType.FLOAT) {
+              instructionOutputs[1].push([
+                ,
+                leftMov,
+                formatOp("xmm0", leftWithOffset),
+              ]);
+              instructionOutputs[1].push([
+                ,
+                operatorForType(
+                  instruction.action,
+                  instruction.left.numberType,
+                  instruction.left.size
+                ),
+                formatOp("xmm0", right),
+              ]);
+              finalMov = leftMov;
+              right = "xmm0";
+            } else {
+              instructionOutputs[1].push([
+                ,
+                operatorForType(
+                  instruction.action,
+                  instruction.left.numberType,
+                  instruction.left.size
+                ),
                 formatOp(
-                  targetWithOffset,
-                  registerWithSize("r13", instruction.targetSize)
+                  `${leftSize} ${leftWithOffset}`,
+                  instruction.right.type === "var"
+                    ? registerWithSize(right, instruction.left.size)
+                    : right
                 ),
               ]);
             }
             break;
           }
           case "*": {
+            const reg =
+              instruction.left.numberType === NumberType.FLOAT ? "xmm0" : "r13";
             instructionOutputs[1].push([
               ,
-              "imul",
-              formatOp(operands[0], operands[1]),
+              leftMov,
+              formatOp(reg, leftWithOffset),
             ]);
             instructionOutputs[1].push([
               ,
-              "mov",
-              formatOp(
-                targetWithOffset,
-                registerWithSize("r13", instruction.targetSize)
+              operatorForType(
+                "*",
+                instruction.left.numberType,
+                instruction.left.size
               ),
+              formatOp(reg, right),
             ]);
+            finalMov = "mov";
+            right = registerWithSize(reg, instruction.left.size);
             break;
           }
+          case "%":
           case "/": {
-            instructionOutputs[1].push([, "idiv", operands[0]]);
-            instructionOutputs[1].push([
-              ,
-              "mov",
-              formatOp(
-                targetWithOffset,
-                registerWithSize("rax", instruction.targetSize)
-              ),
-            ]);
+            if (instruction.left.numberType !== NumberType.FLOAT) {
+              instructionOutputs[1].push([, "xor", "rdx, rdx"]);
+              right !== "r13" &&
+                instructionOutputs[1].push([, "mov", formatOp("r13", right)]);
+              instructionOutputs[1].push([
+                ,
+                leftMov,
+                formatOp("rax", leftWithSize),
+              ]);
+              instructionOutputs[1].push([
+                ,
+                operatorForType(
+                  "/",
+                  instruction.left.numberType,
+                  instruction.left.size
+                ),
+                "r13",
+              ]);
+              finalMov = "mov";
+              right = registerWithSize(
+                instruction.action === "/" ? "rax" : "rdx",
+                instruction.left.size
+              );
+            } else {
+              instructionOutputs[1].push([
+                ,
+                leftMov,
+                formatOp("xmm0", leftWithOffset),
+              ]);
+              right !== "xmm1" &&
+                instructionOutputs[1].push([
+                  ,
+                  rightMov,
+                  formatOp("xmm1", right),
+                ]);
+              instructionOutputs[1].push([
+                ,
+                operatorForType(
+                  "/",
+                  instruction.left.numberType,
+                  instruction.left.size
+                ),
+                formatOp("xmm0", "xmm1"),
+              ]);
+              finalMov = leftMov;
+              right = "xmm0";
+            }
             break;
           }
-          case "%": {
-            instructionOutputs[1].push([, "idiv", operands[0]]);
-            instructionOutputs[1].push([
-              ,
-              "mov",
-              formatOp(
-                targetWithOffset,
-                registerWithSize("rdx", instruction.targetSize)
-              ),
-            ]);
-            break;
-          }
+          case "||":
           case "&&": {
             instructionOutputs[1].push([
               ,
-              "and",
-              formatOp(operands[0], operands[1]),
-            ]);
-            instructionOutputs[1].push([
-              ,
-              "mov",
-              formatOp(
-                targetWithOffset,
-                registerWithSize("r13", instruction.targetSize)
-              ),
-            ]);
-            break;
-          }
-          case "||": {
-            instructionOutputs[1].push([
-              ,
-              "or",
-              formatOp(operands[0], operands[1]),
-            ]);
-            instructionOutputs[1].push([
-              ,
-              "mov",
-              formatOp(
-                targetWithOffset,
-                registerWithSize("r13", instruction.targetSize)
-              ),
+              instruction.action === "&&" ? "and" : "or",
+              formatOp(leftWithOffset, right),
             ]);
             break;
           }
           default:
             break;
         }
+
+        if (finalMov) {
+          instructionOutputs[1].push([
+            ,
+            finalMov,
+            formatOp(
+              finalMov !== "movss" && finalMov !== "movsd"
+                ? leftWithSize
+                : leftWithOffset,
+              right
+            ),
+          ]);
+        }
+
         break;
       }
       case "jump": {
@@ -728,7 +814,7 @@ export function compileX64(
         }
         let leftReg = "r13";
         let rightReg = "r14";
-        switch (instruction.left.source) {
+        switch (instruction.left.type) {
           case "const": {
             instructionOutputs[1].push([
               ,
@@ -741,14 +827,14 @@ export function compileX64(
             instructionOutputs[1].push([
               ,
               "mov",
-              formatOp("r13", memoryOffset(instruction.left.address! / 8)),
+              formatOp("r13", memoryOffset(instruction.left.value / 8)),
             ]);
             break;
           }
           default:
             break;
         }
-        switch (instruction.right.source) {
+        switch (instruction.right.type) {
           case "const": {
             instructionOutputs[1].push([
               ,
@@ -761,7 +847,7 @@ export function compileX64(
             instructionOutputs[1].push([
               ,
               "mov",
-              formatOp("r14", memoryOffset(instruction.right.address! / 8)),
+              formatOp("r14", memoryOffset(instruction.right.value / 8)),
             ]);
             break;
           }
@@ -780,22 +866,39 @@ export function compileX64(
         ]);
         switch (instruction.action) {
           case "stdout": {
-            const [mov, size] = moveAndLabelForSize(instruction.size);
+            let [mov, size] = moveAndLabelForSize(
+              instruction.size,
+              instruction.numberType
+            );
+            // Need to convert to double precision float to use printf
+            if (
+              instruction.numberType === NumberType.FLOAT &&
+              instruction.size === 32
+            ) {
+              mov = "cvtss2sd";
+            }
             instructionOutputs[1].push(preSysCall);
             instructionOutputs[1].push([
               ,
               "lea",
-              `${syscallArgumentRegisters(target, 0)}, [rel message]`,
+              `${syscallArgumentRegisters(
+                target,
+                0,
+                NumberType.UINT
+              )}, [rel format${
+                instruction.numberType === NumberType.FLOAT ? "F" : "I"
+              }]`,
             ]);
-            switch (instruction.source) {
+            switch (instruction.type) {
               case "var": {
                 instructionOutputs[1].push([
                   ,
                   mov,
                   `${syscallArgumentRegisters(
                     target,
-                    1
-                  )}, ${size} ${memoryOffset(instruction.address! / 8)}`,
+                    1,
+                    instruction.numberType
+                  )}, ${size} ${memoryOffset(instruction.value / 8)}`,
                 ]);
                 break;
               }
@@ -803,9 +906,11 @@ export function compileX64(
                 instructionOutputs[1].push([
                   ,
                   mov,
-                  `${syscallArgumentRegisters(target, 1)}, ${
-                    instruction.value
-                  }`,
+                  `${syscallArgumentRegisters(
+                    target,
+                    1,
+                    instruction.numberType
+                  )}, ${instruction.value}`,
                 ]);
               }
             }
@@ -834,7 +939,13 @@ export function compileX64(
 
   output.push([
     -1,
-    [[, "ret"], [], [, "section", ".data"], ["message:", "db", `"%d", 0x0a`]],
+    [
+      [, "ret"],
+      [],
+      [, "section", ".data"],
+      ["formatI:", "db", `"%d", 10, 0`],
+      ["formatF:", "db", `"%f", 10, 0`],
+    ],
   ]);
   return output;
 }

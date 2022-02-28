@@ -11,6 +11,11 @@ import {
   ScopeInstruction,
   VarTypeFragment,
 } from "./editor_handler";
+import {
+  baseTypes,
+  getBaseTypeWithName,
+  NumberType,
+} from "./types/river_types";
 
 const DEBUG = false;
 
@@ -43,28 +48,34 @@ export type CompiledInstructionScope = {
 export type CompiledInstructionAssign = {
   instruction: "assign";
   action: string;
-  target: number;
-  targetSize: number;
-  source: string;
-  sourceSize: number;
-  value?: number;
-  address?: number;
+  left: {
+    type: "var";
+    value: number;
+    size: number;
+    numberType: NumberType;
+  };
+  right: {
+    type: "var" | "const";
+    value: number;
+    size: number;
+    numberType: NumberType;
+  };
 } & CompiledInstructionSharedAttributes;
 
 export type CompiledInstructionCompare = {
   instruction: "compare";
   action: string;
   left: {
-    source: string;
+    type: "var" | "const";
+    value: number;
     size: number;
-    value?: number;
-    address?: number;
+    numberType: NumberType;
   };
   right: {
-    source: string;
+    type: "var" | "const";
+    value: number;
     size: number;
-    value?: number;
-    address?: number;
+    numberType: NumberType;
   };
 } & CompiledInstructionSharedAttributes;
 
@@ -81,10 +92,10 @@ export type CompiledInstructionVoid = {
 export type CompiledInstructionOs = {
   instruction: "os";
   action: string;
-  source: "var" | "const";
-  value?: number;
-  address?: number;
+  type: "var" | "const";
+  value: number;
   size: number;
+  numberType: NumberType;
 } & CompiledInstructionSharedAttributes;
 
 export type CompiledInstructionSharedAttributes = {
@@ -102,8 +113,6 @@ export type CompiledInstruction =
 
 export type Scope = {
   name: string;
-  variables: number[];
-  sizes: number[];
   stackOffset: number;
   stackMemory: number;
   isLoop?: boolean;
@@ -136,9 +145,6 @@ export function parse(file: string, minRegisterSize: number = 8) {
     instructions.push(instruction);
     const scope: Scope = {
       name: "_",
-      variables:
-        scopes.length > 0 ? [...scopes[scopes.length - 1].variables] : [],
-      sizes: scopes.length > 0 ? [...scopes[scopes.length - 1].sizes] : [],
       stackOffset,
       stackMemory: 0,
       openInstruction: instruction,
@@ -187,13 +193,12 @@ export function parse(file: string, minRegisterSize: number = 8) {
         }
         break;
       }
+      // 0   1     2   3
+      // def local u64 64
       case "def": {
         const scope = scopes[scopes.length - 1];
-        const memory = Math.max(parseInt(tokens[2], 10), minRegisterSize);
+        const memory = Math.max(parseInt(tokens[3], 10), minRegisterSize);
         maxMemory += memory;
-        const newVarLocation = scope.stackOffset + scope.stackMemory;
-        scope.variables.push(newVarLocation);
-        scope.sizes.push(memory);
         scope.stackMemory += memory;
         instructions.push({
           instruction: "void",
@@ -202,35 +207,43 @@ export function parse(file: string, minRegisterSize: number = 8) {
         });
         break;
       }
+      // 0      1   2  3 4  5
+      // assign u64 16 + u8 32
       case "assign": {
-        const scope = scopes[scopes.length - 1];
-        const targetIndex = parseInt(tokens[2], 10);
-        const target = scope.variables[targetIndex];
-        const targetSize = scope.sizes[targetIndex];
-        const source = tokens[4];
+        const leftType = baseTypes.find((t) => t.name === tokens[1]);
         const instruction: CompiledInstructionAssign = {
           instruction: "assign",
           action: tokens[3],
-          target,
-          targetSize,
-          source,
-          sourceSize: 0,
+          left: {
+            type: "var",
+            value: parseInt(tokens[2], 10),
+            size: leftType ? Math.max(leftType.size, minRegisterSize) : 0,
+            numberType: leftType ? leftType.numberType : NumberType.UINT,
+          },
+          right: {
+            type: tokens[4] === "const" ? "const" : "var",
+            value: parseInt(tokens[5], 10),
+            size: 0,
+            numberType: leftType ? leftType.numberType : NumberType.UINT,
+          },
           serialized: line,
           originalInstructionIndex: i,
         };
-        switch (source) {
+        switch (tokens[4]) {
           case "const": {
-            instruction.value = parseInt(tokens[5], 10);
-            instruction.sourceSize = instruction.targetSize;
-            break;
-          }
-          case "var": {
-            const targetIndex = parseInt(tokens[5], 10);
-            instruction.address = scope.variables[targetIndex];
-            instruction.sourceSize = scope.sizes[targetIndex];
+            instruction.right.size = instruction.left.size;
+            // Todo fix mixture of float and signed int
+            instruction.right.numberType = instruction.left.numberType;
             break;
           }
           default:
+            const rightType = baseTypes.find((t) => t.name === tokens[4]);
+            instruction.right.size = rightType
+              ? Math.max(rightType.size, minRegisterSize)
+              : 0;
+            instruction.right.numberType = rightType
+              ? rightType.numberType
+              : NumberType.UINT;
             break;
         }
         instructions.push(instruction);
@@ -251,94 +264,58 @@ export function parse(file: string, minRegisterSize: number = 8) {
         instructions.push(jump);
         break;
       }
+      // 0       1   2  3  4  5
+      // compare u64 16 == u8 32
       case "compare": {
+        // TODO: fix const floats and signed ints
+        const leftType =
+          tokens[1] === "const"
+            ? { size: 64, numberType: NumberType.UINT }
+            : baseTypes.find((t) => t.name === tokens[1]);
+        const rightType =
+          tokens[4] === "const"
+            ? { size: 64, numberType: NumberType.UINT }
+            : baseTypes.find((t) => t.name === tokens[4]);
         const instruction: CompiledInstructionCompare = {
           instruction: "compare",
           action: tokens[3],
           left: {
-            source: tokens[1],
-            size: 64,
+            type: tokens[1] === "const" ? "const" : "var",
+            value: parseInt(tokens[2], 10),
+            size: leftType ? Math.max(leftType.size, minRegisterSize) : 0,
+            numberType: leftType ? leftType.numberType : NumberType.UINT,
           },
           right: {
-            source: tokens[4],
-            size: 64,
+            type: tokens[4] === "const" ? "const" : "var",
+            value: parseInt(tokens[5], 10),
+            size: rightType ? Math.max(rightType.size, minRegisterSize) : 0,
+            numberType: rightType ? rightType.numberType : NumberType.UINT,
           },
           serialized: line,
           originalInstructionIndex: i,
         };
-        const scope = scopes[scopes.length - 1];
-        switch (tokens[1]) {
-          case "const": {
-            if (instruction.left) {
-              instruction.left.value = parseInt(tokens[2], 10);
-            }
-            break;
-          }
-          case "var": {
-            const targetIndex = parseInt(tokens[2], 10);
-            const size = scope.sizes[targetIndex];
-            if (instruction.left) {
-              instruction.left.address = scope.variables[targetIndex];
-              instruction.left.size = size;
-            }
-            break;
-          }
-          default:
-            break;
-        }
-        switch (tokens[4]) {
-          case "const": {
-            if (instruction.right) {
-              instruction.right.value = parseInt(tokens[5], 10);
-            }
-            break;
-          }
-          case "var": {
-            const targetIndex = parseInt(tokens[5], 10);
-            const size = scope.sizes[targetIndex];
-            if (instruction.right) {
-              instruction.right.address = scope.variables[targetIndex];
-              instruction.right.size = size;
-            }
-            break;
-          }
-          default:
-            break;
-        }
         instructions.push(instruction);
         break;
       }
+      // 0  1      2  3
+      // os stdout u8 48
       case "os": {
         switch (tokens[1]) {
           case "stdout": {
+            const stdoutType =
+              tokens[2] === "const"
+                ? { size: 64, numberType: NumberType.UINT }
+                : baseTypes.find((t) => t.name === tokens[2])!;
             const instruction: CompiledInstructionOs = {
               instruction: "os",
               action: "stdout",
-              size: 0,
-              source: "var",
+              type: tokens[2] === "const" ? "const" : "var",
+              value: parseInt(tokens[3], 10),
+              size: Math.max(stdoutType.size, minRegisterSize),
+              numberType: stdoutType.numberType,
               serialized: line,
               originalInstructionIndex: i,
             };
-            switch (tokens[2]) {
-              case "const": {
-                // TODO: fix handling of primitives in stdout
-                instruction.value = parseInt(tokens[3]);
-                instruction.size = 64;
-                instruction.source = "const";
-                break;
-              }
-              case "var": {
-                const scope = scopes[scopes.length - 1];
-                const sourceIndex = parseInt(tokens[3], 10);
-                const size = scope.sizes[sourceIndex];
-                instruction.address = scope.variables[sourceIndex];
-                instruction.size = size;
-                instruction.source = "var";
-                break;
-              }
-              default:
-                break;
-            }
             instructions.push(instruction);
             break;
           }
@@ -389,45 +366,57 @@ export function parseTextFile(file: string, isMacro?: boolean): Instruction[] {
           fragments: [
             { type: "instruction", value: "def" },
             { type: "defName", value: tokens[1] },
-            { type: "size", value: parseInt(tokens[2], 10) },
+            {
+              type: "defType",
+              value: tokens[2],
+              size: parseInt(tokens[3], 10),
+            },
           ],
         };
         toReturn.push(instruction);
         break;
       }
+      // 0      1   2  3 4  5
+      // assign u64 16 + u8 32
       case "assign": {
-        let sourceFragment: VarTypeFragment;
-        if (tokens[4] === "var") {
-          sourceFragment = {
-            type: "varType",
-            value: "var",
-            stackPosition: parseInt(tokens[5], 10),
-          };
-        } else if (tokens[4] === "const") {
-          sourceFragment = {
+        let rightFragment: VarTypeFragment;
+        if (tokens[4] === "const") {
+          rightFragment = {
             type: "varType",
             value: "const",
             constValue: parseInt(tokens[5], 10),
           };
-        } else {
-          sourceFragment = {
+        } else if (tokens[4].startsWith("_")) {
+          rightFragment = {
             type: "varType",
             value: "_",
             name: tokens[4].split("_")[1],
           };
-        }
-        let targetFragment: VarTypeFragment;
-        if (tokens[1] === "var") {
-          targetFragment = {
+        } else {
+          const varType = getBaseTypeWithName(tokens[4]);
+          rightFragment = {
             type: "varType",
             value: "var",
-            stackPosition: parseInt(tokens[2], 10),
+            numberType: varType?.numberType,
+            size: varType?.size,
+            offset: parseInt(tokens[5], 10),
           };
-        } else {
-          targetFragment = {
+        }
+        let leftFragment: VarTypeFragment;
+        if (tokens[1].startsWith("_")) {
+          leftFragment = {
             type: "varType",
             value: "_",
             name: tokens[1].split("_")[1],
+          };
+        } else {
+          const varType = getBaseTypeWithName(tokens[1]);
+          leftFragment = {
+            type: "varType",
+            value: "var",
+            numberType: varType?.numberType,
+            size: varType?.size,
+            offset: parseInt(tokens[2], 10),
           };
         }
 
@@ -448,9 +437,9 @@ export function parseTextFile(file: string, isMacro?: boolean): Instruction[] {
           type: "assignInstruction",
           fragments: [
             { type: "instruction", value: "assign" },
-            targetFragment,
+            leftFragment,
             assignActionFragment,
-            sourceFragment,
+            rightFragment,
           ],
         };
         toReturn.push(instruction);
@@ -468,46 +457,54 @@ export function parseTextFile(file: string, isMacro?: boolean): Instruction[] {
         toReturn.push(instruction);
         break;
       }
+      // 0       1   2  3  4  5
+      // compare u64 16 == u8 32
       case "compare": {
-        let targetFragment: VarTypeFragment;
-        if (tokens[1] === "var") {
-          targetFragment = {
-            type: "varType",
-            value: "var",
-            stackPosition: parseInt(tokens[2], 10),
-          };
-        } else if (tokens[1] === "const") {
-          targetFragment = {
+        let leftFragment: VarTypeFragment;
+        if (tokens[1] === "const") {
+          leftFragment = {
             type: "varType",
             value: "const",
             constValue: parseInt(tokens[2], 10),
           };
-        } else {
-          targetFragment = {
+        } else if (tokens[1].startsWith("_")) {
+          leftFragment = {
             type: "varType",
             value: "_",
             name: tokens[1].split("_")[1],
           };
-        }
-
-        let sourceFragment: VarTypeFragment;
-        if (tokens[4] === "var") {
-          sourceFragment = {
+        } else {
+          const varType = getBaseTypeWithName(tokens[1]);
+          leftFragment = {
             type: "varType",
             value: "var",
-            stackPosition: parseInt(tokens[5], 10),
+            offset: parseInt(tokens[2], 10),
+            size: varType?.size,
+            numberType: varType?.numberType,
           };
-        } else if (tokens[4] === "const") {
-          sourceFragment = {
+        }
+
+        let rightFragment: VarTypeFragment;
+        if (tokens[4] === "const") {
+          rightFragment = {
             type: "varType",
             value: "const",
             constValue: parseInt(tokens[5], 10),
           };
-        } else {
-          sourceFragment = {
+        } else if (tokens[4].startsWith("_")) {
+          rightFragment = {
             type: "varType",
             value: "_",
             name: tokens[4].split("_")[1],
+          };
+        } else {
+          const varType = getBaseTypeWithName(tokens[4]);
+          rightFragment = {
+            type: "varType",
+            value: "var",
+            offset: parseInt(tokens[5], 10),
+            size: varType?.size,
+            numberType: varType?.numberType,
           };
         }
 
@@ -529,29 +526,34 @@ export function parseTextFile(file: string, isMacro?: boolean): Instruction[] {
           type: "compareInstruction",
           fragments: [
             { type: "instruction", value: "compare" },
-            targetFragment,
+            leftFragment,
             comparatorFragment,
-            sourceFragment,
+            rightFragment,
           ],
         };
         toReturn.push(instruction);
         break;
       }
+      // 0  1      2  3
+      // os stdout u8 0
       case "os": {
         switch (tokens[1]) {
           case "stdout": {
             let sourceFragment: VarTypeFragment;
-            if (tokens[2] === "var") {
-              sourceFragment = {
-                type: "varType",
-                value: "var",
-                stackPosition: parseInt(tokens[3], 10),
-              };
-            } else {
+            if (tokens[2] === "const") {
               sourceFragment = {
                 type: "varType",
                 value: "const",
                 constValue: parseInt(tokens[3], 10),
+              };
+            } else {
+              const varType = getBaseTypeWithName(tokens[2]);
+              sourceFragment = {
+                type: "varType",
+                value: "var",
+                offset: parseInt(tokens[3], 10),
+                size: varType?.size,
+                numberType: varType?.numberType,
               };
             }
             const instruction: OSInstruction = {
@@ -603,12 +605,17 @@ export function instructionsToText(instructions: Instruction[]) {
           if (f?.type === "varType") {
             switch (f.value) {
               case "var":
-                return `var ${f.stackPosition}`;
+                const baseType = baseTypes.find(
+                  (b) => b.numberType === f.numberType && b.size === f.size
+                );
+                return `${baseType?.name} ${f.offset}`;
               case "const":
                 return `const ${f.constValue}`;
               case "_":
                 return "_";
             }
+          } else if (f?.type === "defType") {
+            return `${f.value} ${f.size}`;
           }
           return f?.value;
         })

@@ -9,8 +9,14 @@ import {
   Macro,
 } from "./editor_handler";
 import { preProcess } from "./preprocess";
+import { baseTypes, NumberType } from "./types/river_types";
 
-export type VisibleVariable = { index: number; name: string };
+export type VisibleVariable = {
+  name: string;
+  offset: number;
+  size: number;
+  numberType: NumberType;
+};
 function renderFragments(
   instruction: CollapsedInstruction,
   hasCursor: boolean,
@@ -22,6 +28,7 @@ function renderFragments(
   macros: Macro[],
   variableSearchString?: string,
   macroSearchString?: string,
+  typeSearchString?: string,
   inlineMacro?: boolean
 ) {
   const cursorPos = cursorPositions.length > 1 ? -1 : cursorPositions[0];
@@ -87,6 +94,36 @@ function renderFragments(
       fragmentContent = (
         <div className={classnames("empty", "fragment")}>{found}</div>
       );
+    } else if (
+      typeof typeSearchString !== "undefined" &&
+      fragment?.type === "defType" &&
+      hasCursor &&
+      cursorPos === i
+    ) {
+      const found = baseTypes
+        .filter((t) =>
+          t.name
+            .toLocaleLowerCase()
+            .startsWith(typeSearchString.toLocaleLowerCase())
+        )
+        .sort((a, b) => a.name.length - b.name.length)
+        .map((m) => (
+          <>
+            <b className="bold-hint">
+              {m.name.slice(0, typeSearchString.length)}
+            </b>
+            {m.name.slice(typeSearchString.length)}
+          </>
+        ))
+        .map((e, i, arr) => (
+          <React.Fragment key={i}>
+            {e}
+            {i < arr.length - 1 ? " | " : null}
+          </React.Fragment>
+        ));
+      fragmentContent = (
+        <div className={classnames("empty", "fragment")}>{found}</div>
+      );
     } else if (fragment?.type === "varType") {
       switch (fragment?.value) {
         case "_": {
@@ -98,10 +135,10 @@ function renderFragments(
           break;
         }
         case "var":
-          if (typeof fragment.stackPosition !== "undefined") {
+          if (typeof fragment.offset !== "undefined") {
             if (
               instruction.inlineMacros.find(
-                (m) => m && m.stackPosition === fragment.stackPosition
+                (m) => m && m.stackOffset === fragment.offset
               )
             ) {
               fragmentContent = (
@@ -117,6 +154,7 @@ function renderFragments(
                     macros,
                     variableSearchString,
                     macroSearchString,
+                    typeSearchString,
                     true
                   )}
                 </div>
@@ -239,7 +277,8 @@ function renderInstructions(
   macros: Macro[],
   macroSearchString: string | undefined,
   visibleVariables: VisibleVariable[],
-  variableSearchString: string | undefined
+  variableSearchString: string | undefined,
+  typeSearchString: string | undefined
 ) {
   let indent = 0;
   let instructionsRendered: React.ReactNode[] = [];
@@ -256,7 +295,8 @@ function renderInstructions(
       selectionRange,
       macros,
       variableSearchString,
-      macroSearchString
+      macroSearchString,
+      typeSearchString
     );
 
     if (instruction.type === "macroInstruction") {
@@ -401,6 +441,9 @@ export function Editor({
   const [variableSearchString, setVariableSearchString] = useState<
     string | undefined
   >(undefined);
+  const [typeSearchString, setTypeSearchString] = useState<string | undefined>(
+    undefined
+  );
   const { collapsedInstructions, visibleVariables } = preProcess(
     instructions,
     instructionIndex,
@@ -465,6 +508,7 @@ export function Editor({
           macros,
           macroSearchString,
           variableSearchString,
+          typeSearchString,
           visibleVariables,
           key: e.key,
           shiftKey: e.shiftKey,
@@ -475,6 +519,7 @@ export function Editor({
           setMacros,
           setMacroSearchString,
           setVariableSearchString,
+          setTypeSearchString,
           setActiveRightTab,
           setFocusIndex,
           onCursorUnderflow,
@@ -502,6 +547,7 @@ export function Editor({
     visibleVariables,
     variableSearchString,
     fixedCursorPositions,
+    typeSearchString,
   ]);
 
   const instructionsRendered = renderInstructions(
@@ -514,7 +560,8 @@ export function Editor({
     macros,
     macroSearchString,
     visibleVariables,
-    variableSearchString
+    variableSearchString,
+    typeSearchString
   );
 
   return <code className={"code"}>{instructionsRendered}</code>;

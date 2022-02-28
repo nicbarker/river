@@ -1,8 +1,122 @@
 import { Output } from "./application";
 import { CompiledInstruction, dec2bin, Scope } from "./parse";
+import { NumberType } from "./types/river_types";
 
 const DEBUG = false;
 const DOUBLE_DEBUG = false;
+
+function readValue(
+  view: DataView,
+  offset: number,
+  numberType: NumberType,
+  size: number
+): number {
+  switch (numberType) {
+    case NumberType.INT: {
+      switch (size) {
+        case 8: {
+          return view.getInt8(offset);
+        }
+        case 16: {
+          return view.getInt16(offset);
+        }
+        case 32: {
+          return view.getInt32(offset);
+        }
+        case 64: {
+          return (view.getBigInt64(offset) as unknown) as number;
+        }
+      }
+      break;
+    }
+    case NumberType.UINT: {
+      switch (size) {
+        case 8: {
+          return view.getUint8(offset);
+        }
+        case 16: {
+          return view.getUint16(offset);
+        }
+        case 32: {
+          return view.getUint32(offset);
+        }
+        case 64: {
+          return (view.getBigUint64(offset) as unknown) as number;
+        }
+      }
+      break;
+    }
+    case NumberType.FLOAT: {
+      switch (size) {
+        case 32: {
+          return view.getFloat32(offset);
+        }
+        case 64: {
+          return view.getFloat64(offset);
+        }
+      }
+      break;
+    }
+  }
+  return 0;
+}
+
+function writeValue(
+  view: DataView,
+  offset: number,
+  numberType: NumberType,
+  size: number,
+  value: number
+) {
+  switch (numberType) {
+    case NumberType.INT: {
+      switch (size) {
+        case 8: {
+          return view.setInt8(offset, value);
+        }
+        case 16: {
+          return view.setInt16(offset, value);
+        }
+        case 32: {
+          return view.setInt32(offset, value);
+        }
+        case 64: {
+          return view.setBigInt64(offset, (value as unknown) as bigint);
+        }
+      }
+      break;
+    }
+    case NumberType.UINT: {
+      switch (size) {
+        case 8: {
+          return view.setUint8(offset, value);
+        }
+        case 16: {
+          return view.setUint16(offset, value);
+        }
+        case 32: {
+          return view.setUint32(offset, value);
+        }
+        case 64: {
+          return view.setBigUint64(offset, (value as unknown) as bigint);
+        }
+      }
+      break;
+    }
+    case NumberType.FLOAT: {
+      switch (size) {
+        case 32: {
+          return view.setFloat32(offset, value);
+        }
+        case 64: {
+          return view.setFloat64(offset, value);
+        }
+      }
+      break;
+    }
+  }
+  return 0;
+}
 
 export function execute(
   scopesFinal: Scope[],
@@ -10,13 +124,8 @@ export function execute(
   instructions: CompiledInstruction[],
   outputCallback: (output: Output) => void
 ) {
-  const memory = Array(maxMemory * 8).fill(undefined);
-
-  function writeBinaryToStack(value: number[], offset: number) {
-    for (let i = 0; i < value.length; i++) {
-      memory[offset + i] = value[i];
-    }
-  }
+  const memory = new ArrayBuffer(maxMemory / 8);
+  const view = new DataView(memory);
 
   let executionCount = 0;
   let peakMemory = 0;
@@ -39,10 +148,6 @@ export function execute(
               console.log(
                 `allocating ${instruction.stackMemory} at offset ${instruction.stackOffset}`
               );
-            writeBinaryToStack(
-              Array(instruction.stackMemory).fill(0),
-              instruction.stackOffset
-            );
             peakMemory = Math.max(
               instruction.stackOffset + instruction.stackMemory,
               peakMemory
@@ -55,10 +160,6 @@ export function execute(
               console.log(
                 `deallocating ${instruction.stackMemory} at offset ${instruction.stackOffset}`
               );
-            writeBinaryToStack(
-              Array(instruction.stackMemory).fill(undefined),
-              instruction.stackOffset
-            );
             DOUBLE_DEBUG && console.log(`new memory state:`, memory);
             break;
           }
@@ -68,91 +169,107 @@ export function execute(
         break;
       }
       case "assign": {
-        let targetValue = parseInt(
-          memory
-            .slice(
-              instruction.target,
-              instruction.target + instruction.targetSize
-            )
-            .join(""),
-          2
-        );
-        let sourceValue: number = 0;
-        switch (instruction.source) {
+        let leftValue: number = readValue(
+          view,
+          instruction.left.value / 8,
+          instruction.left.numberType,
+          instruction.left.size
+        ) as number;
+        let rightValue: number = 0;
+        switch (instruction.right.type) {
           case "const": {
             DEBUG &&
               console.log(
                 `set ${instruction.action} with constant value ${dec2bin(
-                  instruction.value || 0,
-                  instruction.sourceSize
+                  instruction.right.value || 0,
+                  instruction.right.size
                 )
                   .toString()
-                  .padStart(instruction.sourceSize, "0")} at offset ${
-                  instruction.target
+                  .padStart(instruction.right.size, "0")} at offset ${
+                  instruction.left.value
                 }`
               );
-            sourceValue = instruction.value!;
+            rightValue = instruction.right.value;
             break;
           }
           case "var": {
-            const value = memory
-              .slice(
-                instruction.address,
-                instruction.address! + instruction.sourceSize
-              )
-              .join("");
+            rightValue = readValue(
+              view,
+              instruction.right.value / 8,
+              instruction.right.numberType,
+              instruction.right.size
+            ) as number;
             DEBUG &&
               console.log(
-                `set ${instruction.action} with var value ${value} from address ${instruction.address} at offset ${instruction.target}`
+                `set ${instruction.action} with var value ${rightValue} from address ${instruction.right.value} at offset ${instruction.left.value}`
               );
-            sourceValue = parseInt(value, 2);
             break;
           }
           default:
             break;
         }
-        let toWrite = 0;
+        if (typeof leftValue === "number" && typeof rightValue === "bigint") {
+          rightValue = Number(rightValue);
+        } else if (
+          typeof leftValue === "bigint" &&
+          typeof rightValue === "number"
+        ) {
+          rightValue = (BigInt(
+            instruction.right.numberType === NumberType.FLOAT
+              ? Math.floor(rightValue)
+              : rightValue
+          ) as unknown) as number;
+        }
+
+        let toWrite: number | bigint = 0;
         switch (instruction.action) {
           case "=": {
-            toWrite = sourceValue;
+            toWrite = rightValue;
             break;
           }
           case "+": {
-            toWrite = targetValue + sourceValue;
+            toWrite = leftValue + rightValue;
             break;
           }
           case "-": {
-            toWrite = targetValue - sourceValue;
+            toWrite = leftValue - rightValue;
             break;
           }
           case "*": {
-            toWrite = targetValue * sourceValue;
+            toWrite = leftValue * rightValue;
             break;
           }
           case "/": {
-            toWrite = targetValue / sourceValue;
+            toWrite = leftValue / rightValue;
+            if (
+              instruction.left.numberType !== NumberType.FLOAT &&
+              typeof rightValue !== "bigint"
+            ) {
+              toWrite = Math.floor(toWrite);
+            }
             break;
           }
           case "%": {
-            toWrite = targetValue % sourceValue;
+            toWrite = leftValue % rightValue;
             break;
           }
           case "&&": {
-            toWrite = targetValue & sourceValue;
+            toWrite = leftValue & rightValue;
             break;
           }
           case "||": {
-            toWrite = targetValue | sourceValue;
+            toWrite = leftValue | rightValue;
             break;
           }
           default:
             break;
         }
-        writeBinaryToStack(
-          dec2bin(toWrite, instruction.targetSize)
-            .split("")
-            .map((v) => parseInt(v, 10)),
-          instruction.target
+        writeValue(
+          view,
+          instruction.left.value / 8,
+          instruction.left.numberType,
+          instruction.left.size,
+          toWrite
         );
         DOUBLE_DEBUG && console.log(`new memory state:`, memory);
         break;
@@ -166,41 +283,47 @@ export function execute(
           );
         let leftValue = 0,
           rightValue = 0;
-        switch (instruction.left.source) {
+        switch (instruction.left.type) {
           case "const": {
-            leftValue = instruction.left.value!;
+            leftValue = instruction.left.value;
             break;
           }
           case "var": {
-            const value = memory
-              .slice(
-                instruction.left.address,
-                instruction.left.address! + instruction.left.size
-              )
-              .join("");
-            leftValue = parseInt(value, 2);
+            leftValue = readValue(
+              view,
+              instruction.left.value / 8,
+              instruction.left.numberType,
+              instruction.left.size
+            );
             break;
           }
           default:
             break;
         }
-        switch (instruction.right.source) {
+        switch (instruction.right.type) {
           case "const": {
             rightValue = instruction.right.value!;
             break;
           }
           case "var": {
-            const value = memory
-              .slice(
-                instruction.right.address,
-                instruction.right.address! + instruction.right.size
-              )
-              .join("");
-            rightValue = parseInt(value, 2);
+            rightValue = readValue(
+              view,
+              instruction.right.value / 8,
+              instruction.right.numberType,
+              instruction.right.size
+            );
             break;
           }
           default:
             break;
+        }
+        if (typeof leftValue === "number" && typeof rightValue === "bigint") {
+          rightValue = Number(rightValue);
+        } else if (
+          typeof leftValue === "bigint" &&
+          typeof rightValue === "number"
+        ) {
+          rightValue = (BigInt(rightValue) as unknown) as number;
         }
         let result = true;
         switch (instruction.action) {
@@ -255,16 +378,13 @@ export function execute(
       case "os": {
         switch (instruction.action) {
           case "stdout": {
-            switch (instruction.source) {
+            switch (instruction.type) {
               case "var": {
-                let value = parseInt(
-                  memory
-                    .slice(
-                      instruction.address,
-                      instruction.address! + instruction.size
-                    )
-                    .join(""),
-                  2
+                let value = readValue(
+                  view,
+                  instruction.value / 8,
+                  instruction.numberType,
+                  instruction.size
                 );
                 outputCallback({
                   lineNumber: instructionIndex,
@@ -275,7 +395,7 @@ export function execute(
               case "const": {
                 outputCallback({
                   lineNumber: instructionIndex,
-                  value: instruction.value!.toString(),
+                  value: instruction.value.toString(),
                 });
                 break;
               }

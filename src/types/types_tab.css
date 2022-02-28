@@ -1,0 +1,73 @@
+.typesContainer {
+  display: flex;
+  text-align: left;
+  flex-direction: column;
+  color: #fff;
+  font-family: "Source Code Pro", Menlo, Monaco, Consolas, "Courier New",
+    monospace;
+}
+
+.type {
+  padding: 8px 16px;
+  display: flex;
+  gap: 16px;
+}
+
+.typeHeader {
+  font-weight: 600;
+  color: #ccc;
+}
+
+.typeHeader .typeSize {
+  cursor: pointer;
+}
+
+.typeHeader .typeSize:hover {
+  color: #fff;
+}
+
+.typeSection {
+  border-top: 4px solid rgba(255, 255, 255, 0.1);
+}
+
+.stripe {
+  background: #536163;
+}
+
+.subType {
+  border-top-width: 2px;
+}
+
+.subType .typeName {
+  padding-left: 12px;
+  color: #ccc;
+}
+
+.typeName {
+  font-weight: 600;
+  width: 120px;
+  box-sizing: border-box;
+}
+
+.baseType {
+  width: 120px;
+}
+.baseType.int {
+  color: #f9cdad;
+}
+.baseType.uint {
+  color: #fc9d9a;
+}
+.baseType.float {
+  color: #fae571;
+}
+
+.derivedTypeName {
+  width: 120px;
+  color: #7cdab9;
+}
+
+.struct {
+  display: flex;
+  flex-direction: column;
+}

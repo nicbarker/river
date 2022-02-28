@@ -1,33 +1,33 @@
-def sum 64
+def sum u64 64
 scope open
-def index 64
-assign var 1 = const 0
+def index u64 64
+assign u64 64 = const 0
 scope open
-def output2 64
-assign var 2 = var 1
-assign var 2 % const 3
-def bool 8
-assign var 3 = const 0
-compare var 2 == const 0
-assign var 3 = const 1
-def output3 64
-assign var 4 = var 1
-assign var 4 % const 5
-def bool2 8
-assign var 5 = const 0
-compare var 4 == const 0
-assign var 5 = const 1
-def output 64
-assign var 6 = var 3
-assign var 6 || var 5
+def output2 u64 64
+assign u64 128 = u64 64
+assign u64 128 % const 3
+def bool u8 8
+assign u8 192 = const 0
+compare u64 128 == const 0
+assign u8 192 = const 1
+def output3 u64 64
+assign u64 200 = u64 64
+assign u64 200 % const 5
+def bool2 u8 8
+assign u8 264 = const 0
+compare u64 200 == const 0
+assign u8 264 = const 1
+def output u64 64
+assign u64 272 = u8 192
+assign u64 272 || u8 264
 scope open
-compare var 6 == const 0
+compare u64 272 == const 0
 jump end
-assign var 0 + var 1
+assign u64 0 + u64 64
 scope close
-assign var 1 + const 1
-compare var 1 < const 1000
+assign u64 64 + const 1
+compare u64 64 < const 1000
 jump start
 scope close
 scope close
-os stdout var 0
+os stdout u64 0

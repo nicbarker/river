@@ -1,23 +1,23 @@
-def sum 64
-def first 64
-def second 64
-assign var 1 = const 1
-assign var 2 = const 1
+def sum u64 64
+def first u64 64
+def second u64 64
+assign u64 64 = const 1
+assign u64 128 = const 1
 scope open
-def third 64
-def output 64
-assign var 4 = var 1
-assign var 4 + var 2
-assign var 3 = var 4
-assign var 1 = var 2
-assign var 2 = var 3
-compare var 2 >= const 4000000
+def third u64 64
+def output u64 64
+assign u64 256 = u64 64
+assign u64 256 + u64 128
+assign u64 192 = u64 256
+assign u64 64 = u64 128
+assign u64 128 = u64 192
+compare u64 128 >= const 4000000
 jump end
-def output2 64
-assign var 5 = var 2
-assign var 5 % const 2
-compare var 5 == const 0
-assign var 0 + var 2
+def output2 u64 64
+assign u64 320 = u64 128
+assign u64 320 % const 2
+compare u64 320 == const 0
+assign u64 0 + u64 128
 jump start
 scope close
-os stdout var 0
+os stdout u64 0

@@ -1,6 +1,77 @@
 /* eslint-disable no-sparse-arrays */
-import { CompiledInstruction } from "../parse";
-import { ASMBlock } from "./compiler";
+import { AssignInstruction, CompareInstruction } from "../editor_handler";
+import {
+  CompiledInstruction,
+  CompiledInstructionAssign,
+  CompiledInstructionCompare,
+} from "../parse";
+import { NumberType } from "../types/river_types";
+import { ASMBlock, ASMLine } from "./compiler";
+
+function numberTypePrefix(numberType: NumberType) {
+  if (numberType === NumberType.FLOAT) {
+    return "f";
+  } else {
+    return "i";
+  }
+}
+
+function comparatorSignSuffix(numberType: NumberType) {
+  if (numberType === NumberType.FLOAT) {
+    return "";
+  } else if (numberType === NumberType.INT) {
+    return "_s";
+  } else {
+    return "_u";
+  }
+}
+
+function truncateOrWrap(
+  instruction: CompiledInstructionAssign | CompiledInstructionCompare
+): string | undefined {
+  // Truncation and wrapping -----
+  // Promote or demote floats
+  if (
+    instruction.left.numberType === NumberType.FLOAT &&
+    instruction.right.numberType === NumberType.FLOAT &&
+    instruction.left.size !== instruction.right.size
+  ) {
+    if (instruction.left.size === 32) {
+      return `f32.demote_f64`;
+    } else {
+      return `f64.promote_f32`;
+    }
+  }
+  // Truncate floats down to signed or unsigned int e.g. (i32.trunc_f32_s)
+  else if (
+    instruction.left.numberType !== NumberType.FLOAT &&
+    instruction.right.numberType === NumberType.FLOAT
+  ) {
+    return `i${instruction.left.size}.trunc_f${instruction.right.size}_${
+      instruction.left.numberType === NumberType.UINT ? "u" : "s"
+    }`;
+    // Convert ints to float e.g. (f64.convert_i32_u)
+  } else if (
+    instruction.left.numberType === NumberType.FLOAT &&
+    instruction.right.numberType !== NumberType.FLOAT
+  ) {
+    return `f${instruction.left.size}.convert_i${instruction.right.size}_${
+      instruction.right.numberType === NumberType.UINT ? "u" : "s"
+    }`;
+    // Integers
+  } else if (
+    instruction.right.numberType !== NumberType.FLOAT &&
+    instruction.left.numberType !== NumberType.FLOAT
+  ) {
+    // Extend if the right hand side is smaller
+    if (instruction.left.size === 64 && instruction.right.size === 32) {
+      return `i64.extend_i32_${instruction.right.numberType}`;
+      // Wrap if the right hand side is larger
+    } else if (instruction.left.size === 32 && instruction.right.size === 64) {
+      return `i32.wrap_i64`;
+    }
+  }
+}
 
 export function compileWasm(
   fileName: string,
@@ -17,8 +88,10 @@ export function compileWasm(
         [";; Targeting .wat WebAssembly text format"],
         [";; See github.com/nicbarker/river#running-wasm"],
         [";; --------------------------------------------------"],
-        ['(import "console" "log" (func $log32 (param i32)))'],
-        ['(import "console" "log" (func $log64 (param i64)))'],
+        ['(import "console" "log" (func $logi32 (param i32)))'],
+        ['(import "console" "log" (func $logi64 (param i64)))'],
+        ['(import "console" "log" (func $logf32 (param f32)))'],
+        ['(import "console" "log" (func $logf64 (param f64)))'],
         [],
         ["(memory 1)"],
         [],
@@ -46,30 +119,39 @@ export function compileWasm(
           ,
           `;; ${instructionIndex}: ${instruction.serialized}`,
         ]);
-        const targetSize = instruction.targetSize === 64 ? 64 : 32;
-        const sourceSize = instruction.sourceSize === 64 ? 64 : 32;
-        let source = "";
-        const target = instruction.target / 8;
-        instructionOutputs[1].push([...indent, `i32.const ${target}`]);
+        const leftAddress = instruction.left.value / 8;
+        instructionOutputs[1].push([...indent, `i32.const ${leftAddress}`]);
         if (instruction.action !== "=") {
-          instructionOutputs[1].push([...indent, `i32.const ${target}`]);
-          instructionOutputs[1].push([...indent, `i${targetSize}.load`]);
+          instructionOutputs[1].push([...indent, `i32.const ${leftAddress}`]);
+          instructionOutputs[1].push([
+            ...indent,
+            `${numberTypePrefix(instruction.left.numberType)}${
+              instruction.left.size
+            }.load`,
+          ]);
         }
-        switch (instruction.source) {
+        switch (instruction.right.type) {
           case "const": {
-            source = instruction.value?.toString() || "0";
+            const rightValue = instruction.right.value.toString() || "0";
             instructionOutputs[1].push([
               ...indent,
-              `i${targetSize}.const ${source}`,
+              `${numberTypePrefix(instruction.right.numberType)}${
+                instruction.right.size
+              }.const ${rightValue}`,
             ]);
             break;
           }
           case "var": {
             instructionOutputs[1].push([
               ...indent,
-              `i32.const ${instruction.address! / 8}`,
+              `i32.const ${instruction.right.value / 8}`,
             ]);
-            instructionOutputs[1].push([...indent, `i${sourceSize}.load`]);
+            instructionOutputs[1].push([
+              ...indent,
+              `${numberTypePrefix(instruction.right.numberType)}${
+                instruction.right.size
+              }.load`,
+            ]);
             break;
           }
           default:
@@ -90,11 +172,23 @@ export function compileWasm(
             break;
           }
           case "/": {
-            action = "div";
+            if (instruction.left.numberType === NumberType.UINT) {
+              action = "div_u";
+            } else if (instruction.left.numberType === NumberType.INT) {
+              action = "div_s";
+            } else {
+              action = "div";
+            }
             break;
           }
           case "%": {
-            action = "rem_u";
+            if (instruction.left.numberType === NumberType.UINT) {
+              action = "rem_u";
+            } else if (instruction.left.numberType === NumberType.INT) {
+              action = "rem_s";
+            } else {
+              action = "div";
+            }
             break;
           }
           case "&&": {
@@ -108,15 +202,24 @@ export function compileWasm(
           default:
             break;
         }
-        if (targetSize === 64 && sourceSize === 32) {
-          instructionOutputs[1].push([...indent, `i64.extend_i32_u`]);
-        } else if (targetSize === 32 && sourceSize === 64) {
-          instructionOutputs[1].push([...indent, `i32.wrap_i64`]);
+        const truncOrWrap = truncateOrWrap(instruction);
+        if (truncOrWrap) {
+          instructionOutputs[1].push([...indent, truncOrWrap]);
         }
         if (action) {
-          instructionOutputs[1].push([...indent, `i${targetSize}.${action}`]);
+          instructionOutputs[1].push([
+            ...indent,
+            `${numberTypePrefix(instruction.left.numberType)}${
+              instruction.left.size
+            }.${action}`,
+          ]);
         }
-        instructionOutputs[1].push([...indent, `i${targetSize}.store`]);
+        instructionOutputs[1].push([
+          ...indent,
+          `${numberTypePrefix(instruction.left.numberType)}${
+            instruction.left.size
+          }.store`,
+        ]);
 
         break;
       }
@@ -155,16 +258,16 @@ export function compileWasm(
             comp = "eq";
             break;
           case "<":
-            comp = "lt_u";
+            comp = `lt${comparatorSignSuffix}`;
             break;
           case "<=":
-            comp = "le_u";
+            comp = `le${comparatorSignSuffix}`;
             break;
           case ">":
-            comp = "gt_u";
+            comp = `gt${comparatorSignSuffix}`;
             break;
           case ">=":
-            comp = "ge_u";
+            comp = `ge${comparatorSignSuffix}`;
             break;
           case "!=":
             comp = "ne";
@@ -172,22 +275,26 @@ export function compileWasm(
           default:
             break;
         }
-        const leftSize = instruction.left.size === 64 ? 64 : 32;
-        switch (instruction.left.source) {
+        switch (instruction.left.type) {
           case "const": {
-            const source = instruction.left.value?.toString() || "0";
+            const source = instruction.left.value.toString() || "0";
             instructionOutputs[1].push([
               ...indent,
-              `i${leftSize}.const ${source}`,
+              `i${instruction.left.size}.const ${source}`,
             ]);
             break;
           }
           case "var": {
             instructionOutputs[1].push([
               ...indent,
-              `i32.const ${instruction.left.address! / 8}`,
+              `i32.const ${instruction.left.value / 8}`,
             ]);
-            instructionOutputs[1].push([...indent, `i${leftSize}.load`]);
+            instructionOutputs[1].push([
+              ...indent,
+              `${numberTypePrefix(instruction.left.numberType)}${
+                instruction.left.size
+              }.load`,
+            ]);
             break;
           }
           default:
@@ -195,9 +302,9 @@ export function compileWasm(
         }
 
         const rightSize = instruction.left.size === 64 ? 64 : 32;
-        switch (instruction.right.source) {
+        switch (instruction.right.type) {
           case "const": {
-            const source = instruction.right.value?.toString() || "0";
+            const source = instruction.right.value.toString() || "0";
             instructionOutputs[1].push([
               ...indent,
               `i${rightSize}.const ${source}`,
@@ -207,16 +314,24 @@ export function compileWasm(
           case "var": {
             instructionOutputs[1].push([
               ...indent,
-              `i32.const ${instruction.right.address! / 8}`,
+              `i32.const ${instruction.right.value / 8}`,
             ]);
-            instructionOutputs[1].push([...indent, `i${rightSize}.load`]);
+            instructionOutputs[1].push([
+              ...indent,
+              `${numberTypePrefix(
+                instruction.right.numberType
+              )}${rightSize}.load`,
+            ]);
             break;
           }
           default:
             break;
         }
 
-        instructionOutputs[1].push([...indent, `i${leftSize}.${comp}`]);
+        instructionOutputs[1].push([
+          ...indent,
+          `i${instruction.left.size}.${comp}`,
+        ]);
 
         if (instructionIndex < instructions.length - 1) {
           const nextInstruction = instructions[instructionIndex + 1];
@@ -237,22 +352,28 @@ export function compileWasm(
         ]);
         switch (instruction.action) {
           case "stdout": {
-            switch (instruction.source) {
+            switch (instruction.type) {
               case "var": {
-                const sourceSize = instruction.size === 64 ? 64 : 32;
-                const source = instruction.address! / 8;
+                const source = instruction.value / 8;
                 instructionOutputs[1].push([...indent, `i32.const ${source}`]);
-                instructionOutputs[1].push([...indent, `i${sourceSize}.load`]);
                 instructionOutputs[1].push([
                   ...indent,
-                  `call $log${sourceSize}`,
+                  `${numberTypePrefix(instruction.numberType)}${
+                    instruction.size
+                  }.load`,
+                ]);
+                instructionOutputs[1].push([
+                  ...indent,
+                  `call $log${numberTypePrefix(instruction.numberType)}${
+                    instruction.size
+                  }`,
                 ]);
                 break;
               }
               case "const": {
                 instructionOutputs[1].push([
                   ...indent,
-                  `i64.const ${instruction.value!}`,
+                  `i64.const ${instruction.value}`,
                 ]);
                 instructionOutputs[1].push([...indent, `call $log64`]);
                 break;

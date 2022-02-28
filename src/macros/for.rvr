@@ -1,10 +1,10 @@
 scope open
-def index 64
-assign var 0 = _initial 0
+def index u64 64
+assign u64 0 = _initial 0
 scope open
 _block
-assign var 0 + _increment 0
-compare var 0 < _max 0
+assign u64 0 + _increment 0
+compare u64 0 < _max 0
 jump start
 scope close
 scope close

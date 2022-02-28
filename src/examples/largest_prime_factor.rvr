@@ -1,24 +1,24 @@
-def currentFactor 64
-def total 64
-assign var 0 = const 1
-assign var 1 = const 600851475143
+def currentFactor u64 64
+def total u64 64
+assign u64 0 = const 1
+assign u64 64 = const 600851475143
 scope open
-assign var 0 + const 1
-compare var 0 == var 1
+assign u64 0 + const 1
+compare u64 0 == u64 64
 jump end
-def output 64
-assign var 2 = var 1
-assign var 2 % var 0
-def bool 8
-assign var 3 = const 0
-compare var 2 == const 0
-assign var 3 = const 1
+def output u64 64
+assign u64 128 = u64 64
+assign u64 128 % u64 0
+def bool u8 8
+assign u8 192 = const 0
+compare u64 128 == const 0
+assign u8 192 = const 1
 scope open
-compare var 3 == const 0
+compare u8 192 == const 0
 jump end
-assign var 1 / var 0
-assign var 0 = const 1
+assign u64 64 / u64 0
+assign u64 0 = const 1
 scope close
 jump start
 scope close
-os stdout var 1
+os stdout u64 64

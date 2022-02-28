@@ -347,6 +347,7 @@ button {
 
 .fragment.assignAction {
   color: #f77825;
+  font-weight: 600;
 }
 
 .fragment.comparator {

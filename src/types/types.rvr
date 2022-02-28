@@ -1,0 +1,7 @@
+type char u8 single
+type string char array
+
+struct person open
+type name string single
+type age u8 single
+struct person close

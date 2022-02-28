@@ -13,7 +13,7 @@ export function validate(instructions: Instruction[]): boolean {
       } else if (fragment.type === "varType") {
         if (
           fragment.value === "var" &&
-          typeof fragment.stackPosition === "undefined"
+          typeof fragment.offset === "undefined"
         ) {
           return false;
         }

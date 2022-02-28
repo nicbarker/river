@@ -4,10 +4,11 @@ import {
   Fragment,
   Macro,
   CollapsedInstruction,
-  getStackPositionAtInstructionIndex,
+  getStackOffsetAtInstructionIndex,
   MacroInstruction,
   CollapsedData,
 } from "./editor_handler";
+import { getBaseTypeWithName } from "./types/river_types";
 
 type PlaceholderFragment = { name: string; fragment: Fragment };
 
@@ -65,10 +66,10 @@ function instructionsAreEqual(
       macroFragment?.type === "varType" &&
       ((fragment.value === "var" &&
         macroFragment.value === "var" &&
-        fragment.stackPosition !==
-          (typeof macroFragment.stackPosition === "undefined"
+        fragment.offset !==
+          (typeof macroFragment.offset === "undefined"
             ? undefined
-            : macroFragment.stackPosition + stackPositionOffset)) ||
+            : macroFragment.offset + stackPositionOffset)) ||
         (fragment.value === "const" &&
           macroFragment.value === "const" &&
           fragment.constValue !== macroFragment.constValue))
@@ -101,7 +102,7 @@ function macroRanges(
     [newInstructionIndex, newInstructionIndex + macro.instructions.length],
   ];
   let blockRanges: [number, number][] = [];
-  let stackPositionOffset = getStackPositionAtInstructionIndex(
+  let stackPositionOffset = getStackOffsetAtInstructionIndex(
     instructionIndex,
     instructions
   );
@@ -202,13 +203,14 @@ export function preProcess(
 } {
   const namedVariables: VisibleVariable[] = [];
   const visibleVariables: VisibleVariable[] = [];
-  const scopeLengths: number[] = [0];
+  // [number of variables in the scope, size of the scope in bits]
+  const scopeSizes: [number, number][] = [[0, 0]];
   const collapse: [number, number][][] = [];
   const blocks: [number, number][] = [];
   let unplacedInlineMacros: {
     lineNumber: number;
     instruction: MacroInstruction & CollapsedData;
-    stackPosition: number;
+    stackOffset: number;
   }[] = [];
   const collapsed: CollapsedInstruction[] = [];
   const macrosByLength = macros
@@ -216,29 +218,39 @@ export function preProcess(
     .sort((a, b) => b.instructions.length - a.instructions.length);
   for (let i = 0; i < instructions.length; i++) {
     const instruction = instructions[i];
-    if (instruction.type === "defInstruction" && instruction.fragments[1]) {
+    if (
+      instruction.type === "defInstruction" &&
+      instruction.fragments[1] &&
+      instruction.fragments[2]?.value &&
+      instruction.fragments[2]?.size
+    ) {
       const namedVariable = {
         name: instruction.fragments[1].value || "",
-        index: scopeLengths.reduce((prev, curr) => prev + curr, 0),
+        offset: scopeSizes.reduce((prev, curr) => prev + curr[1], 0),
+        size: instruction.fragments[2].size,
+        // Todo fix the number type here
+        numberType: getBaseTypeWithName(instruction.fragments[2].value)!
+          .numberType,
       };
       if (collapsed.length <= instructionIndex) {
         visibleVariables.push(namedVariable);
       }
       namedVariables.push(namedVariable);
-      scopeLengths[scopeLengths.length - 1]++;
+      scopeSizes[scopeSizes.length - 1][0]++;
+      scopeSizes[scopeSizes.length - 1][1] += instruction.fragments[2].size;
     } else if (
       instruction.type === "scopeInstruction" &&
       instruction.fragments[1]
     ) {
       if (instruction.fragments[1].value === "open") {
-        scopeLengths.push(0);
+        scopeSizes.push([0, 0]);
       } else {
-        if (visibleVariables.length > 0) {
-          const scopeLength = scopeLengths.pop()!;
+        if (namedVariables.length > 0) {
+          const scopeSize = scopeSizes.pop()!;
           if (collapsed.length <= instructionIndex) {
-            visibleVariables.splice(-scopeLength, scopeLength);
+            visibleVariables.splice(-scopeSize[0], scopeSize[0]);
           }
-          namedVariables.splice(-scopeLength, scopeLength);
+          namedVariables.splice(-scopeSize[0], scopeSize[0]);
         }
       }
     } else {
@@ -246,9 +258,11 @@ export function preProcess(
         if (
           fragment?.type === "varType" &&
           fragment.value === "var" &&
-          typeof fragment.stackPosition !== "undefined"
+          typeof fragment.offset !== "undefined"
         ) {
-          fragment.varName = namedVariables[fragment.stackPosition].name;
+          fragment.varName = namedVariables.find(
+            (n) => n.offset === fragment.offset
+          )?.name;
         }
       }
     }
@@ -305,7 +319,7 @@ export function preProcess(
             if (
               fragment?.type === "varType" &&
               fragment.value === "var" &&
-              fragment.stackPosition === macro.stackPosition
+              fragment.offset === macro.stackOffset
             ) {
               macroInstruction.inlineMacros[cursorPos] = macro;
               unplacedInlineMacros.splice(i, 1);
@@ -320,7 +334,7 @@ export function preProcess(
           unplacedInlineMacros.push({
             lineNumber: i,
             instruction: macroInstruction,
-            stackPosition: getStackPositionAtInstructionIndex(i, instructions),
+            stackOffset: getStackOffsetAtInstructionIndex(i, instructions),
           });
         } else {
           const toReturn: CollapsedInstruction[] = [macroInstruction];
@@ -347,7 +361,7 @@ export function preProcess(
             if (
               fragment?.type === "varType" &&
               fragment.value === "var" &&
-              fragment.stackPosition === macro.stackPosition
+              fragment.offset === macro.stackOffset
             ) {
               toReturn.inlineMacros[cursorPos] = macro;
               unplacedInlineMacros.splice(i, 1);

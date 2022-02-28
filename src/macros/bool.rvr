@@ -1,4 +1,4 @@
-def bool 8
-assign var 0 = const 0
+def bool u8 8
+assign u8 0 = const 0
 compare _left 0 _comparator _right 0
-assign var 0 = const 1
+assign u8 0 = const 1
