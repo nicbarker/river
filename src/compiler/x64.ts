@@ -1,5 +1,14 @@
 /* eslint-disable no-sparse-arrays */
-import { CompiledInstruction } from "../parse";
+import {
+  AssignAction,
+  CompareAction,
+  FragmentType,
+  instructionsToText,
+  InstructionType,
+  InstructionValid,
+  JumpAction,
+  OSAction,
+} from "../parse2";
 import { NumberType } from "../types/river_types";
 import { ASMBlock, ASMLine } from "./compiler";
 
@@ -375,13 +384,9 @@ function moveAndLabelForSize(instructionSize: number, numberType: NumberType) {
   return [mov, size];
 }
 
-function operatorForType(
-  operator: string,
-  numberType: NumberType,
-  size: number
-) {
+function operatorForType(operator: AssignAction, numberType: NumberType, size: number) {
   switch (operator) {
-    case "+": {
+    case AssignAction.ADD: {
       switch (numberType) {
         case NumberType.UINT:
         case NumberType.INT:
@@ -391,7 +396,7 @@ function operatorForType(
       }
       break;
     }
-    case "-": {
+    case AssignAction.SUBTRACT: {
       switch (numberType) {
         case NumberType.UINT:
         case NumberType.INT:
@@ -401,7 +406,7 @@ function operatorForType(
       }
       break;
     }
-    case "*": {
+    case AssignAction.MULTIPLY: {
       switch (numberType) {
         case NumberType.UINT:
           return "mul";
@@ -412,7 +417,8 @@ function operatorForType(
       }
       break;
     }
-    case "/": {
+    case AssignAction.MOD:
+    case AssignAction.DIVIDE: {
       switch (numberType) {
         case NumberType.UINT:
           return "div";
@@ -427,9 +433,7 @@ function operatorForType(
 }
 
 function formatOp(firstOperand: string, secondOperand?: string) {
-  return `${firstOperand}${
-    secondOperand === undefined ? "" : `, ${secondOperand}`
-  }`;
+  return `${firstOperand}${secondOperand === undefined ? "" : `, ${secondOperand}`}`;
 }
 
 function memoryOffset(offset: number) {
@@ -447,11 +451,7 @@ const nasmInstructions = (target: x64Flavour, fileName: string) => {
   }
 };
 
-function syscallArgumentRegisters(
-  target: x64Flavour,
-  index: number,
-  numberType: NumberType
-) {
+function syscallArgumentRegisters(target: x64Flavour, index: number, numberType: NumberType) {
   const isMac = target === "x64_OSX";
   switch (index) {
     case 0:
@@ -468,7 +468,8 @@ function syscallArgumentRegisters(
 export function compileX64(
   target: x64Flavour,
   fileName: string,
-  instructions: CompiledInstruction[],
+  instructions: InstructionValid[],
+  serializedInstructions: string[],
   maxMemory: number
 ) {
   const isMac = target === "x64_OSX";
@@ -499,13 +500,7 @@ export function compileX64(
         [, "section", ".text"],
         [`${mainLabel}:`],
         preSysCall,
-        [
-          ,
-          "mov",
-          `${syscallArgumentRegisters(target, 0, NumberType.UINT)}, ${
-            maxMemory / 8
-          }`,
-        ],
+        [, "mov", `${syscallArgumentRegisters(target, 0, NumberType.UINT)}, ${maxMemory / 8}`],
         [, "call", `${mallocLabel}`],
         postSysCall,
         [, "mov", "r12, rax"],
@@ -514,54 +509,29 @@ export function compileX64(
   ];
   const jumpLabels: number[] = [];
   const jumpLabelsUsed: number[] = [];
-  for (
-    let instructionIndex = 0;
-    instructionIndex < instructions.length;
-    instructionIndex++
-  ) {
+  for (let instructionIndex = 0; instructionIndex < instructions.length; instructionIndex++) {
     const instruction = instructions[instructionIndex];
-    const instructionOutputs: ASMBlock = [
-      instruction.originalInstructionIndex,
-      [],
-    ];
-    if (
-      jumpLabels.length > 0 &&
-      jumpLabels[jumpLabels.length - 1] === instructionIndex
-    ) {
+    const instructionOutputs: ASMBlock = [instructionIndex, []];
+    if (jumpLabels.length > 0 && jumpLabels[jumpLabels.length - 1] === instructionIndex) {
       instructionOutputs[1].push([`j${instructionIndex.toString()}:`]);
       jumpLabelsUsed.push(jumpLabels.pop()!);
     }
-    switch (instruction.instruction) {
-      case "assign": {
-        instructionOutputs[1].push([
-          ,
-          `; ${instructionIndex}: ${instruction.serialized}`,
-        ]);
-        const [rightMov, rightSize] = moveAndLabelForSize(
-          instruction.right.size,
-          instruction.right.numberType
-        );
-        const [leftMov, leftSize] = moveAndLabelForSize(
-          instruction.left.size,
-          instruction.left.numberType
-        );
+    switch (instruction.type) {
+      case InstructionType.ASSIGN: {
+        instructionOutputs[1].push([, `; ${instructionIndex}: ${instructionsToText([instruction])}`]);
+        const [rightMov, rightSize] = moveAndLabelForSize(instruction.right.size, instruction.right.numberType);
+        const [leftMov, leftSize] = moveAndLabelForSize(instruction.left.size, instruction.left.numberType);
         let right = "";
         const leftWithOffset = memoryOffset(instruction.left.value / 8);
         const leftWithSize = `${leftSize} ${leftWithOffset}`;
-        if (instruction.right.type === "const") {
+        if (instruction.right.type === FragmentType.CONST) {
           right = instruction.right.value.toString() || "0";
           // 64 bit immediate values need to go through a register first
           if (
-            (instruction.right.numberType === NumberType.INT &&
-              instruction.right.value > 2147483647) ||
-            (instruction.right.numberType === NumberType.UINT &&
-              instruction.right.value > 4294967295)
+            (instruction.right.numberType === NumberType.INT && instruction.right.value > 2147483647) ||
+            (instruction.right.numberType === NumberType.UINT && instruction.right.value > 4294967295)
           ) {
-            instructionOutputs[1].push([
-              ,
-              "mov",
-              formatOp("r14", instruction.right.value.toString()),
-            ]);
+            instructionOutputs[1].push([, "mov", formatOp("r14", instruction.right.value.toString())]);
             right = "r14";
           } else if (instruction.right.numberType === NumberType.FLOAT) {
             if (instruction.right.size === 64) {
@@ -569,25 +539,15 @@ export function compileX64(
               instructionOutputs[1].push([
                 ,
                 "mov",
-                formatOp(
-                  "r14",
-                  `__?float64?__(${
-                    !right.includes(".") ? right + ".0" : right
-                  })`
-                ),
+                formatOp("r14", `__?float64?__(${!right.includes(".") ? right + ".0" : right})`),
               ]);
               right = "r14";
             } else {
-              right = `__?float32?__(${
-                !right.includes(".") ? right + ".0" : right
-              })`;
+              right = `__?float32?__(${!right.includes(".") ? right + ".0" : right})`;
             }
           }
         } else {
-          let rightWithSize = `${rightSize} ${memoryOffset(
-            instruction.right.value / 8
-          )}`;
-          right = rightWithSize;
+          let rightWithSize = `${rightSize} ${memoryOffset(instruction.right.value / 8)}`;
           // Convert between different data types and sizes
           if (instruction.right.numberType === NumberType.FLOAT) {
             if (instruction.left.numberType !== NumberType.FLOAT) {
@@ -605,15 +565,11 @@ export function compileX64(
               ]);
               right = "xmm1";
             }
-            // Right is int and left is float
           } else {
+            // Right is int and left is float
             if (instruction.left.numberType === NumberType.FLOAT) {
               if (instruction.right.size < 32) {
-                instructionOutputs[1].push([
-                  ,
-                  rightMov,
-                  formatOp("r14", rightWithSize),
-                ]);
+                instructionOutputs[1].push([, rightMov, formatOp("r14", rightWithSize)]);
                 rightWithSize = "r14";
               }
               instructionOutputs[1].push([
@@ -624,127 +580,76 @@ export function compileX64(
               right = "xmm1";
             }
           }
+
+          if (right === "") {
+            instructionOutputs[1].push([, rightMov, formatOp("r14", rightWithSize)]);
+            right = "r14";
+          }
         }
 
         let finalMov: string | undefined;
-        switch (instruction.action) {
-          case "=":
+        let operator = operatorForType(instruction.action.action, instruction.left.numberType, instruction.left.size);
+        switch (instruction.action.action) {
+          case AssignAction.EQUALS:
             finalMov = "mov";
             break;
-          case "-":
-          case "+": {
+          case AssignAction.SUBTRACT:
+          case AssignAction.ADD: {
             if (instruction.left.numberType === NumberType.FLOAT) {
-              instructionOutputs[1].push([
-                ,
-                leftMov,
-                formatOp("xmm0", leftWithOffset),
-              ]);
-              instructionOutputs[1].push([
-                ,
-                operatorForType(
-                  instruction.action,
-                  instruction.left.numberType,
-                  instruction.left.size
-                ),
-                formatOp("xmm0", right),
-              ]);
+              instructionOutputs[1].push([, leftMov, formatOp("xmm0", leftWithOffset)]);
+              instructionOutputs[1].push([, operator, formatOp("xmm0", right)]);
               finalMov = leftMov;
               right = "xmm0";
             } else {
               instructionOutputs[1].push([
                 ,
-                operatorForType(
-                  instruction.action,
-                  instruction.left.numberType,
-                  instruction.left.size
-                ),
+                operator,
                 formatOp(
                   `${leftSize} ${leftWithOffset}`,
-                  instruction.right.type === "var"
-                    ? registerWithSize(right, instruction.left.size)
-                    : right
+                  instruction.right.type === FragmentType.VAR ? registerWithSize(right, instruction.left.size) : right
                 ),
               ]);
             }
             break;
           }
-          case "*": {
-            const reg =
-              instruction.left.numberType === NumberType.FLOAT ? "xmm0" : "r13";
+          case AssignAction.MULTIPLY: {
+            const reg = instruction.left.numberType === NumberType.FLOAT ? "xmm0" : "r13";
+            instructionOutputs[1].push([, leftMov, formatOp(reg, leftWithOffset)]);
             instructionOutputs[1].push([
               ,
-              leftMov,
-              formatOp(reg, leftWithOffset),
-            ]);
-            instructionOutputs[1].push([
-              ,
-              operatorForType(
-                "*",
-                instruction.left.numberType,
-                instruction.left.size
-              ),
+              operatorForType(instruction.action.action, instruction.left.numberType, instruction.left.size),
               formatOp(reg, right),
             ]);
             finalMov = "mov";
             right = registerWithSize(reg, instruction.left.size);
             break;
           }
-          case "%":
-          case "/": {
+          case AssignAction.MOD:
+          case AssignAction.DIVIDE: {
             if (instruction.left.numberType !== NumberType.FLOAT) {
               instructionOutputs[1].push([, "xor", "rdx, rdx"]);
-              right !== "r13" &&
-                instructionOutputs[1].push([, "mov", formatOp("r13", right)]);
-              instructionOutputs[1].push([
-                ,
-                leftMov,
-                formatOp("rax", leftWithSize),
-              ]);
-              instructionOutputs[1].push([
-                ,
-                operatorForType(
-                  "/",
-                  instruction.left.numberType,
-                  instruction.left.size
-                ),
-                "r13",
-              ]);
+              right !== "r13" && instructionOutputs[1].push([, "mov", formatOp("r13", right)]);
+              instructionOutputs[1].push([, leftMov, formatOp("rax", leftWithSize)]);
+              instructionOutputs[1].push([, operator, "r13"]);
               finalMov = "mov";
               right = registerWithSize(
-                instruction.action === "/" ? "rax" : "rdx",
+                instruction.action.action === AssignAction.DIVIDE ? "rax" : "rdx",
                 instruction.left.size
               );
             } else {
-              instructionOutputs[1].push([
-                ,
-                leftMov,
-                formatOp("xmm0", leftWithOffset),
-              ]);
-              right !== "xmm1" &&
-                instructionOutputs[1].push([
-                  ,
-                  rightMov,
-                  formatOp("xmm1", right),
-                ]);
-              instructionOutputs[1].push([
-                ,
-                operatorForType(
-                  "/",
-                  instruction.left.numberType,
-                  instruction.left.size
-                ),
-                formatOp("xmm0", "xmm1"),
-              ]);
+              instructionOutputs[1].push([, leftMov, formatOp("xmm0", leftWithOffset)]);
+              right !== "xmm1" && instructionOutputs[1].push([, rightMov, formatOp("xmm1", right)]);
+              instructionOutputs[1].push([, operator, formatOp("xmm0", "xmm1")]);
               finalMov = leftMov;
               right = "xmm0";
             }
             break;
           }
-          case "||":
-          case "&&": {
+          case AssignAction.OR:
+          case AssignAction.AND: {
             instructionOutputs[1].push([
               ,
-              instruction.action === "&&" ? "and" : "or",
+              instruction.action.action === AssignAction.AND ? "and" : "or",
               formatOp(leftWithOffset, right),
             ]);
             break;
@@ -757,56 +662,45 @@ export function compileX64(
           instructionOutputs[1].push([
             ,
             finalMov,
-            formatOp(
-              finalMov !== "movss" && finalMov !== "movsd"
-                ? leftWithSize
-                : leftWithOffset,
-              right
-            ),
+            formatOp(finalMov !== "movss" && finalMov !== "movsd" ? leftWithSize : leftWithOffset, right),
           ]);
         }
 
         break;
       }
-      case "jump": {
-        instructionOutputs[1].push([
-          ,
-          `; ${instructionIndex}: ${instruction.serialized}`,
-        ]);
+      case InstructionType.JUMP: {
+        instructionOutputs[1].push([, `; ${instructionIndex}: ${instructionsToText([instruction])}`]);
         instructionOutputs[1].push([
           ,
           "jmp",
           `j${
-            instruction.type === "start"
-              ? instruction.scope.openInstruction.originalInstructionIndex + 1
-              : instruction.scope.closeInstruction.originalInstructionIndex + 1
+            instruction.action.action === JumpAction.START
+              ? instruction.scope.openInstructionIndex + 1
+              : instruction.scope.closeInstructionIndex + 1
           }`,
         ]);
         break;
       }
-      case "compare": {
-        instructionOutputs[1].push([
-          ,
-          `; ${instructionIndex}: ${instruction.serialized}`,
-        ]);
+      case InstructionType.COMPARE: {
+        instructionOutputs[1].push([, `; ${instructionIndex}: ${instructionsToText([instruction])}`]);
         let jump = "";
-        switch (instruction.action) {
-          case "==":
+        switch (instruction.action.action) {
+          case CompareAction.EQUAL:
             jump = "jne";
             break;
-          case "<":
+          case CompareAction.LESS:
             jump = "jge";
             break;
-          case "<=":
+          case CompareAction.LESS_EQUAL:
             jump = "jg";
             break;
-          case ">":
+          case CompareAction.GREATER:
             jump = "jle";
             break;
-          case ">=":
+          case CompareAction.GREATER_EQUAL:
             jump = "jl";
             break;
-          case "!=":
+          case CompareAction.NOT_EQUAL:
             jump = "je";
             break;
           default:
@@ -814,41 +708,14 @@ export function compileX64(
         }
         let leftReg = "r13";
         let rightReg = "r14";
-        switch (instruction.left.type) {
-          case "const": {
-            instructionOutputs[1].push([
-              ,
-              "mov",
-              formatOp("r13", `${instruction.left.value}`),
-            ]);
-            break;
-          }
-          case "var": {
-            instructionOutputs[1].push([
-              ,
-              "mov",
-              formatOp("r13", memoryOffset(instruction.left.value / 8)),
-            ]);
-            break;
-          }
-          default:
-            break;
-        }
+        instructionOutputs[1].push([, "mov", formatOp("r13", memoryOffset(instruction.left.value / 8))]);
         switch (instruction.right.type) {
-          case "const": {
-            instructionOutputs[1].push([
-              ,
-              "mov",
-              formatOp("r14", `${instruction.right.value}`),
-            ]);
+          case FragmentType.CONST: {
+            instructionOutputs[1].push([, "mov", formatOp("r14", `${instruction.right.value}`)]);
             break;
           }
-          case "var": {
-            instructionOutputs[1].push([
-              ,
-              "mov",
-              formatOp("r14", memoryOffset(instruction.right.value / 8)),
-            ]);
+          case FragmentType.VAR: {
+            instructionOutputs[1].push([, "mov", formatOp("r14", memoryOffset(instruction.right.value / 8))]);
             break;
           }
           default:
@@ -859,58 +726,46 @@ export function compileX64(
         jumpLabels.push(instructionIndex + 2);
         break;
       }
-      case "os": {
-        instructionOutputs[1].push([
-          ,
-          `; ${instructionIndex}: ${instruction.serialized}`,
-        ]);
-        switch (instruction.action) {
-          case "stdout": {
+      case InstructionType.OS: {
+        instructionOutputs[1].push([, `; ${instructionIndex}: ${instructionsToText([instruction])}`]);
+        switch (instruction.action.action) {
+          case OSAction.STDOUT: {
             let [mov, size] = moveAndLabelForSize(
-              instruction.size,
-              instruction.numberType
+              instruction.action.varType.size,
+              instruction.action.varType.numberType
             );
             // Need to convert to double precision float to use printf
-            if (
-              instruction.numberType === NumberType.FLOAT &&
-              instruction.size === 32
-            ) {
+            if (instruction.action.varType.numberType === NumberType.FLOAT && instruction.action.varType.size === 32) {
               mov = "cvtss2sd";
             }
             instructionOutputs[1].push(preSysCall);
             instructionOutputs[1].push([
               ,
               "lea",
-              `${syscallArgumentRegisters(
-                target,
-                0,
-                NumberType.UINT
-              )}, [rel format${
-                instruction.numberType === NumberType.FLOAT ? "F" : "I"
+              `${syscallArgumentRegisters(target, 0, NumberType.UINT)}, [rel format${
+                instruction.action.varType.numberType === NumberType.FLOAT ? "F" : "I"
               }]`,
             ]);
-            switch (instruction.type) {
-              case "var": {
+            switch (instruction.action.varType.type) {
+              case FragmentType.VAR: {
                 instructionOutputs[1].push([
                   ,
                   mov,
                   `${syscallArgumentRegisters(
                     target,
                     1,
-                    instruction.numberType
-                  )}, ${size} ${memoryOffset(instruction.value / 8)}`,
+                    instruction.action.varType.numberType
+                  )}, ${size} ${memoryOffset(instruction.action.varType.value / 8)}`,
                 ]);
                 break;
               }
-              case "const": {
+              case FragmentType.CONST: {
                 instructionOutputs[1].push([
                   ,
                   mov,
-                  `${syscallArgumentRegisters(
-                    target,
-                    1,
-                    instruction.numberType
-                  )}, ${instruction.value}`,
+                  `${syscallArgumentRegisters(target, 1, instruction.action.varType.numberType)}, ${
+                    instruction.action.varType.value
+                  }`,
                 ]);
               }
             }
@@ -923,7 +778,7 @@ export function compileX64(
         }
         break;
       }
-      case "scope": {
+      case InstructionType.SCOPE: {
         if (!jumpLabelsUsed.includes(instructionIndex)) {
           instructionOutputs[1].push([`j${instructionIndex.toString()}:`]);
         }
@@ -939,13 +794,7 @@ export function compileX64(
 
   output.push([
     -1,
-    [
-      [, "ret"],
-      [],
-      [, "section", ".data"],
-      ["formatI:", "db", `"%d", 10, 0`],
-      ["formatF:", "db", `"%f", 10, 0`],
-    ],
+    [[, "ret"], [], [, "section", ".data"], ["formatI:", "db", `"%d", 10, 0`], ["formatF:", "db", `"%f", 10, 0`]],
   ]);
   return output;
 }

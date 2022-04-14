@@ -33,13 +33,8 @@ export function App() {
   const instructions = openFiles[selectedFileIndex].instructions;
   const [outputs, setOutputs] = useState<Output[]>([]);
   const [focusIndex, setFocusIndex] = useState<number>(0);
-  const [activeRightTab, setActiveRightTab] = useState<
-    "build" | "asm" | "macros"
-  >("asm");
-  const [instructionRange, setInstructionRange] = useState<[number, number]>([
-    0,
-    0,
-  ]);
+  const [activeRightTab, setActiveRightTab] = useState<"build" | "asm" | "macros">("asm");
+  const [instructionRange, setInstructionRange] = useState<[number, number]>([0, 0]);
   const [macrosExpanded, setMacrosExpanded] = useState(false);
   const [dismissMap] = useState<DismissMap>([]);
 
@@ -116,23 +111,14 @@ export function App() {
 
   function runInInterpreter() {
     outputs.splice(0, outputs.length);
-    const [pScopes, pInstructions, maxMemory] = parse(
-      instructionsToText(instructions)
-    );
-    const { peakMemory } = execute(
-      pScopes,
-      maxMemory,
-      pInstructions,
-      (output: Output) => {
-        outputs.push(output);
-        setOutputs(outputs.slice());
-      }
-    );
+    const [pScopes, pInstructions, maxMemory] = parse(instructionsToText(instructions));
+    const { peakMemory } = execute(pScopes, maxMemory, pInstructions, (output: Output) => {
+      outputs.push(output);
+      setOutputs(outputs.slice());
+    });
     outputs.push({
       lineNumber: instructions.length,
-      value: `Execution finished. Peak memory usage: ${peakMemory / 8} byte${
-        peakMemory / 8 !== 1 ? "s" : ""
-      }.`,
+      value: `Execution finished. Peak memory usage: ${peakMemory / 8} byte${peakMemory / 8 !== 1 ? "s" : ""}.`,
     });
     setOutputs(outputs.slice());
   }
@@ -183,9 +169,7 @@ export function App() {
               onClick={() => {
                 openFiles.splice(selectedFileIndex, 0, {
                   name: "untitled.rvr",
-                  instructions: [
-                    { type: "emptyInstruction", fragments: [undefined] },
-                  ],
+                  instructions: [{ type: "emptyInstruction", fragments: [undefined] }],
                 });
                 setOpenFiles(openFiles.slice());
                 setSelectedFileIndex(selectedFileIndex + 1);
@@ -195,13 +179,7 @@ export function App() {
             </div>
             <div
               className="dropdownItem"
-              onClick={() =>
-                downloadFile(
-                  instructionsToText(instructions),
-                  selectedFile.name,
-                  ".rvr"
-                )
-              }
+              onClick={() => downloadFile(instructionsToText(instructions), selectedFile.name, ".rvr")}
             >
               Save To Disk...
             </div>
@@ -219,11 +197,7 @@ export function App() {
               />
             </label>
           </InlineDropdown>
-          <InlineDropdown
-            label="Examples"
-            classNames={"menuButton"}
-            dismissOnClick
-          >
+          <InlineDropdown label="Examples" classNames={"menuButton"} dismissOnClick>
             {exampleMenuItems}
           </InlineDropdown>
         </div>
@@ -235,10 +209,7 @@ export function App() {
           <div className="right">
             <div className="header">
               <button
-                className={classNames(
-                  "headerButton",
-                  activeRightTab === "build" ? "active" : ""
-                )}
+                className={classNames("headerButton", activeRightTab === "build" ? "active" : "")}
                 onClick={() => {
                   setActiveRightTab("build");
                 }}
@@ -246,10 +217,7 @@ export function App() {
                 VM
               </button>
               <button
-                className={classNames(
-                  "headerButton",
-                  activeRightTab === "asm" ? "active" : ""
-                )}
+                className={classNames("headerButton", activeRightTab === "asm" ? "active" : "")}
                 onClick={() => {
                   setActiveRightTab("asm");
                 }}
@@ -257,10 +225,7 @@ export function App() {
                 Assembly
               </button>
               <button
-                className={classNames(
-                  "headerButton",
-                  activeRightTab === "macros" ? "active" : ""
-                )}
+                className={classNames("headerButton", activeRightTab === "macros" ? "active" : "")}
                 onClick={() => {
                   setActiveRightTab("macros");
                 }}
@@ -271,22 +236,19 @@ export function App() {
             {activeRightTab === "build" && (
               <div className="buildContainer">
                 <div className="header subheader">
-                  <button
-                    className="subheaderButton"
-                    onClick={() => runInInterpreter()}
-                  >
+                  <button className="subheaderButton" onClick={() => runInInterpreter()}>
                     Run
                   </button>
                 </div>
                 <div className="outputs">{outputsRendered}</div>
               </div>
             )}
-            {activeRightTab === "asm" && (
+            {/* {activeRightTab === "asm" && (
               <ASMTab
                 instructions={instructions}
                 instructionRange={instructionRange}
               />
-            )}
+            )} */}
             {activeRightTab === "macros" && (
               <div className="macros">
                 <div className="header subheader">

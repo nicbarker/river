@@ -1,5 +1,5 @@
 import { VisibleVariable } from "./editor";
-import { baseTypes, NumberType } from "./types/river_types";
+import { baseTypes, NumberType, RiverType } from "./types/river_types";
 
 // TOP LEVEL INSTRUCTIONS ----------------------------
 export type InstructionAssign = {
@@ -148,11 +148,7 @@ export type VarTypeMissing = {
   name: string;
 };
 
-export type VarTypeFragment =
-  | VarTypeVar
-  | VarTypeConst
-  | VarTypePlaceholder
-  | VarTypeMissing;
+export type VarTypeFragment = VarTypeVar | VarTypeConst | VarTypePlaceholder | VarTypeMissing;
 
 // COMPARATOR ----------------------------------
 export type ComparatorEq = {
@@ -248,22 +244,13 @@ export type DefInstruction = {
 // assign 0 eq var 1
 export type AssignInstruction = {
   type: "assignInstruction";
-  fragments: Partial<
-    [
-      InstructionAssign,
-      VarTypeVar | VarTypePlaceholder,
-      AssignActionFragment,
-      VarTypeFragment
-    ]
-  >;
+  fragments: Partial<[InstructionAssign, VarTypeVar | VarTypePlaceholder, AssignActionFragment, VarTypeFragment]>;
 };
 
 // compare lt var 1 const 1000
 export type CompareInstruction = {
   type: "compareInstruction";
-  fragments: Partial<
-    [InstructionCompare, VarTypeFragment, ComparatorFragment, VarTypeFragment]
-  >;
+  fragments: Partial<[InstructionCompare, VarTypeFragment, ComparatorFragment, VarTypeFragment]>;
 };
 
 export type JumpInstruction = {
@@ -331,12 +318,7 @@ export type CollapsedData = {
   }[];
 };
 
-export type CollapsedInstruction = (
-  | Instruction
-  | MacroInstruction
-  | BlockInstruction
-) &
-  CollapsedData;
+export type CollapsedInstruction = (Instruction | MacroInstruction | BlockInstruction) & CollapsedData;
 
 export type Macro = {
   name: string;
@@ -378,21 +360,11 @@ export function getFragmentHints(instruction: CollapsedInstruction) {
     case "defInstruction":
       return ["def", "name", baseTypes.map((b) => b.name).join(" | ")];
     case "assignInstruction":
-      return [
-        "assign",
-        "var",
-        "= | + | - | * | / | % | && | ||",
-        "var | const | macro",
-      ];
+      return ["assign", "var", "= | + | - | * | / | % | && | ||", "var | const | macro"];
     case "scopeInstruction":
       return ["scope", "open | close"];
     case "compareInstruction":
-      return [
-        "compare",
-        "var | const | macro",
-        "= | != | < | <= | > | >=",
-        "var | const | macro",
-      ];
+      return ["compare", "var | const | macro", "= | != | < | <= | > | >=", "var | const | macro"];
     case "jumpInstruction":
       return ["jump", "start | end"];
     case "OSInstruction":
@@ -404,10 +376,7 @@ export function getFragmentHints(instruction: CollapsedInstruction) {
   }
 }
 
-export function getStackOffsetAtInstructionIndex(
-  index: number,
-  instructions: Instruction[]
-) {
+export function getStackOffsetAtInstructionIndex(index: number, instructions: Instruction[]) {
   const scopedOffsets: number[] = [0];
   for (let i = 0; i < index; i++) {
     const instruction = instructions[i];
@@ -418,22 +387,14 @@ export function getStackOffsetAtInstructionIndex(
         scopedOffsets.pop();
       }
       // TODO: validate this in a less ugly way
-    } else if (
-      instruction.type === "defInstruction" &&
-      instruction.fragments[1] &&
-      instruction.fragments[2]?.size
-    ) {
+    } else if (instruction.type === "defInstruction" && instruction.fragments[1] && instruction.fragments[2]?.size) {
       scopedOffsets[scopedOffsets.length - 1] += instruction.fragments[2].size;
     }
   }
   return scopedOffsets[scopedOffsets.length - 1];
 }
 
-export function modifyStackOffsetsAfter(
-  amount: number,
-  index: number,
-  instructions: Instruction[]
-) {
+export function modifyStackOffsetsAfter(amount: number, index: number, instructions: Instruction[]) {
   const stackOffset = getStackOffsetAtInstructionIndex(index, instructions);
   for (let i = index; i < instructions.length; i++) {
     for (let j = 0; j < instructions[i].fragments.length; j++) {
@@ -450,11 +411,7 @@ export function modifyStackOffsetsAfter(
   }
 }
 
-function deleteInstruction(
-  instructionIndex: number,
-  instructions: Instruction[],
-  matchScopes: boolean = true
-) {
+function deleteInstruction(instructionIndex: number, instructions: Instruction[], matchScopes: boolean = true) {
   let extraDeleted = 0;
   const instruction = instructions[instructionIndex];
   instructions.splice(instructionIndex, 1);
@@ -478,18 +435,11 @@ function deleteInstruction(
     }
   } else if (instruction.type === "defInstruction") {
     // Find references to this variable, and replace them with placeholders
-    const stackOffset = getStackOffsetAtInstructionIndex(
-      instructionIndex,
-      instructions
-    );
+    const stackOffset = getStackOffsetAtInstructionIndex(instructionIndex, instructions);
     for (let i = instructionIndex; i < instructions.length; i++) {
       for (let j = 0; j < instructions[i].fragments.length; j++) {
         const fragment = instructions[i].fragments[j];
-        if (
-          fragment?.type === "varType" &&
-          fragment.value === "var" &&
-          fragment.offset === stackOffset
-        ) {
+        if (fragment?.type === "varType" && fragment.value === "var" && fragment.offset === stackOffset) {
           instructions[i].fragments[j] = {
             type: "varType",
             value: "_",
@@ -512,6 +462,62 @@ export enum CursorMovement {
   PRESERVE,
 }
 
+export enum FocusInputType {
+  VARIABLE_SEARCH,
+  MACRO_SEARCH,
+  TYPE_SEARCH,
+  UNSIGNED_CONST,
+  SIGNED_CONST,
+  FLOAT_CONST,
+  GENERIC_STRING,
+}
+
+type FocusInputStateBase = {
+  text: string;
+  allow: RegExp;
+  onCancel: () => void;
+};
+
+export type FocusInputStateVariableSearch = FocusInputStateBase & {
+  type: FocusInputType.VARIABLE_SEARCH;
+  matchedVariables: VisibleVariable[];
+};
+
+export type FocusInputStateMacroSearch = FocusInputStateBase & {
+  type: FocusInputType.MACRO_SEARCH;
+  matchedMacros: Macro[];
+};
+
+export type FocusInputStateTypeSearch = FocusInputStateBase & {
+  type: FocusInputType.TYPE_SEARCH;
+  matchedTypes: RiverType[];
+};
+
+export type FocusInputStateUnsignedConst = FocusInputStateBase & {
+  type: FocusInputType.UNSIGNED_CONST;
+};
+
+export type FocusInputStateSignedConst = FocusInputStateBase & {
+  type: FocusInputType.SIGNED_CONST;
+};
+
+export type FocusInputStateFloatConst = FocusInputStateBase & {
+  type: FocusInputType.FLOAT_CONST;
+};
+
+export type FocusInputStateGenericString = FocusInputStateBase & {
+  type: FocusInputType.GENERIC_STRING;
+};
+
+export type FocusInputState =
+  | FocusInputStateVariableSearch
+  | FocusInputStateMacroSearch
+  | FocusInputStateTypeSearch
+  | FocusInputStateUnsignedConst
+  | FocusInputStateSignedConst
+  | FocusInputStateFloatConst
+  | FocusInputStateGenericString;
+
 export function handleKeyStroke({
   instruction,
   instructions,
@@ -521,9 +527,7 @@ export function handleKeyStroke({
   selectionRange,
   isMacro,
   macros,
-  macroSearchString,
-  variableSearchString,
-  typeSearchString,
+  focusInputState,
   visibleVariables,
   key,
   shiftKey,
@@ -533,9 +537,7 @@ export function handleKeyStroke({
   setCursorPositions,
   setSelectionRange,
   setMacros,
-  setMacroSearchString,
-  setVariableSearchString,
-  setTypeSearchString,
+  setFocusInputState,
   setActiveRightTab,
   setFocusIndex,
 }: {
@@ -547,9 +549,7 @@ export function handleKeyStroke({
   selectionRange: [number, number];
   isMacro: boolean;
   macros: Macro[];
-  macroSearchString?: string;
-  variableSearchString?: string;
-  typeSearchString?: string;
+  focusInputState?: FocusInputState;
   visibleVariables: VisibleVariable[];
   key: string;
   shiftKey: boolean;
@@ -559,9 +559,7 @@ export function handleKeyStroke({
   setCursorPositions: (cursorPostions: number[]) => void;
   setSelectionRange: (selectionRange: [number, number]) => void;
   setMacros: (macros: Macro[]) => void;
-  setMacroSearchString: (macroSearchString?: string) => void;
-  setVariableSearchString: (macroSearchString?: string) => void;
-  setTypeSearchString: (typeSearchString?: string) => void;
+  setFocusInputState: (focusInputState?: FocusInputState) => void;
   setActiveRightTab: (rightTab: "build" | "asm" | "macros") => void;
   setFocusIndex: (focusIndex: number) => void;
 }) {
@@ -571,39 +569,134 @@ export function handleKeyStroke({
   let inlineInstruction = instruction;
   if (cursorPositions.length > 1) {
     let i = 0;
-    while (
-      i < cursorPositions.length &&
-      inlineInstruction.inlineMacros[cursorPositions[i]]
-    ) {
-      inlineInstruction =
-        inlineInstruction.inlineMacros[cursorPositions[i]].instruction;
+    while (i < cursorPositions.length && inlineInstruction.inlineMacros[cursorPositions[i]]) {
+      inlineInstruction = inlineInstruction.inlineMacros[cursorPositions[i]].instruction;
       i++;
     }
   }
   const currentInstruction = inlineInstruction;
 
-  function setCursorPos(
-    cursorMovement: CursorMovement,
-    newInstruction?: CollapsedInstruction
-  ) {
+  function createMacro(matchedMacro: Macro) {
+    const isInline = cursorPositions[0] !== 0;
+    let parentInstruction = instruction;
+    let depth = 0;
+    while (isInline && parentInstruction.inlineMacros[cursorPositions[depth]]) {
+      parentInstruction = parentInstruction.inlineMacros[cursorPositions[depth]].instruction;
+      depth++;
+    }
+    const macroContentsFixed = matchedMacro.instructions
+      .map((inst): Instruction[] => {
+        const toReturn = JSON.parse(JSON.stringify(inst)) as Instruction;
+        for (let i = 0; i < toReturn.fragments.length; i++) {
+          const fragment = toReturn.fragments[i];
+          if (
+            (fragment?.type === "varType" || fragment?.type === "assignAction" || fragment?.type === "comparator") &&
+            fragment.value === "_"
+          ) {
+            toReturn.fragments[i] = {
+              ...fragment,
+              value: "missing",
+            };
+          }
+        }
+        switch (toReturn.type) {
+          case "placeholderInstruction": {
+            return [
+              {
+                type: "emptyInstruction",
+                fragments: [undefined],
+              },
+            ];
+          }
+          case "compareInstruction":
+          case "assignInstruction": {
+            const target = toReturn.fragments[1] && {
+              ...toReturn.fragments[1],
+            };
+            if (target && target.value === "var" && typeof target.offset !== "undefined") {
+              target.offset += getStackOffsetAtInstructionIndex(parentInstruction.lineNumber, instructions);
+              toReturn.fragments[1] = target;
+            }
+            const source = toReturn.fragments[3] && {
+              ...toReturn.fragments[3],
+            };
+            if (source && source.value === "var" && typeof source.offset !== "undefined") {
+              source.offset += getStackOffsetAtInstructionIndex(parentInstruction.lineNumber, instructions);
+              toReturn.fragments[3] = source;
+            }
+            return [toReturn];
+          }
+          case "defInstruction": {
+            const fragment = toReturn.fragments[1];
+            if (fragment) {
+              let nextNumber = 1;
+              while (true) {
+                const next = nextNumber;
+                if (visibleVariables.find((v) => v.name.startsWith(fragment.value + (next === 1 ? "" : next)))) {
+                  nextNumber++;
+                } else {
+                  break;
+                }
+              }
+              fragment.value += (nextNumber === 1 ? "" : nextNumber).toString();
+            }
+            modifyStackOffsetsAfter(1, parentInstruction.lineNumber, instructions);
+            return [toReturn];
+          }
+          default: {
+            return [toReturn];
+          }
+        }
+      })
+      .flat();
+    if (isInline) {
+      instructions.splice(parentInstruction.lineNumber, 0, ...JSON.parse(JSON.stringify(macroContentsFixed)));
+      const attachedFragment = parentInstruction.fragments[
+        cursorPositions[cursorPositions.length - 1]
+      ] as VarTypeFragment;
+      const inlineReturnValue = matchedMacro.instructions[0] as DefInstruction;
+      const inlineType = baseTypes.find((b) => b.name === inlineReturnValue.fragments[2]?.value);
+      if (attachedFragment) {
+        attachedFragment.value = "var";
+        if (attachedFragment.value === "var") {
+          attachedFragment.offset = getStackOffsetAtInstructionIndex(parentInstruction.lineNumber, instructions);
+          attachedFragment.size = inlineType?.size;
+          attachedFragment.numberType = inlineType?.numberType;
+        }
+      } else {
+        parentInstruction.fragments[cursorPositions[cursorPositions.length - 1]] = {
+          type: "varType",
+          value: "var",
+          offset: getStackOffsetAtInstructionIndex(parentInstruction.lineNumber, instructions),
+          size: inlineType?.size,
+          numberType: inlineType?.numberType,
+        };
+      }
+      cursorPositions.push(0);
+      setCursorPositions(cursorPositions.slice());
+    } else {
+      instructions.splice(parentInstruction.lineNumber, 1, ...JSON.parse(JSON.stringify(macroContentsFixed)));
+    }
+    if (instructions[instructions.length - 1].type !== "emptyInstruction") {
+      instructions.push({
+        type: "emptyInstruction",
+        fragments: [undefined],
+      });
+    }
+    setInstructions(instructions.slice());
+  }
+
+  function setCursorPos(cursorMovement: CursorMovement, newInstruction?: CollapsedInstruction) {
     let targetInstruction = newInstruction || currentInstruction;
     switch (cursorMovement) {
       case CursorMovement.INCREMENT: {
-        if (
-          cursorPos < getFragmentLength(targetInstruction) - 1 &&
-          cursorPos < targetInstruction.fragments.length
-        ) {
+        if (cursorPos < getFragmentLength(targetInstruction) - 1 && cursorPos < targetInstruction.fragments.length) {
           cursorPositions[cursorPositions.length - 1]++;
-          const newFragment =
-            targetInstruction.fragments[
-              cursorPositions[cursorPositions.length - 1]
-            ];
+          const newFragment = targetInstruction.fragments[cursorPositions[cursorPositions.length - 1]];
           if (
             newFragment?.type === "varType" &&
             newFragment.value === "var" &&
-            targetInstruction.inlineMacros.find(
-              (m) => m && m.stackOffset === newFragment.offset
-            )
+            targetInstruction.inlineMacros.find((m) => m && m.stackOffset === newFragment.offset)
           ) {
             cursorPositions.push(0);
           }
@@ -623,21 +716,15 @@ export function handleKeyStroke({
       case CursorMovement.DECREMENT: {
         if (cursorPos > 0) {
           cursorPositions[cursorPositions.length - 1]--;
-          const newFragment =
-            targetInstruction.fragments[
-              cursorPositions[cursorPositions.length - 1]
-            ];
+          const newFragment = targetInstruction.fragments[cursorPositions[cursorPositions.length - 1]];
           if (
             newFragment?.type === "varType" &&
             newFragment.value === "var" &&
-            targetInstruction.inlineMacros[
-              cursorPositions[cursorPositions.length - 1]
-            ]
+            targetInstruction.inlineMacros[cursorPositions[cursorPositions.length - 1]]
           ) {
             cursorPositions.push(
-              targetInstruction.inlineMacros[
-                cursorPositions[cursorPositions.length - 1]
-              ].instruction.fragments.length - 1
+              targetInstruction.inlineMacros[cursorPositions[cursorPositions.length - 1]].instruction.fragments.length -
+                1
             );
           }
         } else if (cursorPositions.length > 1) {
@@ -645,36 +732,20 @@ export function handleKeyStroke({
           cursorPositions[cursorPositions.length - 1]--;
         } else if (instructionIndex > 0 && currentInstruction) {
           setInstructionIndex(instructionIndex - 1);
-          const previousInstruction =
-            collapsedInstructions[instructionIndex - 1];
+          const previousInstruction = collapsedInstructions[instructionIndex - 1];
           cursorPositions[cursorPositions.length - 1] = Math.max(
-            Math.min(
-              previousInstruction.fragments.length,
-              getFragmentLength(previousInstruction) - 1
-            ),
+            Math.min(previousInstruction.fragments.length, getFragmentLength(previousInstruction) - 1),
             0
           );
-          const newFragment =
-            previousInstruction.fragments[
-              cursorPositions[cursorPositions.length - 1]
-            ];
+          const newFragment = previousInstruction.fragments[cursorPositions[cursorPositions.length - 1]];
           if (
             newFragment?.type === "varType" &&
             newFragment.value === "var" &&
-            previousInstruction.inlineMacros[
-              previousInstruction.fragments.length - 1
-            ]
+            previousInstruction.inlineMacros[previousInstruction.fragments.length - 1]
           ) {
             let inlineInstruction = previousInstruction;
-            while (
-              inlineInstruction.inlineMacros[
-                inlineInstruction.fragments.length - 1
-              ]
-            ) {
-              inlineInstruction =
-                inlineInstruction.inlineMacros[
-                  inlineInstruction.fragments.length - 1
-                ].instruction;
+            while (inlineInstruction.inlineMacros[inlineInstruction.fragments.length - 1]) {
+              inlineInstruction = inlineInstruction.inlineMacros[inlineInstruction.fragments.length - 1].instruction;
               cursorPositions.push(inlineInstruction.fragments.length - 1);
             }
           }
@@ -687,10 +758,7 @@ export function handleKeyStroke({
       }
       case CursorMovement.END: {
         cursorPositions[cursorPositions.length - 1] = Math.max(
-          Math.min(
-            targetInstruction.fragments.length,
-            getFragmentLength(targetInstruction) - 1
-          ),
+          Math.min(targetInstruction.fragments.length, getFragmentLength(targetInstruction) - 1),
           0
         );
         break;
@@ -714,302 +782,108 @@ export function handleKeyStroke({
     setCursorPositions(cursorPositions.slice());
   }
 
-  if (typeof macroSearchString !== "undefined") {
-    const isInline = cursorPositions[0] !== 0;
-    let parentInstruction = instruction;
-    let depth = 0;
-    while (isInline && parentInstruction.inlineMacros[cursorPositions[depth]]) {
-      parentInstruction =
-        parentInstruction.inlineMacros[cursorPositions[depth]].instruction;
-      depth++;
+  if (key === "ArrowRight" && currentInstruction) {
+    setCursorPos(CursorMovement.INCREMENT);
+    if (focusInputState) {
+      focusInputState = undefined;
+      setFocusInputState(undefined);
     }
-    const found = macros
-      .filter(
-        (m) =>
-          ((isInline && m.inline) || (!isInline && !m.inline)) &&
-          m.name
-            .toLocaleLowerCase()
-            .startsWith(macroSearchString.toLocaleLowerCase())
-      )
-      .sort((a, b) => b.name.length - a.name.length);
-    if (key.match(/^[ -~]$/)) {
-      setMacroSearchString(macroSearchString + key);
-    } else {
-      switch (key) {
-        case "Enter": {
-          if (found.length === 0) {
-            break;
-          }
-          const macroContentsFixed = found[0].instructions
-            .map((inst): Instruction[] => {
-              const toReturn = JSON.parse(JSON.stringify(inst)) as Instruction;
-              for (let i = 0; i < toReturn.fragments.length; i++) {
-                const fragment = toReturn.fragments[i];
-                if (
-                  (fragment?.type === "varType" ||
-                    fragment?.type === "assignAction" ||
-                    fragment?.type === "comparator") &&
-                  fragment.value === "_"
-                ) {
-                  toReturn.fragments[i] = {
-                    ...fragment,
-                    value: "missing",
-                  };
-                }
-              }
-              switch (toReturn.type) {
-                case "placeholderInstruction": {
-                  return [
-                    {
-                      type: "emptyInstruction",
-                      fragments: [undefined],
-                    },
-                  ];
-                }
-                case "compareInstruction":
-                case "assignInstruction": {
-                  const target = toReturn.fragments[1] && {
-                    ...toReturn.fragments[1],
-                  };
-                  if (
-                    target &&
-                    target.value === "var" &&
-                    typeof target.offset !== "undefined"
-                  ) {
-                    target.offset += getStackOffsetAtInstructionIndex(
-                      parentInstruction.lineNumber,
-                      instructions
-                    );
-                    toReturn.fragments[1] = target;
-                  }
-                  const source = toReturn.fragments[3] && {
-                    ...toReturn.fragments[3],
-                  };
-                  if (
-                    source &&
-                    source.value === "var" &&
-                    typeof source.offset !== "undefined"
-                  ) {
-                    source.offset += getStackOffsetAtInstructionIndex(
-                      parentInstruction.lineNumber,
-                      instructions
-                    );
-                    toReturn.fragments[3] = source;
-                  }
-                  return [toReturn];
-                }
-                case "defInstruction": {
-                  const fragment = toReturn.fragments[1];
-                  if (fragment) {
-                    let nextNumber = 1;
-                    while (true) {
-                      const next = nextNumber;
-                      if (
-                        visibleVariables.find((v) =>
-                          v.name.startsWith(
-                            fragment.value + (next === 1 ? "" : next)
-                          )
-                        )
-                      ) {
-                        nextNumber++;
-                      } else {
-                        break;
-                      }
-                    }
-                    fragment.value += (nextNumber === 1
-                      ? ""
-                      : nextNumber
-                    ).toString();
-                  }
-                  modifyStackOffsetsAfter(
-                    1,
-                    parentInstruction.lineNumber,
-                    instructions
-                  );
-                  return [toReturn];
-                }
-                default: {
-                  return [toReturn];
-                }
-              }
-            })
-            .flat();
-          if (isInline) {
-            instructions.splice(
-              parentInstruction.lineNumber,
-              0,
-              ...JSON.parse(JSON.stringify(macroContentsFixed))
-            );
-            const attachedFragment = parentInstruction.fragments[
-              cursorPositions[cursorPositions.length - 1]
-            ] as VarTypeFragment;
-            const inlineReturnValue = found[0]
-              .instructions[0] as DefInstruction;
-            const inlineType = baseTypes.find(
-              (b) => b.name === inlineReturnValue.fragments[2]?.value
-            );
-            if (attachedFragment) {
-              attachedFragment.value = "var";
-              if (attachedFragment.value === "var") {
-                attachedFragment.offset = getStackOffsetAtInstructionIndex(
-                  parentInstruction.lineNumber,
-                  instructions
-                );
-                attachedFragment.size = inlineType?.size;
-                attachedFragment.numberType = inlineType?.numberType;
-              }
-            } else {
-              parentInstruction.fragments[
-                cursorPositions[cursorPositions.length - 1]
-              ] = {
-                type: "varType",
-                value: "var",
-                offset: getStackOffsetAtInstructionIndex(
-                  parentInstruction.lineNumber,
-                  instructions
-                ),
-                size: inlineType?.size,
-                numberType: inlineType?.numberType,
-              };
+  } else if (key === "ArrowLeft") {
+    setCursorPos(CursorMovement.DECREMENT);
+    if (focusInputState) {
+      focusInputState = undefined;
+      setFocusInputState(undefined);
+    }
+  }
+
+  if (focusInputState) {
+    // clone reference to assert != undefined
+    const input = { ...focusInputState };
+    const currentFragment = currentInstruction.fragments[cursorPos];
+    switch (key) {
+      case " ":
+      case "Enter": {
+        switch (input.type) {
+          case FocusInputType.MACRO_SEARCH: {
+            if (input.matchedMacros.length > 0) {
+              createMacro(input.matchedMacros[0]);
             }
-            cursorPositions.push(0);
-            setCursorPositions(cursorPositions.slice());
-          } else {
-            instructions.splice(
-              parentInstruction.lineNumber,
-              1,
-              ...JSON.parse(JSON.stringify(macroContentsFixed))
-            );
-          }
-          if (
-            instructions[instructions.length - 1].type !== "emptyInstruction"
-          ) {
-            instructions.push({
-              type: "emptyInstruction",
-              fragments: [undefined],
-            });
-          }
-          setMacroSearchString(undefined);
-          setInstructions(instructions.slice());
-          break;
-        }
-        case "Backspace": {
-          if (macroSearchString.length > 0) {
-            setMacroSearchString(
-              macroSearchString.slice(0, macroSearchString.length - 1)
-            );
-          } else {
-            setMacroSearchString(undefined);
-          }
-          break;
-        }
-        case "Escape": {
-          setMacroSearchString(undefined);
-        }
-      }
-    }
-    return;
-  }
-
-  if (typeof variableSearchString !== "undefined") {
-    const found = visibleVariables
-      .filter((m) =>
-        m.name
-          .toLocaleLowerCase()
-          .startsWith(variableSearchString.toLocaleLowerCase())
-      )
-      .sort((a, b) => a.name.length - b.name.length);
-    if (key !== " " && key.match(/^[ -~]$/)) {
-      setVariableSearchString(variableSearchString + key);
-    } else {
-      switch (key) {
-        case " ":
-        case "Enter": {
-          if (found.length === 0) {
             break;
           }
-          const currentFragment = currentInstruction.fragments[cursorPos];
-          if (
-            currentFragment?.type === "varType" &&
-            currentFragment.value === "var"
-          ) {
-            currentFragment.offset = found[0].offset;
-            currentFragment.numberType = found[0].numberType;
-            currentFragment.size = found[0].size;
-          }
-          setVariableSearchString(undefined);
-          setCursorPos(CursorMovement.INCREMENT);
-          setInstructions(instructions.slice());
-          break;
-        }
-        case "Backspace": {
-          if (variableSearchString.length > 0) {
-            setVariableSearchString(
-              variableSearchString.slice(0, variableSearchString.length - 1)
-            );
-          } else {
-            currentInstruction.fragments[cursorPos] = undefined;
-            setVariableSearchString(undefined);
-          }
-          break;
-        }
-        case "Escape": {
-          collapsedInstructions[instructionIndex].fragments[
-            cursorPos
-          ] = undefined;
-          setVariableSearchString(undefined);
-        }
-      }
-    }
-    return;
-  }
-
-  if (typeof typeSearchString !== "undefined") {
-    const found = baseTypes
-      .filter((t) =>
-        t.name
-          .toLocaleLowerCase()
-          .startsWith(typeSearchString.toLocaleLowerCase())
-      )
-      .sort((a, b) => a.name.length - b.name.length);
-    if (key !== " " && key.match(/^[ -~]$/)) {
-      setTypeSearchString(typeSearchString + key);
-    } else {
-      switch (key) {
-        case " ":
-        case "Enter": {
-          if (found.length === 0) {
+          case FocusInputType.VARIABLE_SEARCH: {
+            if (input.matchedVariables.length === 0) {
+              break;
+            }
+            const varFragment = currentFragment as VarTypeVar;
+            varFragment.offset = input.matchedVariables[0].offset;
+            varFragment.numberType = input.matchedVariables[0].numberType;
+            varFragment.size = input.matchedVariables[0].size;
+            setCursorPos(CursorMovement.INCREMENT);
+            setInstructions(instructions.slice());
             break;
           }
-          const currentFragment = currentInstruction.fragments[cursorPos];
-          if (currentFragment?.type === "defType") {
-            currentFragment.value = found[0].name;
-            currentFragment.size = found[0].size;
+          case FocusInputType.TYPE_SEARCH: {
+            if (input.matchedTypes.length === 0) {
+              break;
+            }
+            const typeFragment = currentFragment as DefTypeFragment;
+            typeFragment.value = input.matchedTypes[0].name;
+            typeFragment.size = input.matchedTypes[0].size;
+            setCursorPos(CursorMovement.INCREMENT);
+            setInstructions(instructions.slice());
+            break;
           }
-          setTypeSearchString(undefined);
-          setCursorPos(CursorMovement.INCREMENT);
-          setInstructions(instructions.slice());
-          break;
-        }
-        case "Backspace": {
-          if (typeSearchString.length > 0) {
-            setTypeSearchString(
-              typeSearchString.slice(0, typeSearchString.length - 1)
-            );
-          } else {
-            currentInstruction.fragments[cursorPos] = undefined;
-            setTypeSearchString(undefined);
+          case FocusInputType.FLOAT_CONST: {
+            const currentFragment = currentInstruction.fragments[cursorPos];
+            if (currentFragment?.type === "varType" && currentFragment.value === "const") {
+              currentFragment.constValue = parseFloat(focusInputState.text);
+            }
           }
-          break;
         }
-        case "Escape": {
-          collapsedInstructions[instructionIndex].fragments[
-            cursorPos
-          ] = undefined;
-          setTypeSearchString(undefined);
+        setFocusInputState(undefined);
+        return;
+      }
+      case "Backspace": {
+        if (input.text.length > 0) {
+          input.text = input.text.slice(0, input.text.length - 1);
+        } else {
+          input.onCancel();
         }
+        break;
+      }
+      case "Escape": {
+        input.onCancel();
+        break;
+      }
+      default: {
+        // First update the string itself
+        if (key.match(input.allow)) {
+          input.text += key;
+        }
+        break;
       }
     }
+    switch (input.type) {
+      case FocusInputType.VARIABLE_SEARCH: {
+        input.matchedVariables = visibleVariables
+          .filter((m) => input.text === "" || m.name.toLocaleLowerCase().startsWith(input.text.toLocaleLowerCase()))
+          .sort((a, b) => a.name.length - b.name.length);
+        break;
+      }
+      case FocusInputType.MACRO_SEARCH: {
+        input.matchedMacros = macros
+          .filter((m) => input.text === "" || m.name.toLocaleLowerCase().startsWith(input.text.toLocaleLowerCase()))
+          .sort((a, b) => a.name.length - b.name.length);
+        break;
+      }
+      case FocusInputType.TYPE_SEARCH: {
+        input.matchedTypes = baseTypes
+          .filter((m) => input.text === "" || m.name.toLocaleLowerCase().startsWith(input.text.toLocaleLowerCase()))
+          .sort((a, b) => a.name.length - b.name.length);
+        break;
+      }
+    }
+    setFocusInputState(input);
     return;
   }
 
@@ -1017,24 +891,11 @@ export function handleKeyStroke({
     if (key === "ArrowUp" || key === "ArrowDown") {
       const change = key === "ArrowUp" ? -1 : 1;
       if (shiftKey) {
-        selectionRange[1] = Math.max(
-          Math.min(selectionRange[1] + change, instructions.length - 1),
-          0
-        );
-        setInstructionIndex(
-          Math.min(
-            Math.max(instructionIndex + change, 0),
-            instructions.length - 1
-          )
-        );
+        selectionRange[1] = Math.max(Math.min(selectionRange[1] + change, instructions.length - 1), 0);
+        setInstructionIndex(Math.min(Math.max(instructionIndex + change, 0), instructions.length - 1));
       } else if (!shiftKey) {
         setSelectionRange([-1, -1]);
-        setInstructionIndex(
-          Math.min(
-            Math.max(instructionIndex + change, 0),
-            instructions.length - 1
-          )
-        );
+        setInstructionIndex(Math.min(Math.max(instructionIndex + change, 0), instructions.length - 1));
       }
       return;
     } else if (key === "m") {
@@ -1042,12 +903,7 @@ export function handleKeyStroke({
       macros.push({
         name: "Untitled",
         instructions: JSON.parse(
-          JSON.stringify(
-            instructions.slice(
-              Math.min(...selectionRange),
-              Math.max(...selectionRange) + 1
-            )
-          )
+          JSON.stringify(instructions.slice(Math.min(...selectionRange), Math.max(...selectionRange) + 1))
         ),
         inline: firstInstruction.type === "defInstruction",
       });
@@ -1060,11 +916,7 @@ export function handleKeyStroke({
 
   let increment: "instruction" | "cursor" | "none" = "none";
 
-  function parseVarType(
-    fragment?: VarTypeFragment,
-    disableConst?: boolean,
-    isMacro?: boolean
-  ) {
+  function parseVarType(fragment?: VarTypeFragment, disableConst?: boolean, isMacro?: boolean) {
     let newFragment = fragment;
     if (typeof newFragment === "undefined" || newFragment.value === "missing") {
       switch (key) {
@@ -1074,6 +926,12 @@ export function handleKeyStroke({
               type: "varType",
               value: "const",
             };
+            setFocusInputState({
+              text: "",
+              allow: /^[\d\-+.]+$/,
+              type: FocusInputType.FLOAT_CONST,
+              onCancel: () => (currentInstruction.fragments[cursorPos] = undefined),
+            });
           }
           break;
         }
@@ -1082,11 +940,23 @@ export function handleKeyStroke({
             type: "varType",
             value: "var",
           };
-          setVariableSearchString("");
+          setFocusInputState({
+            text: "",
+            allow: /^[ -~]$/,
+            type: FocusInputType.VARIABLE_SEARCH,
+            matchedVariables: visibleVariables,
+            onCancel: () => (currentInstruction.fragments[cursorPos] = undefined),
+          });
           break;
         }
         case "m": {
-          setMacroSearchString("");
+          setFocusInputState({
+            type: FocusInputType.MACRO_SEARCH,
+            text: "",
+            allow: /^[ -~]$/,
+            matchedMacros: macros,
+            onCancel: () => (currentInstruction.fragments[cursorPos] = undefined),
+          });
           break;
         }
         case "_": {
@@ -1099,37 +969,6 @@ export function handleKeyStroke({
           }
           break;
         }
-      }
-    } else if (newFragment.value === "var") {
-      if (key === " " || key.match(/[a-z]/)) {
-        increment = "cursor";
-      }
-      if (typeof newFragment.offset === "undefined") {
-        newFragment.offset = parseInt(key, 10);
-      } else {
-        newFragment.offset = parseInt(newFragment.offset.toString() + key, 10);
-      }
-    } else if (newFragment.value === "const") {
-      if (key === " " || key.match(/[a-z]/)) {
-        increment = "cursor";
-      }
-      if (typeof newFragment?.constValue === "undefined") {
-        newFragment.constValue = parseFloat(key);
-      } else {
-        newFragment.constValue = parseFloat(
-          newFragment.constValue.toString() + key
-        );
-      }
-    } else if (newFragment.value === "_") {
-      if (key === " " || key === "Enter") {
-        increment = "cursor";
-      }
-      if (key === "Backspace") {
-        newFragment.name =
-          newFragment.name.length > 0 ? newFragment.name.slice(0, -1) : "";
-      } else if (key.match(/[\p{L}\p{N}\s]/gu)) {
-        // Multi language alpha numeric
-        newFragment.name += key;
       }
     }
     return newFragment;
@@ -1227,8 +1066,7 @@ export function handleKeyStroke({
         increment = "cursor";
       }
       if (key === "Backspace") {
-        newFragment.name =
-          newFragment.name.length > 0 ? newFragment.name.slice(0, -1) : "";
+        newFragment.name = newFragment.name.length > 0 ? newFragment.name.slice(0, -1) : "";
       } else if (key.match(/[\p{L}\p{N}\s]/gu)) {
         // Multi language alpha numeric
         newFragment.name += key;
@@ -1314,8 +1152,7 @@ export function handleKeyStroke({
         increment = "cursor";
       }
       if (key === "Backspace") {
-        newFragment.name =
-          newFragment.name.length > 0 ? newFragment.name.slice(0, -1) : "";
+        newFragment.name = newFragment.name.length > 0 ? newFragment.name.slice(0, -1) : "";
       } else if (key.match(/[\p{L}\p{N}\s]/gu)) {
         // Multi language alpha numeric
         newFragment.name += key;
@@ -1353,12 +1190,7 @@ export function handleKeyStroke({
       case "a": {
         instructions[collapsedIndex] = {
           type: "assignInstruction",
-          fragments: [
-            { type: "instruction", value: "assign" },
-            undefined,
-            undefined,
-            undefined,
-          ],
+          fragments: [{ type: "instruction", value: "assign" }, undefined, undefined, undefined],
         };
         increment = "cursor";
         break;
@@ -1366,11 +1198,7 @@ export function handleKeyStroke({
       case "d": {
         instructions[collapsedIndex] = {
           type: "defInstruction",
-          fragments: [
-            { type: "instruction", value: "def" },
-            undefined,
-            undefined,
-          ],
+          fragments: [{ type: "instruction", value: "def" }, undefined, undefined],
         };
         increment = "cursor";
         break;
@@ -1378,12 +1206,7 @@ export function handleKeyStroke({
       case "c": {
         instructions[collapsedIndex] = {
           type: "compareInstruction",
-          fragments: [
-            { type: "instruction", value: "compare" },
-            undefined,
-            undefined,
-            undefined,
-          ],
+          fragments: [{ type: "instruction", value: "compare" }, undefined, undefined, undefined],
         };
         increment = "cursor";
         break;
@@ -1399,17 +1222,19 @@ export function handleKeyStroke({
       case "o": {
         instructions[collapsedIndex] = {
           type: "OSInstruction",
-          fragments: [
-            { type: "instruction", value: "os" },
-            undefined,
-            undefined,
-          ],
+          fragments: [{ type: "instruction", value: "os" }, undefined, undefined],
         };
         increment = "cursor";
         break;
       }
       case "m": {
-        setMacroSearchString("");
+        setFocusInputState({
+          type: FocusInputType.MACRO_SEARCH,
+          text: "",
+          allow: /^[ -~]$/,
+          matchedMacros: macros,
+          onCancel: () => (currentInstruction.fragments[cursorPos] = undefined),
+        });
         break;
       }
       case "_": {
@@ -1472,10 +1297,17 @@ export function handleKeyStroke({
             break;
           }
           case 2: {
-            currentInstruction.fragments[2] = {
+            const newFragment: DefTypeFragment = {
               type: "defType",
             };
-            setTypeSearchString(key);
+            currentInstruction.fragments[2] = newFragment;
+            setFocusInputState({
+              text: key,
+              allow: /^[ -~]$/,
+              type: FocusInputType.TYPE_SEARCH,
+              matchedTypes: baseTypes,
+              onCancel: () => (currentInstruction.fragments[cursorPos] = undefined),
+            });
             break;
           }
         }
@@ -1492,17 +1324,11 @@ export function handleKeyStroke({
             setInstructions(instructions.slice());
             break;
           case 2: {
-            currentInstruction.fragments[2] = parseAssignAction(
-              currentInstruction.fragments[2]
-            );
+            currentInstruction.fragments[2] = parseAssignAction(currentInstruction.fragments[2]);
             break;
           }
           case 3: {
-            currentInstruction.fragments[3] = parseVarType(
-              currentInstruction.fragments[3],
-              false,
-              isMacro
-            );
+            currentInstruction.fragments[3] = parseVarType(currentInstruction.fragments[3], false, isMacro);
             setInstructions(instructions.slice());
             break;
           }
@@ -1512,26 +1338,15 @@ export function handleKeyStroke({
       case "compareInstruction": {
         switch (cursorPos) {
           case 1:
-            currentInstruction.fragments[1] = parseVarType(
-              currentInstruction.fragments[1],
-              false,
-              isMacro
-            );
+            currentInstruction.fragments[1] = parseVarType(currentInstruction.fragments[1], false, isMacro);
             setInstructions(instructions.slice());
             break;
           case 2: {
-            currentInstruction.fragments[2] = parseComparator(
-              currentInstruction.fragments[2],
-              false
-            );
+            currentInstruction.fragments[2] = parseComparator(currentInstruction.fragments[2], false);
             break;
           }
           case 3: {
-            currentInstruction.fragments[3] = parseVarType(
-              currentInstruction.fragments[3],
-              false,
-              isMacro
-            );
+            currentInstruction.fragments[3] = parseVarType(currentInstruction.fragments[3], false, isMacro);
             setInstructions(instructions.slice());
             break;
           }
@@ -1577,11 +1392,7 @@ export function handleKeyStroke({
             break;
           }
           case 2: {
-            currentInstruction.fragments[2] = parseVarType(
-              currentInstruction.fragments[2],
-              false,
-              isMacro
-            );
+            currentInstruction.fragments[2] = parseVarType(currentInstruction.fragments[2], false, isMacro);
             setInstructions(instructions.slice());
             break;
           }
@@ -1595,16 +1406,11 @@ export function handleKeyStroke({
           if (newVarType) {
             fragment.value = newVarType.value;
             if (fragment.value === "var" || fragment.value === "const") {
-              fragment.numberType =
-                newVarType.value === "var" ? newVarType.numberType : undefined;
+              fragment.numberType = newVarType.value === "var" ? newVarType.numberType : undefined;
               if (fragment.value === "var") {
-                fragment.offset =
-                  newVarType.value === "var" ? newVarType.offset : undefined;
+                fragment.offset = newVarType.value === "var" ? newVarType.offset : undefined;
               } else if (fragment.value === "const") {
-                fragment.constValue =
-                  newVarType.value === "const"
-                    ? newVarType.constValue
-                    : undefined;
+                fragment.constValue = newVarType.value === "const" ? newVarType.constValue : undefined;
               }
             }
           }
@@ -1695,10 +1501,8 @@ export function handleKeyStroke({
         instructions.length === 0 ||
         (instructionIndex > 0 &&
           cursorPositions.length === 1 &&
-          collapsedInstructions[instructionIndex - 1].type ===
-            "blockInstruction" &&
-          collapsedInstructions[instructionIndex + 1].type ===
-            "blockInstruction")
+          collapsedInstructions[instructionIndex - 1].type === "blockInstruction" &&
+          collapsedInstructions[instructionIndex + 1].type === "blockInstruction")
       ) {
         instructions.splice(startLine, 0, {
           type: "emptyInstruction",
@@ -1721,28 +1525,18 @@ export function handleKeyStroke({
           let inlineInstruction = instruction;
           if (cursorPositions.length > 1) {
             let i = 0;
-            while (
-              i < cursorPositions.length &&
-              inlineInstruction.inlineMacros[cursorPositions[i]]
-            ) {
-              inlineInstruction =
-                inlineInstruction.inlineMacros[cursorPositions[i]].instruction;
+            while (i < cursorPositions.length && inlineInstruction.inlineMacros[cursorPositions[i]]) {
+              inlineInstruction = inlineInstruction.inlineMacros[cursorPositions[i]].instruction;
               i++;
             }
           }
-          inlineInstruction.fragments[
-            cursorPositions[cursorPositions.length - 1]
-          ] = undefined;
+          inlineInstruction.fragments[cursorPositions[cursorPositions.length - 1]] = undefined;
           setCursorPositions(cursorPositions.slice());
         }
       }
       setInstructions(instructions.slice());
     }
     // ---------------------------------------------
-  } else if (key === "ArrowRight" && currentInstruction) {
-    setCursorPos(CursorMovement.INCREMENT);
-  } else if (key === "ArrowLeft") {
-    setCursorPos(CursorMovement.DECREMENT);
     // ---------------------------------------------
   } else if (key === "ArrowUp") {
     if (onCursorUnderflow && instructionIndex === 0) {
@@ -1760,10 +1554,7 @@ export function handleKeyStroke({
       }
     }
     // ---------------------------------------------
-  } else if (
-    key === "ArrowDown" &&
-    instructionIndex < collapsedInstructions.length - 1
-  ) {
+  } else if (key === "ArrowDown" && instructionIndex < collapsedInstructions.length - 1) {
     const nextInstruction = collapsedInstructions[instructionIndex + 1]!;
     setInstructionIndex(instructionIndex + 1);
     if (shiftKey) {
@@ -1785,10 +1576,7 @@ export function handleKeyStroke({
     }
   }
 
-  if (
-    instructions[instructions.length - 1].type !== "emptyInstruction" &&
-    !isMacro
-  ) {
+  if (instructions[instructions.length - 1].type !== "emptyInstruction" && !isMacro) {
     instructions.push({ type: "emptyInstruction", fragments: [undefined] });
     setInstructions(instructions.slice());
   }

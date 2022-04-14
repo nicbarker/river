@@ -6,6 +6,7 @@ export enum RiverTypeCategory {
   STRUCT,
 }
 export enum NumberType {
+  ANY,
   UINT,
   INT,
   FLOAT,

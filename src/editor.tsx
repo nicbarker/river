@@ -3,13 +3,15 @@ import React from "react";
 import { useState, useEffect } from "react";
 import {
   CollapsedInstruction,
+  FocusInputState,
+  FocusInputType,
   getFragmentHints,
   handleKeyStroke,
   Instruction,
   Macro,
 } from "./editor_handler";
 import { preProcess } from "./preprocess";
-import { baseTypes, NumberType } from "./types/river_types";
+import { NumberType, RiverType } from "./types/river_types";
 
 export type VisibleVariable = {
   name: string;
@@ -23,107 +25,53 @@ function renderFragments(
   hasFocus: boolean,
   isMacro: boolean,
   cursorPositions: number[],
-  visibleVariables: VisibleVariable[],
   selectionRange: [number, number],
-  macros: Macro[],
-  variableSearchString?: string,
-  macroSearchString?: string,
-  typeSearchString?: string,
+  focusInputState?: FocusInputState,
   inlineMacro?: boolean
 ) {
   const cursorPos = cursorPositions.length > 1 ? -1 : cursorPositions[0];
   return instruction.fragments.map((fragment, i) => {
     let fragmentContent: React.ReactNode;
     if (
-      typeof variableSearchString !== "undefined" &&
-      fragment?.type === "varType" &&
+      focusInputState &&
       hasCursor &&
       cursorPos === i
     ) {
-      const found = visibleVariables
-        .filter((m) =>
-          m.name
-            .toLocaleLowerCase()
-            .startsWith(variableSearchString.toLocaleLowerCase())
-        )
-        .sort((a, b) => a.name.length - b.name.length)
-        .map((m) => (
-          <>
-            <b className="bold-hint">
-              {m.name.slice(0, variableSearchString.length)}
-            </b>
-            {m.name.slice(variableSearchString.length)}
-          </>
-        ))
-        .map((e, i, arr) => (
-          <React.Fragment key={i}>
-            {e}
-            {i < arr.length - 1 ? " | " : null}
-          </React.Fragment>
-        ));
-      fragmentContent = (
-        <div className={classnames("empty", "fragment")}>{found}</div>
-      );
-    } else if (
-      typeof macroSearchString !== "undefined" &&
-      hasCursor &&
-      cursorPos === i
-    ) {
-      const found = macros
-        .filter(
-          (m) =>
-            m.inline &&
-            m.name
-              .toLocaleLowerCase()
-              .startsWith(macroSearchString.toLocaleLowerCase())
-        )
-        .map((m) => (
-          <>
-            <b className="bold-hint">
-              {m.name.slice(0, macroSearchString.length)}
-            </b>
-            {m.name.slice(macroSearchString.length)}
-          </>
-        ))
-        .map((e, i, arr) => (
-          <React.Fragment key={i}>
-            {e}
-            {i < arr.length - 1 ? " | " : null}
-          </React.Fragment>
-        ));
-      fragmentContent = (
-        <div className={classnames("empty", "fragment")}>{found}</div>
-      );
-    } else if (
-      typeof typeSearchString !== "undefined" &&
-      fragment?.type === "defType" &&
-      hasCursor &&
-      cursorPos === i
-    ) {
-      const found = baseTypes
-        .filter((t) =>
-          t.name
-            .toLocaleLowerCase()
-            .startsWith(typeSearchString.toLocaleLowerCase())
-        )
-        .sort((a, b) => a.name.length - b.name.length)
-        .map((m) => (
-          <>
-            <b className="bold-hint">
-              {m.name.slice(0, typeSearchString.length)}
-            </b>
-            {m.name.slice(typeSearchString.length)}
-          </>
-        ))
-        .map((e, i, arr) => (
-          <React.Fragment key={i}>
-            {e}
-            {i < arr.length - 1 ? " | " : null}
-          </React.Fragment>
-        ));
-      fragmentContent = (
-        <div className={classnames("empty", "fragment")}>{found}</div>
-      );
+      if ([FocusInputType.MACRO_SEARCH, FocusInputType.VARIABLE_SEARCH, FocusInputType.TYPE_SEARCH].includes(focusInputState.type)) {
+        let items: (Macro | VisibleVariable | RiverType)[] = [];
+        if (focusInputState.type === FocusInputType.MACRO_SEARCH) {
+          items = focusInputState.matchedMacros;
+        } else if (focusInputState.type === FocusInputType.VARIABLE_SEARCH) {
+          items = focusInputState.matchedVariables;
+        } else if (focusInputState.type === FocusInputType.TYPE_SEARCH) {
+          items = focusInputState.matchedTypes;
+        }
+        const found = items
+          .sort((a, b) => a.name.length - b.name.length)
+          .map((m) => (
+            <>
+              <b className="bold-hint">
+                {m.name.slice(0, focusInputState.text.length)}
+              </b>
+              {m.name.slice(focusInputState.text.length)}
+            </>
+          ))
+          .map((e, i, arr) => (
+            <React.Fragment key={i}>
+              {e}
+              {i < arr.length - 1 ? " | " : null}
+            </React.Fragment>
+          ));
+        fragmentContent = (
+          <div className={classnames("empty", "fragment")}>{found}</div>
+        );
+      } else if ([FocusInputType.UNSIGNED_CONST, FocusInputType.SIGNED_CONST, FocusInputType.FLOAT_CONST].includes(focusInputState.type)) {
+        fragmentContent = `const ${
+          focusInputState.text.length === 0
+            ? "0.. value"
+            : focusInputState.text
+        }`;
+      }
     } else if (fragment?.type === "varType") {
       switch (fragment?.value) {
         case "_": {
@@ -149,12 +97,8 @@ function renderFragments(
                     hasFocus,
                     isMacro,
                     cursorPositions[0] === i ? cursorPositions.slice(1) : [],
-                    visibleVariables,
                     selectionRange,
-                    macros,
-                    variableSearchString,
-                    macroSearchString,
-                    typeSearchString,
+                    focusInputState,
                     true
                   )}
                 </div>
@@ -274,11 +218,7 @@ function renderInstructions(
   cursorPositions: number[],
   hasFocus: boolean,
   isMacro: boolean,
-  macros: Macro[],
-  macroSearchString: string | undefined,
-  visibleVariables: VisibleVariable[],
-  variableSearchString: string | undefined,
-  typeSearchString: string | undefined
+  focusInputState?: FocusInputState,
 ) {
   let indent = 0;
   let instructionsRendered: React.ReactNode[] = [];
@@ -291,12 +231,8 @@ function renderInstructions(
       hasFocus,
       isMacro,
       cursorPositions,
-      visibleVariables,
       selectionRange,
-      macros,
-      variableSearchString,
-      macroSearchString,
-      typeSearchString
+      focusInputState
     );
 
     if (instruction.type === "macroInstruction") {
@@ -340,24 +276,17 @@ function renderInstructions(
     let contents: React.ReactElement;
 
     if (
-      typeof macroSearchString !== "undefined" &&
+      focusInputState?.type === FocusInputType.MACRO_SEARCH &&
       instructionIndex === li &&
       cursorPositions[cursorPositions.length - 1] === 0
     ) {
-      const found = macros
-        .filter(
-          (m) =>
-            !m.inline &&
-            m.name
-              .toLocaleLowerCase()
-              .startsWith(macroSearchString.toLocaleLowerCase())
-        )
+      const found = focusInputState.matchedMacros
         .map((m) => (
           <>
             <b className="bold-hint">
-              {m.name.slice(0, macroSearchString.length)}
+              {m.name.slice(0, focusInputState.text.length)}
             </b>
-            {m.name.slice(macroSearchString.length)}
+            {m.name.slice(focusInputState.text.length)}
           </>
         ))
         .map((e, i, arr) => (
@@ -435,15 +364,7 @@ export function Editor({
     -1,
   ]);
   const [instructionIndex, setInstructionIndex] = useState(0);
-  const [macroSearchString, setMacroSearchString] = useState<
-    string | undefined
-  >(undefined);
-  const [variableSearchString, setVariableSearchString] = useState<
-    string | undefined
-  >(undefined);
-  const [typeSearchString, setTypeSearchString] = useState<string | undefined>(
-    undefined
-  );
+  const [focusInputState, setFocusInputState] = useState<FocusInputState | undefined>();
   const { collapsedInstructions, visibleVariables } = preProcess(
     instructions,
     instructionIndex,
@@ -506,9 +427,7 @@ export function Editor({
           selectionRange,
           isMacro,
           macros,
-          macroSearchString,
-          variableSearchString,
-          typeSearchString,
+          focusInputState,
           visibleVariables,
           key: e.key,
           shiftKey: e.shiftKey,
@@ -517,9 +436,7 @@ export function Editor({
           setCursorPositions,
           setSelectionRange,
           setMacros,
-          setMacroSearchString,
-          setVariableSearchString,
-          setTypeSearchString,
+          setFocusInputState,
           setActiveRightTab,
           setFocusIndex,
           onCursorUnderflow,
@@ -528,27 +445,7 @@ export function Editor({
     };
     window.addEventListener("keydown", handle);
     return () => window.removeEventListener("keydown", handle);
-  }, [
-    instructions,
-    setInstructions,
-    hasFocus,
-    instructionIndex,
-    instruction,
-    selectionRange,
-    macros,
-    setMacros,
-    macroSearchString,
-    setActiveRightTab,
-    setFocusIndex,
-    onCursorUnderflow,
-    isMacro,
-    collapsedInstructions,
-    fixedInstructionIndex,
-    visibleVariables,
-    variableSearchString,
-    fixedCursorPositions,
-    typeSearchString,
-  ]);
+  }, [instructions, setInstructions, hasFocus, instructionIndex, instruction, selectionRange, macros, setMacros, setActiveRightTab, setFocusIndex, onCursorUnderflow, isMacro, collapsedInstructions, fixedInstructionIndex, visibleVariables, fixedCursorPositions, focusInputState]);
 
   const instructionsRendered = renderInstructions(
     collapsedInstructions,
@@ -557,11 +454,7 @@ export function Editor({
     fixedCursorPositions,
     hasFocus,
     isMacro,
-    macros,
-    macroSearchString,
-    visibleVariables,
-    variableSearchString,
-    typeSearchString
+    focusInputState,
   );
 
   return <code className={"code"}>{instructionsRendered}</code>;

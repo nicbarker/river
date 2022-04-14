@@ -16,17 +16,15 @@ html,
 
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen",
-    "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
-    sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", "Fira Sans",
+    "Droid Sans", "Helvetica Neue", sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   height: 100%;
 }
 
 code {
-  font-family: "Source Code Pro", Menlo, Monaco, Consolas, "Courier New",
-    monospace;
+  font-family: "Source Code Pro", Menlo, Monaco, Consolas, "Courier New", monospace;
   white-space: pre;
 }
 
@@ -278,11 +276,6 @@ button {
   background: rgba(0, 170, 255, 0.4);
 }
 
-.fragment.missing,
-.fragment.placeholder {
-  margin: 0 2px;
-}
-
 .fragment:not(.highlight).placeholder:after,
 .fragment:not(.highlight).missing:after {
   content: " ";
@@ -327,6 +320,7 @@ button {
 .fragment {
   display: flex;
   align-items: center;
+  margin-right: 9px;
 }
 
 .fragment.scope {
@@ -350,7 +344,7 @@ button {
   font-weight: 600;
 }
 
-.fragment.comparator {
+.fragment.compareAction {
   color: #f9cdad;
 }
 

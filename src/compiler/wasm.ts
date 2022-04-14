@@ -1,12 +1,17 @@
 /* eslint-disable no-sparse-arrays */
-import { AssignInstruction, CompareInstruction } from "../editor_handler";
 import {
-  CompiledInstruction,
-  CompiledInstructionAssign,
-  CompiledInstructionCompare,
-} from "../parse";
+  AssignAction,
+  CompareAction,
+  FragmentType,
+  InstructionAssignValid,
+  InstructionCompareValid,
+  InstructionType,
+  InstructionValid,
+  JumpAction,
+  OSAction,
+} from "../parse2";
 import { NumberType } from "../types/river_types";
-import { ASMBlock, ASMLine } from "./compiler";
+import { ASMBlock } from "./compiler";
 
 function numberTypePrefix(numberType: NumberType) {
   if (numberType === NumberType.FLOAT) {
@@ -26,9 +31,7 @@ function comparatorSignSuffix(numberType: NumberType) {
   }
 }
 
-function truncateOrWrap(
-  instruction: CompiledInstructionAssign | CompiledInstructionCompare
-): string | undefined {
+function truncateOrWrap(instruction: InstructionAssignValid | InstructionCompareValid): string | undefined {
   // Truncation and wrapping -----
   // Promote or demote floats
   if (
@@ -43,26 +46,17 @@ function truncateOrWrap(
     }
   }
   // Truncate floats down to signed or unsigned int e.g. (i32.trunc_f32_s)
-  else if (
-    instruction.left.numberType !== NumberType.FLOAT &&
-    instruction.right.numberType === NumberType.FLOAT
-  ) {
+  else if (instruction.left.numberType !== NumberType.FLOAT && instruction.right.numberType === NumberType.FLOAT) {
     return `i${instruction.left.size}.trunc_f${instruction.right.size}_${
       instruction.left.numberType === NumberType.UINT ? "u" : "s"
     }`;
     // Convert ints to float e.g. (f64.convert_i32_u)
-  } else if (
-    instruction.left.numberType === NumberType.FLOAT &&
-    instruction.right.numberType !== NumberType.FLOAT
-  ) {
+  } else if (instruction.left.numberType === NumberType.FLOAT && instruction.right.numberType !== NumberType.FLOAT) {
     return `f${instruction.left.size}.convert_i${instruction.right.size}_${
       instruction.right.numberType === NumberType.UINT ? "u" : "s"
     }`;
     // Integers
-  } else if (
-    instruction.right.numberType !== NumberType.FLOAT &&
-    instruction.left.numberType !== NumberType.FLOAT
-  ) {
+  } else if (instruction.right.numberType !== NumberType.FLOAT && instruction.left.numberType !== NumberType.FLOAT) {
     // Extend if the right hand side is smaller
     if (instruction.left.size === 64 && instruction.right.size === 32) {
       return `i64.extend_i32_${instruction.right.numberType}`;
@@ -75,7 +69,8 @@ function truncateOrWrap(
 
 export function compileWasm(
   fileName: string,
-  instructions: CompiledInstruction[],
+  instructions: InstructionValid[],
+  serializedInstructions: string[],
   maxMemory: number
 ) {
   let indent = [,];
@@ -103,54 +98,35 @@ export function compileWasm(
   let printEnd = 0;
   let blockDepth = 0;
   let loopDepth = 0;
-  for (
-    let instructionIndex = 0;
-    instructionIndex < instructions.length;
-    instructionIndex++
-  ) {
+  for (let instructionIndex = 0; instructionIndex < instructions.length; instructionIndex++) {
     const instruction = instructions[instructionIndex];
-    const instructionOutputs: ASMBlock = [
-      instruction.originalInstructionIndex,
-      [],
-    ];
-    switch (instruction.instruction) {
-      case "assign": {
-        instructionOutputs[1].push([
-          ,
-          `;; ${instructionIndex}: ${instruction.serialized}`,
-        ]);
+    const instructionOutputs: ASMBlock = [instructionIndex, []];
+    switch (instruction.type) {
+      case InstructionType.ASSIGN: {
+        instructionOutputs[1].push([, `;; ${instructionIndex}: ${serializedInstructions[instructionIndex]}`]);
         const leftAddress = instruction.left.value / 8;
         instructionOutputs[1].push([...indent, `i32.const ${leftAddress}`]);
-        if (instruction.action !== "=") {
+        if (instruction.action.action !== AssignAction.EQUALS) {
           instructionOutputs[1].push([...indent, `i32.const ${leftAddress}`]);
           instructionOutputs[1].push([
             ...indent,
-            `${numberTypePrefix(instruction.left.numberType)}${
-              instruction.left.size
-            }.load`,
+            `${numberTypePrefix(instruction.left.numberType)}${instruction.left.size}.load`,
           ]);
         }
         switch (instruction.right.type) {
-          case "const": {
+          case FragmentType.CONST: {
             const rightValue = instruction.right.value.toString() || "0";
             instructionOutputs[1].push([
               ...indent,
-              `${numberTypePrefix(instruction.right.numberType)}${
-                instruction.right.size
-              }.const ${rightValue}`,
+              `${numberTypePrefix(instruction.right.numberType)}${instruction.right.size}.const ${rightValue}`,
             ]);
             break;
           }
-          case "var": {
+          case FragmentType.VAR: {
+            instructionOutputs[1].push([...indent, `i32.const ${instruction.right.value / 8}`]);
             instructionOutputs[1].push([
               ...indent,
-              `i32.const ${instruction.right.value / 8}`,
-            ]);
-            instructionOutputs[1].push([
-              ...indent,
-              `${numberTypePrefix(instruction.right.numberType)}${
-                instruction.right.size
-              }.load`,
+              `${numberTypePrefix(instruction.right.numberType)}${instruction.right.size}.load`,
             ]);
             break;
           }
@@ -158,20 +134,20 @@ export function compileWasm(
             break;
         }
         let action: string | null = null;
-        switch (instruction.action) {
-          case "+": {
+        switch (instruction.action.action) {
+          case AssignAction.ADD: {
             action = "add";
             break;
           }
-          case "-": {
+          case AssignAction.SUBTRACT: {
             action = "sub";
             break;
           }
-          case "*": {
+          case AssignAction.MULTIPLY: {
             action = "mul";
             break;
           }
-          case "/": {
+          case AssignAction.DIVIDE: {
             if (instruction.left.numberType === NumberType.UINT) {
               action = "div_u";
             } else if (instruction.left.numberType === NumberType.INT) {
@@ -181,7 +157,7 @@ export function compileWasm(
             }
             break;
           }
-          case "%": {
+          case AssignAction.MOD: {
             if (instruction.left.numberType === NumberType.UINT) {
               action = "rem_u";
             } else if (instruction.left.numberType === NumberType.INT) {
@@ -191,11 +167,11 @@ export function compileWasm(
             }
             break;
           }
-          case "&&": {
+          case AssignAction.AND: {
             action = "and";
             break;
           }
-          case "||": {
+          case AssignAction.OR: {
             action = "or";
             break;
           }
@@ -209,36 +185,26 @@ export function compileWasm(
         if (action) {
           instructionOutputs[1].push([
             ...indent,
-            `${numberTypePrefix(instruction.left.numberType)}${
-              instruction.left.size
-            }.${action}`,
+            `${numberTypePrefix(instruction.left.numberType)}${instruction.left.size}.${action}`,
           ]);
         }
         instructionOutputs[1].push([
           ...indent,
-          `${numberTypePrefix(instruction.left.numberType)}${
-            instruction.left.size
-          }.store`,
+          `${numberTypePrefix(instruction.left.numberType)}${instruction.left.size}.store`,
         ]);
 
         break;
       }
-      case "jump": {
-        instructionOutputs[1].push([
-          ,
-          `;; ${instructionIndex}: ${instruction.serialized}`,
-        ]);
+      case InstructionType.JUMP: {
+        instructionOutputs[1].push([, `;; ${instructionIndex}: ${serializedInstructions[instructionIndex]}`]);
         let branch = "br";
         if (printEnd === 1) {
           branch = "br_if";
           printEnd--;
           indent.pop();
         }
-        if (instruction.type === "start") {
-          instructionOutputs[1].push([
-            ...indent,
-            `${branch} $${blockDepth}_${loopDepth}`,
-          ]);
+        if (instruction.action.action === JumpAction.START) {
+          instructionOutputs[1].push([...indent, `${branch} $${blockDepth}_${loopDepth}`]);
           loopDepth -= 1;
           indent.pop();
           instructionOutputs[1].push([...indent, `end`]);
@@ -247,80 +213,49 @@ export function compileWasm(
         }
         break;
       }
-      case "compare": {
-        instructionOutputs[1].push([
-          ,
-          `;; ${instructionIndex}: ${instruction.serialized}`,
-        ]);
+      case InstructionType.COMPARE: {
+        instructionOutputs[1].push([, `;; ${instructionIndex}: ${serializedInstructions[instructionIndex]}`]);
         let comp = "";
-        switch (instruction.action) {
-          case "==":
+        switch (instruction.action.action) {
+          case CompareAction.EQUAL:
             comp = "eq";
             break;
-          case "<":
+          case CompareAction.LESS:
             comp = `lt${comparatorSignSuffix}`;
             break;
-          case "<=":
+          case CompareAction.LESS_EQUAL:
             comp = `le${comparatorSignSuffix}`;
             break;
-          case ">":
+          case CompareAction.GREATER:
             comp = `gt${comparatorSignSuffix}`;
             break;
-          case ">=":
+          case CompareAction.GREATER_EQUAL:
             comp = `ge${comparatorSignSuffix}`;
             break;
-          case "!=":
+          case CompareAction.NOT_EQUAL:
             comp = "ne";
             break;
           default:
             break;
         }
-        switch (instruction.left.type) {
-          case "const": {
-            const source = instruction.left.value.toString() || "0";
-            instructionOutputs[1].push([
-              ...indent,
-              `i${instruction.left.size}.const ${source}`,
-            ]);
-            break;
-          }
-          case "var": {
-            instructionOutputs[1].push([
-              ...indent,
-              `i32.const ${instruction.left.value / 8}`,
-            ]);
-            instructionOutputs[1].push([
-              ...indent,
-              `${numberTypePrefix(instruction.left.numberType)}${
-                instruction.left.size
-              }.load`,
-            ]);
-            break;
-          }
-          default:
-            break;
-        }
+        instructionOutputs[1].push([...indent, `i32.const ${instruction.left.value / 8}`]);
+        instructionOutputs[1].push([
+          ...indent,
+          `${numberTypePrefix(instruction.left.numberType)}${instruction.left.size}.load`,
+        ]);
 
         const rightSize = instruction.left.size === 64 ? 64 : 32;
         switch (instruction.right.type) {
-          case "const": {
+          case FragmentType.CONST: {
             const source = instruction.right.value.toString() || "0";
-            instructionOutputs[1].push([
-              ...indent,
-              `i${rightSize}.const ${source}`,
-            ]);
+            instructionOutputs[1].push([...indent, `i${rightSize}.const ${source}`]);
             break;
           }
-          case "var": {
+          case FragmentType.VAR: {
+            instructionOutputs[1].push([...indent, `i32.const ${instruction.right.value / 8}`]);
             instructionOutputs[1].push([
               ...indent,
-              `i32.const ${instruction.right.value / 8}`,
-            ]);
-            instructionOutputs[1].push([
-              ...indent,
-              `${numberTypePrefix(
-                instruction.right.numberType
-              )}${rightSize}.load`,
+              `${numberTypePrefix(instruction.right.numberType)}${rightSize}.load`,
             ]);
             break;
           }
@@ -328,15 +263,12 @@ export function compileWasm(
             break;
         }
 
-        instructionOutputs[1].push([
-          ...indent,
-          `i${instruction.left.size}.${comp}`,
-        ]);
+        instructionOutputs[1].push([...indent, `i${instruction.left.size}.${comp}`]);
 
         if (instructionIndex < instructions.length - 1) {
           const nextInstruction = instructions[instructionIndex + 1];
           // We use a br_if instead of an if statement in the case of compare then jump
-          if (nextInstruction.instruction !== "jump") {
+          if (nextInstruction.type !== InstructionType.JUMP) {
             instructionOutputs[1].push([...indent, `if`]);
           }
           indent.push(undefined);
@@ -345,36 +277,28 @@ export function compileWasm(
         }
         break;
       }
-      case "os": {
-        instructionOutputs[1].push([
-          ,
-          `;; ${instructionIndex}: ${instruction.serialized}`,
-        ]);
-        switch (instruction.action) {
-          case "stdout": {
-            switch (instruction.type) {
-              case "var": {
-                const source = instruction.value / 8;
+      case InstructionType.OS: {
+        instructionOutputs[1].push([, `;; ${instructionIndex}: ${serializedInstructions[instructionIndex]}`]);
+        switch (instruction.action.action) {
+          case OSAction.STDOUT: {
+            switch (instruction.action.varType.type) {
+              case FragmentType.VAR: {
+                const source = instruction.action.varType.value / 8;
                 instructionOutputs[1].push([...indent, `i32.const ${source}`]);
                 instructionOutputs[1].push([
                   ...indent,
-                  `${numberTypePrefix(instruction.numberType)}${
-                    instruction.size
-                  }.load`,
+                  `${numberTypePrefix(instruction.action.varType.numberType)}${instruction.action.varType.size}.load`,
                 ]);
                 instructionOutputs[1].push([
                   ...indent,
-                  `call $log${numberTypePrefix(instruction.numberType)}${
-                    instruction.size
+                  `call $log${numberTypePrefix(instruction.action.varType.numberType)}${
+                    instruction.action.varType.size
                   }`,
                 ]);
                 break;
               }
-              case "const": {
-                instructionOutputs[1].push([
-                  ...indent,
-                  `i64.const ${instruction.value}`,
-                ]);
+              case FragmentType.CONST: {
+                instructionOutputs[1].push([...indent, `i64.const ${instruction.action.varType.value}`]);
                 instructionOutputs[1].push([...indent, `call $log64`]);
                 break;
               }
@@ -386,12 +310,12 @@ export function compileWasm(
         }
         break;
       }
-      case "scope": {
+      case InstructionType.SCOPE: {
         instructionOutputs[1].push([
           ,
-          instruction.originalInstructionIndex === -1
+          instructionIndex === -1
             ? `;; ${instruction.action === "open" ? "begin" : "end"} program`
-            : `;; ${instruction.originalInstructionIndex}: ${instruction.serialized}`,
+            : `;; ${instructionIndex}: ${serializedInstructions[instructionIndex]}`,
         ]);
         if (instruction.action === "open") {
           blockDepth += 1;
@@ -399,10 +323,7 @@ export function compileWasm(
           indent.push(undefined);
           for (let i = 0; i < instruction.loopCount; i++) {
             loopDepth += 1;
-            instructionOutputs[1].push([
-              ...indent,
-              `loop $${blockDepth}_${loopDepth}`,
-            ]);
+            instructionOutputs[1].push([...indent, `loop $${blockDepth}_${loopDepth}`]);
             indent.push(undefined);
           }
         } else {

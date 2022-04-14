@@ -1,22 +1,11 @@
 import classNames from "classnames";
-import { useEffect, useState } from "react";
-import {
-  ASMBlock,
-  BackendTarget,
-  compile,
-  formatASM,
-  formatWASM,
-} from "./compiler/compiler";
+import { useState } from "react";
+import { ASMBlock, BackendTarget, compile, formatASM, formatWASM } from "./compiler/compiler";
 import { InlineDropdown } from "./components/inline_dropdown";
-import { Instruction } from "./editor_handler";
-import { instructionsToText, parse } from "./parse";
-import { validate } from "./validate";
+import { InstructionValid } from "./parse2";
+import { ApplicationState } from "./editor_handler2";
 
-export function downloadFile(
-  data: string,
-  fileName: string,
-  type = "text/plain"
-) {
+export function downloadFile(data: string, fileName: string, type = "text/plain") {
   // Create an invisible A element
   const a = document.createElement("a");
   a.style.display = "none";
@@ -37,15 +26,17 @@ export function downloadFile(
 }
 
 function compileAsm(
-  instructions: Instruction[],
+  instructions: InstructionValid[],
+  serializedInstructions: string[],
+  maxMemory: number,
   target: BackendTarget,
   fileName: string
 ) {
-  const [, pInstructions, pMaxMemory] = parse(
-    instructionsToText(instructions),
-    target === "wasm" ? 32 : 8
-  );
-  const compiled = compile(target, fileName, pInstructions, pMaxMemory);
+  // const [, pInstructions, pMaxMemory] = parse(
+  //   instructionsToText(instructions),
+  //   target === "wasm" ? 32 : 8
+  // );
+  const compiled = compile(target, fileName, instructions, serializedInstructions, maxMemory);
   return compiled;
 }
 
@@ -55,10 +46,7 @@ const targetValues: [BackendTarget, string][] = [
   ["wasm", "WebAssembly"],
 ];
 
-function renderX64(props: {
-  asm: ASMBlock[];
-  instructionRange: [number, number];
-}) {
+function renderX64(props: { asm: ASMBlock[]; instructionRange: [number, number] }) {
   return props.asm.map((block, bi) => {
     const renderedLines = block[1].map((line, li) => {
       const columns: React.ReactNode[] = [];
@@ -73,10 +61,7 @@ function renderX64(props: {
             className={classNames({
               purple:
                 column?.charAt(0) !== ";" &&
-                (i === 0 ||
-                  column === "section" ||
-                  column === ".text" ||
-                  column === ".data"),
+                (i === 0 || column === "section" || column === ".text" || column === ".data"),
               red: i === 1 && column?.charAt(0) !== ";",
               blue: i === 2 && column?.charAt(0) !== "_",
             })}
@@ -95,9 +80,7 @@ function renderX64(props: {
       <div
         key={bi}
         className={classNames("asmBlock", {
-          highlight:
-            props.instructionRange[0] <= block[0] &&
-            props.instructionRange[1] > block[0],
+          highlight: props.instructionRange[0] <= block[0] && props.instructionRange[1] > block[0],
         })}
       >
         {renderedLines}
@@ -106,10 +89,7 @@ function renderX64(props: {
   });
 }
 
-function renderWasm(props: {
-  asm: ASMBlock[];
-  instructionRange: [number, number];
-}) {
+function renderWasm(props: { asm: ASMBlock[]; instructionRange: [number, number] }) {
   return props.asm.map((block, bi) => {
     const renderedLines = block[1].map((line, li) => {
       const columns: React.ReactNode[] = [];
@@ -146,9 +126,7 @@ function renderWasm(props: {
       <div
         key={bi}
         className={classNames("asmBlock", {
-          highlight:
-            props.instructionRange[0] <= block[0] &&
-            props.instructionRange[1] > block[0],
+          highlight: props.instructionRange[0] <= block[0] && props.instructionRange[1] > block[0],
         })}
       >
         {renderedLines}
@@ -157,25 +135,38 @@ function renderWasm(props: {
   });
 }
 
-export function ASMTab(props: {
-  instructions: Instruction[];
-  instructionRange: [number, number];
-}) {
-  const [asm, setAsm] = useState<ASMBlock[]>([]);
-  const [targetPlatform, setTargetPlatform] = useState<BackendTarget>(
-    "x64_win"
-  );
+export function ASMTab({ applicationState }: { applicationState: ApplicationState }) {
+  const instructionRange: [number, number] = [applicationState.cursorPositions[0], applicationState.cursorPositions[0]];
+  const [targetPlatform, setTargetPlatform] = useState<BackendTarget>("x64_win");
+  let content: React.ReactElement;
+  let downloadButton: React.ReactElement | null = null;
+  if (applicationState.valid) {
+    const asm = compileAsm(
+      applicationState.instructions as InstructionValid[],
+      applicationState.serializedInstructions,
+      applicationState.maxMemory,
+      targetPlatform,
+      "untitled"
+    );
 
-  useEffect(() => {
-    if (validate(props.instructions)) {
-      setAsm(compileAsm(props.instructions, targetPlatform, "untitled"));
-    }
-  }, [props.instructions, targetPlatform]);
+    downloadButton = (
+      <button
+        className="subheaderButton"
+        onClick={() => downloadFile(targetPlatform === "wasm" ? formatWASM(asm) : formatASM(asm), "untitled.asm")}
+      >
+        Download
+      </button>
+    );
 
-  const renderedBlocks =
-    targetPlatform === "wasm"
-      ? renderWasm({ asm, instructionRange: props.instructionRange })
-      : renderX64({ asm, instructionRange: props.instructionRange });
+    const renderedBlocks =
+      targetPlatform === "wasm"
+        ? renderWasm({ asm, instructionRange: instructionRange })
+        : renderX64({ asm, instructionRange: instructionRange });
+
+    content = <div className={"asmInner"}>{renderedBlocks}</div>;
+  } else {
+    content = <div>Invalid Program</div>;
+  }
 
   const targets = targetValues.map((platform, index) => (
     <button
@@ -194,28 +185,16 @@ export function ASMTab(props: {
       <div className="header subheader">
         <InlineDropdown
           classNames="subheaderButton"
-          label={`Target: ${
-            targetValues.find((t) => t[0] === targetPlatform)![1]
-          }`}
+          label={`Target: ${targetValues.find((t) => t[0] === targetPlatform)![1]}`}
           openLabel="Select Target"
           dismissOnClick
         >
           {targets}
         </InlineDropdown>
         <div className={"divider"} />
-        <button
-          className="subheaderButton"
-          onClick={() =>
-            downloadFile(
-              targetPlatform === "wasm" ? formatWASM(asm) : formatASM(asm),
-              "untitled.asm"
-            )
-          }
-        >
-          Download
-        </button>
+        {downloadButton}
       </div>
-      <div className={"asmInner"}>{renderedBlocks}</div>
+      {content}
     </div>
   );
 }

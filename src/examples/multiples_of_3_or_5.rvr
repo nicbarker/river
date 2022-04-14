@@ -19,7 +19,7 @@ compare u64 200 == const 0
 assign u8 264 = const 1
 def output u64 64
 assign u64 272 = u8 192
-assign u64 272 || u8 264
+assign u64 272 | u8 264
 scope open
 compare u64 272 == const 0
 jump end

@@ -11,11 +11,7 @@ import {
   ScopeInstruction,
   VarTypeFragment,
 } from "./editor_handler";
-import {
-  baseTypes,
-  getBaseTypeWithName,
-  NumberType,
-} from "./types/river_types";
+import { baseTypes, getBaseTypeWithName, NumberType } from "./types/river_types";
 
 const DEBUG = false;
 
@@ -129,10 +125,7 @@ export function parse(file: string, minRegisterSize: number = 8) {
 
   function openScope(originalInstructionIndex: number) {
     const stackOffset =
-      scopes.length > 0
-        ? scopes[scopes.length - 1].stackOffset +
-          scopes[scopes.length - 1].stackMemory
-        : 0;
+      scopes.length > 0 ? scopes[scopes.length - 1].stackOffset + scopes[scopes.length - 1].stackMemory : 0;
     const instruction: CompiledInstructionScope & { action: "open" } = {
       instruction: "scope",
       action: "open",
@@ -216,16 +209,17 @@ export function parse(file: string, minRegisterSize: number = 8) {
           action: tokens[3],
           left: {
             type: "var",
-            value: parseInt(tokens[2], 10),
+            value: parseFloat(tokens[2]),
             size: leftType ? Math.max(leftType.size, minRegisterSize) : 0,
             numberType: leftType ? leftType.numberType : NumberType.UINT,
           },
           right: {
             type: tokens[4] === "const" ? "const" : "var",
-            value: parseInt(tokens[5], 10),
+            value: parseFloat(tokens[5]),
             size: 0,
             numberType: leftType ? leftType.numberType : NumberType.UINT,
           },
+          //
           serialized: line,
           originalInstructionIndex: i,
         };
@@ -238,12 +232,8 @@ export function parse(file: string, minRegisterSize: number = 8) {
           }
           default:
             const rightType = baseTypes.find((t) => t.name === tokens[4]);
-            instruction.right.size = rightType
-              ? Math.max(rightType.size, minRegisterSize)
-              : 0;
-            instruction.right.numberType = rightType
-              ? rightType.numberType
-              : NumberType.UINT;
+            instruction.right.size = rightType ? Math.max(rightType.size, minRegisterSize) : 0;
+            instruction.right.numberType = rightType ? rightType.numberType : NumberType.UINT;
             break;
         }
         instructions.push(instruction);
@@ -435,12 +425,7 @@ export function parseTextFile(file: string, isMacro?: boolean): Instruction[] {
         }
         const instruction: AssignInstruction = {
           type: "assignInstruction",
-          fragments: [
-            { type: "instruction", value: "assign" },
-            leftFragment,
-            assignActionFragment,
-            rightFragment,
-          ],
+          fragments: [{ type: "instruction", value: "assign" }, leftFragment, assignActionFragment, rightFragment],
         };
         toReturn.push(instruction);
         break;
@@ -524,12 +509,7 @@ export function parseTextFile(file: string, isMacro?: boolean): Instruction[] {
 
         const instruction: CompareInstruction = {
           type: "compareInstruction",
-          fragments: [
-            { type: "instruction", value: "compare" },
-            leftFragment,
-            comparatorFragment,
-            rightFragment,
-          ],
+          fragments: [{ type: "instruction", value: "compare" }, leftFragment, comparatorFragment, rightFragment],
         };
         toReturn.push(instruction);
         break;
@@ -558,11 +538,7 @@ export function parseTextFile(file: string, isMacro?: boolean): Instruction[] {
             }
             const instruction: OSInstruction = {
               type: "OSInstruction",
-              fragments: [
-                { type: "instruction", value: "os" },
-                { type: "OSAction", value: "stdout" },
-                sourceFragment,
-              ],
+              fragments: [{ type: "instruction", value: "os" }, { type: "OSAction", value: "stdout" }, sourceFragment],
             };
             toReturn.push(instruction);
             break;
@@ -596,18 +572,14 @@ export function parseTextFile(file: string, isMacro?: boolean): Instruction[] {
 }
 
 export function instructionsToText(instructions: Instruction[]) {
-  return (instructions.filter(
-    (i) => i.type !== "emptyInstruction"
-  ) as Instruction[])
+  return (instructions.filter((i) => i.type !== "emptyInstruction") as Instruction[])
     .map((i) =>
       i.fragments
         .map((f) => {
           if (f?.type === "varType") {
             switch (f.value) {
               case "var":
-                const baseType = baseTypes.find(
-                  (b) => b.numberType === f.numberType && b.size === f.size
-                );
+                const baseType = baseTypes.find((b) => b.numberType === f.numberType && b.size === f.size);
                 return `${baseType?.name} ${f.offset}`;
               case "const":
                 return `const ${f.constValue}`;
