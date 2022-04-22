@@ -573,7 +573,9 @@ export function Editor({ applicationState, rerender }: { applicationState: Appli
 
     return (
       <div className="line" key={i}>
-        <div className="lineNumber">{instruction.originalLineNumber + 1}</div>
+        <div className="lineNumber">
+          {instruction.type !== EditorInstructionType.EMPTY && instruction.originalLineNumber + 1}
+        </div>
         <div className="instruction">
           {indent}
           {compareIndent}

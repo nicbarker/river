@@ -70,7 +70,7 @@ export function preprocess(applicationState: ApplicationState) {
   let allValid = true;
   let variableOffset = 0;
   let scopeOffsets = [0];
-  for (let i = 1; i < applicationState.instructions.length - 1; i++) {
+  for (let i = 0; i < applicationState.instructions.length; i++) {
     const instruction = applicationState.instructions[i];
     const valid = validate(instruction);
     allValid = allValid && valid;
