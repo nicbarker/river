@@ -29,8 +29,6 @@ import {
   EditorInstructionDef,
   EditorInstructionOS,
   EditorInstructionType,
-  ExtendedInstruction,
-  preprocess,
 } from "./preprocess2";
 import { baseTypes } from "./types/river_types";
 
@@ -574,7 +572,7 @@ export function Editor({ applicationState, rerender }: { applicationState: Appli
     return (
       <div className="line" key={i}>
         <div className="lineNumber">
-          {instruction.type !== EditorInstructionType.EMPTY && instruction.originalLineNumber + 1}
+          {instruction.type === EditorInstructionType.EMPTY ? "·" : instruction.originalLineNumber + 1}
         </div>
         <div className="instruction">
           {indent}

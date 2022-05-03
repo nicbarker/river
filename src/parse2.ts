@@ -1,6 +1,6 @@
 import { baseTypes, NumberType } from "./types/river_types";
 
-const DEBUG = false;
+const DEBUG = true;
 
 export function dec2bin(dec: number, pad: number) {
   if (!Number.isSafeInteger(dec)) {
@@ -20,6 +20,23 @@ export enum InstructionType {
   COMPARE,
   JUMP,
   OS,
+}
+
+export function InstructionTypeToString(instructionType: InstructionType) {
+  switch (instructionType) {
+    case InstructionType.SCOPE:
+      return "SCOPE";
+    case InstructionType.DEF:
+      return "DEF";
+    case InstructionType.ASSIGN:
+      return "ASSIGN";
+    case InstructionType.COMPARE:
+      return "COMPARE";
+    case InstructionType.JUMP:
+      return "JUMP";
+    case InstructionType.OS:
+      return "OS";
+  }
 }
 
 export enum FragmentType {
@@ -299,7 +316,7 @@ export type Scope = {
 };
 
 export function parse(file: string) {
-  const lines = file.length === 0 ? [] : file.split("\n");
+  const lines = file.length === 0 ? [] : file.split(/\r\n|\r|\n/);
   const scopes: [number, ScopeOpen][] = [];
   const instructions: Instruction[] = [];
   let maxMemory = 0;
@@ -333,7 +350,6 @@ export function parse(file: string) {
       case "scope": {
         if (tokens[1] === "open") {
           openScope(i);
-          break;
         } else if (tokens[1] === "close") {
           const popped = scopes.pop();
           if (popped && popped[1].action === "open") {
