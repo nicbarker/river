@@ -8,8 +8,10 @@ import {
   InstructionAssign,
   InstructionCompare,
   InstructionDef,
+  InstructionMacro,
   InstructionOS,
   InstructionType,
+  Macro,
 } from "./parse2";
 import { baseTypes, RiverType } from "./types/river_types";
 
@@ -49,8 +51,8 @@ function validate(instruction: Instruction) {
     case InstructionType.ASSIGN: {
       return (
         instruction.action.type !== FragmentType.MISSING &&
-        instruction.left.type !== FragmentType.MISSING &&
-        instruction.right.type !== FragmentType.MISSING
+        instruction.left.type !== FragmentType.VAR_MISSING &&
+        instruction.right.type !== FragmentType.VAR_MISSING
       );
     }
     case InstructionType.JUMP: {
@@ -61,6 +63,76 @@ function validate(instruction: Instruction) {
     }
   }
   return true;
+}
+
+// Returns true if two instructions are equal from a macro perspective (including placeholder or block instructions etc)
+function instructionsAreEquivalent(instruction: Instruction, macroInstruction: InstructionMacro) {
+  switch (instruction.type) {
+    case InstructionType.SCOPE:
+      return macroInstruction.type === InstructionType.SCOPE && instruction.action === macroInstruction.action;
+    case InstructionType.DEF:
+      return (
+        macroInstruction.type === InstructionType.DEF &&
+        instruction.name === macroInstruction.name &&
+        instruction.defType.type === FragmentType.DEF_TYPE &&
+        macroInstruction.defType.type === FragmentType.DEF_TYPE &&
+        instruction.defType.size === macroInstruction.defType.size &&
+        instruction.defType.name === macroInstruction.defType.name
+      );
+    case InstructionType.ASSIGN:
+      return (
+        macroInstruction.type === InstructionType.ASSIGN &&
+        (macroInstruction.action.type === FragmentType.PLACEHOLDER ||
+          (instruction.action.type !== FragmentType.MISSING &&
+            instruction.action.action === macroInstruction.action.action)) &&
+        (macroInstruction.left.type === FragmentType.VAR_PLACEHOLDER ||
+          (instruction.left.type !== FragmentType.VAR_MISSING &&
+            instruction.left.numberType === macroInstruction.left.numberType &&
+            instruction.left.size === macroInstruction.left.size &&
+            instruction.left.value === macroInstruction.left.value)) &&
+        (macroInstruction.right.type === FragmentType.VAR_PLACEHOLDER ||
+          (instruction.right.type !== FragmentType.VAR_MISSING &&
+            instruction.right.numberType === macroInstruction.right.numberType &&
+            instruction.right.size === macroInstruction.right.size &&
+            instruction.right.value === macroInstruction.right.value))
+      );
+    case InstructionType.COMPARE:
+      return (
+        macroInstruction.type === InstructionType.COMPARE &&
+        (macroInstruction.action.type === FragmentType.PLACEHOLDER ||
+          (instruction.action.type !== FragmentType.MISSING &&
+            instruction.action.action === macroInstruction.action.action)) &&
+        (macroInstruction.left.type === FragmentType.VAR_PLACEHOLDER ||
+          (instruction.left.type !== FragmentType.VAR_MISSING &&
+            instruction.left.numberType === macroInstruction.left.numberType &&
+            instruction.left.size === macroInstruction.left.size &&
+            instruction.left.value === macroInstruction.left.value)) &&
+        (macroInstruction.right.type === FragmentType.VAR_PLACEHOLDER ||
+          (instruction.right.type !== FragmentType.VAR_MISSING &&
+            instruction.right.numberType === macroInstruction.right.numberType &&
+            instruction.right.size === macroInstruction.right.size &&
+            instruction.right.value === macroInstruction.right.value))
+      );
+    case InstructionType.JUMP:
+      return macroInstruction.type === InstructionType.JUMP && instruction.action === macroInstruction.action;
+    case InstructionType.OS:
+      return (
+        macroInstruction.type === InstructionType.OS &&
+        macroInstruction.action.type === instruction.action.type &&
+        (macroInstruction.action.varType.type === FragmentType.VAR_PLACEHOLDER ||
+          (instruction.action.varType.type !== FragmentType.VAR_MISSING &&
+            instruction.action.varType.numberType === macroInstruction.action.varType.numberType &&
+            instruction.action.varType.size === macroInstruction.action.varType.size &&
+            instruction.action.varType.value === macroInstruction.action.varType.value))
+      );
+  }
+}
+
+function findMatchingMacros(instruction: Instruction, macros: Macro[]) {
+  for (const macro of macros) {
+    if (instructionsAreEquivalent(instruction, macro.instructions[0])) {
+    }
+  }
 }
 
 export function preprocess(applicationState: ApplicationState) {
@@ -75,6 +147,11 @@ export function preprocess(applicationState: ApplicationState) {
     const valid = validate(instruction);
     allValid = allValid && valid;
     const serialized = JSON.stringify(instruction);
+
+    // First, check if the current instruction matches any macros
+    const matching = findMatchingMacros(instruction, applicationState.macros);
+    console.log(matching);
+
     switch (instruction.type) {
       case InstructionType.DEF: {
         let riverType: RiverType | undefined;
@@ -104,7 +181,7 @@ export function preprocess(applicationState: ApplicationState) {
       case InstructionType.COMPARE:
       case InstructionType.ASSIGN: {
         let leftVariable: VisibleVariable | undefined, rightVariable: VisibleVariable | undefined;
-        if (instruction.left.type !== FragmentType.MISSING) {
+        if (instruction.left.type !== FragmentType.VAR_MISSING) {
           const leftVar = instruction.left;
           leftVariable = visibleVariables.find((v) => v.offset === leftVar.value);
         } else {

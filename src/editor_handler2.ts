@@ -1,5 +1,4 @@
 import { VisibleVariable } from "./editor";
-import { Macro } from "./editor_handler";
 import {
   allCompareActions,
   AssignAction,
@@ -12,9 +11,10 @@ import {
   FragmentVar,
   FragmentConst,
   JumpAction,
+  Macro,
 } from "./parse2";
 import { EditorInstructionType, ExtendedInstruction } from "./preprocess2";
-import { baseTypes, NumberType, RiverType } from "./types/river_types";
+import { baseTypes, NumberType, RiverType, SolidNumberType } from "./types/river_types";
 
 export enum FocusInputType {
   INSERT_INSTRUCTION,
@@ -33,7 +33,6 @@ export enum FocusInputType {
 }
 
 export const FocusInputConstantTypes = [
-  FocusInputType.CONST_ANY,
   FocusInputType.CONST_UNSIGNED,
   FocusInputType.CONST_SIGNED,
   FocusInputType.CONST_FLOAT,
@@ -142,7 +141,6 @@ function getNumberTypeFromFocusInputState(focusInputState: FocusInputState) {
     case FocusInputType.CONST_FLOAT:
       return NumberType.FLOAT;
   }
-  return NumberType.ANY;
 }
 
 export type ApplicationState = {
@@ -151,6 +149,7 @@ export type ApplicationState = {
   cursorPositions: number[];
   focusInputState?: FocusInputState;
   visibleVariables: VisibleVariable[];
+  macros: Macro[];
   serializedInstructions: string[];
   maxMemory: number;
   valid: boolean;
@@ -219,7 +218,7 @@ function handleKeyStrokeInFocusInput({ key, applicationState }: { key: string; a
             type: FragmentType.CONST,
             value: parseFloat(focusInputState.text),
             size: (focusInputState as FocusInputStateConstAny).size,
-            numberType: getNumberTypeFromFocusInputState(focusInputState),
+            numberType: getNumberTypeFromFocusInputState(focusInputState) as SolidNumberType,
           };
           currentInstruction.right = newVar;
           baseInstructions[currentInstruction.originalLineNumber] = { ...currentInstruction };
@@ -258,7 +257,7 @@ function handleKeyStrokeInFocusInput({ key, applicationState }: { key: string; a
             type: FragmentType.CONST,
             value: parseFloat(focusInputState.text),
             size: (focusInputState as FocusInputStateConstAny).size,
-            numberType: getNumberTypeFromFocusInputState(focusInputState),
+            numberType: getNumberTypeFromFocusInputState(focusInputState) as SolidNumberType,
           };
           currentInstruction.action.varType = newVar;
           baseInstructions[currentInstruction.originalLineNumber] = { ...currentInstruction };
@@ -270,7 +269,6 @@ function handleKeyStrokeInFocusInput({ key, applicationState }: { key: string; a
     const baseInstruction = baseInstructions[currentInstruction.originalLineNumber];
     switch (focusInputState.type) {
       case FocusInputType.INSERT_INSTRUCTION: {
-        console.log(currentInstruction);
         switch (key) {
           case "d":
             baseInstructions[currentInstruction.originalLineNumber] = {
@@ -283,18 +281,18 @@ function handleKeyStrokeInFocusInput({ key, applicationState }: { key: string; a
           case "a":
             baseInstructions[currentInstruction.originalLineNumber] = {
               type: InstructionType.ASSIGN,
-              left: { type: FragmentType.MISSING, name: "target" },
+              left: { type: FragmentType.VAR_MISSING, name: "target", numberType: NumberType.ANY, size: 0 }, // todo this might not be quite right
               action: { type: FragmentType.MISSING, name: "action" },
-              right: { type: FragmentType.MISSING, name: "source" },
+              right: { type: FragmentType.VAR_MISSING, name: "target", numberType: NumberType.ANY, size: 0 },
             };
             applicationState.focusInputState = undefined;
             break;
           case "c":
             baseInstructions[currentInstruction.originalLineNumber] = {
               type: InstructionType.COMPARE,
-              left: { type: FragmentType.MISSING, name: "target" },
+              left: { type: FragmentType.VAR_MISSING, name: "target", numberType: NumberType.ANY, size: 0 },
               action: { type: FragmentType.MISSING, name: "action" },
-              right: { type: FragmentType.MISSING, name: "source" },
+              right: { type: FragmentType.VAR_MISSING, name: "target", numberType: NumberType.ANY, size: 0 },
             };
             applicationState.focusInputState = undefined;
             break;
@@ -327,7 +325,7 @@ function handleKeyStrokeInFocusInput({ key, applicationState }: { key: string; a
               action: {
                 type: FragmentType.OS_ACTION,
                 action: OSAction.STDOUT,
-                varType: { type: FragmentType.MISSING, name: "value" },
+                varType: { type: FragmentType.VAR_MISSING, name: "target", numberType: NumberType.ANY, size: 0 },
               },
             };
             applicationState.focusInputState = undefined;
@@ -557,8 +555,8 @@ export function handleKeyStroke({ key, applicationState }: { key: string; applic
   }
   // For other uncaught keys
   switch (currentInstruction.type) {
-    // 0   1     2
-    // def local u64
+    // 0   1     2     3     4   5
+    // def valid local valid u64 64
     case InstructionType.DEF: {
       switch (cursorPositions[1]) {
         case 1: {
@@ -587,12 +585,12 @@ export function handleKeyStroke({ key, applicationState }: { key: string; applic
       }
       break;
     }
-    // 0      1     2 3
-    // assign local + const 5
+    // 0      1     2   3  4     5 6     7     8
+    // assign valid u64 16 valid + valid const 32
     case InstructionType.ASSIGN: {
       switch (cursorPositions[1]) {
         case 1: {
-          if (currentInstruction.left.type === FragmentType.MISSING || isBackspaceKey) {
+          if (currentInstruction.left.type === FragmentType.VAR_MISSING || isBackspaceKey) {
             applicationState.focusInputState = {
               type: FocusInputType.SEARCH_VARIABLE,
               matchedVariables: applicationState.visibleVariables,
@@ -613,8 +611,8 @@ export function handleKeyStroke({ key, applicationState }: { key: string; applic
         }
         case 3: {
           if (
-            currentInstruction.left.type !== FragmentType.MISSING &&
-            (currentInstruction.right.type === FragmentType.MISSING || isBackspaceKey)
+            currentInstruction.left.type !== FragmentType.VAR_MISSING &&
+            (currentInstruction.right.type === FragmentType.VAR_MISSING || isBackspaceKey)
           ) {
             applicationState.focusInputState = {
               type: FocusInputType.SELECT_VARIABLE_TYPE,
@@ -628,12 +626,12 @@ export function handleKeyStroke({ key, applicationState }: { key: string; applic
       }
       break;
     }
-    // 0       1     2 3
-    // compare local > const 5
+    // 0       1     2   3  4     5  6     7     8
+    // compare valid u64 16 valid == valid const 32
     case InstructionType.COMPARE: {
       switch (cursorPositions[1]) {
         case 1: {
-          if (currentInstruction.left.type === FragmentType.MISSING || isBackspaceKey) {
+          if (currentInstruction.left.type === FragmentType.VAR_MISSING || isBackspaceKey) {
             applicationState.focusInputState = {
               type: FocusInputType.SEARCH_VARIABLE,
               matchedVariables: applicationState.visibleVariables,
@@ -655,8 +653,8 @@ export function handleKeyStroke({ key, applicationState }: { key: string; applic
         }
         case 3: {
           if (
-            currentInstruction.left.type !== FragmentType.MISSING &&
-            (currentInstruction.right.type === FragmentType.MISSING || isBackspaceKey)
+            currentInstruction.left.type !== FragmentType.VAR_MISSING &&
+            (currentInstruction.right.type === FragmentType.VAR_MISSING || isBackspaceKey)
           ) {
             applicationState.focusInputState = {
               type: FocusInputType.SELECT_VARIABLE_TYPE,
@@ -670,8 +668,8 @@ export function handleKeyStroke({ key, applicationState }: { key: string; applic
       }
       break;
     }
-    // 0    1
-    // jump start
+    // 0    1     2
+    // jump valid start
     case InstructionType.JUMP: {
       switch (cursorPositions[1]) {
         case 1: {
@@ -701,8 +699,8 @@ export function handleKeyStroke({ key, applicationState }: { key: string; applic
       }
       break;
     }
-    // 0  1      2
-    // os stdout local
+    // 0  1     2      3     4   5
+    // os valid stdout valid u64 16
     case InstructionType.OS: {
       switch (cursorPositions[1]) {
         case 1: {
@@ -711,14 +709,14 @@ export function handleKeyStroke({ key, applicationState }: { key: string; applic
               currentInstruction.action = {
                 type: FragmentType.OS_ACTION,
                 action: OSAction.STDOUT,
-                varType: { type: FragmentType.MISSING, name: "var" },
+                varType: { type: FragmentType.VAR_MISSING, name: "target", numberType: NumberType.ANY, size: 0 },
               };
               break;
           }
           break;
         }
         case 2: {
-          if (currentInstruction.action.varType.type === FragmentType.MISSING || isBackspaceKey) {
+          if (currentInstruction.action.varType.type === FragmentType.VAR_MISSING || isBackspaceKey) {
             applicationState.focusInputState = {
               type: FocusInputType.SELECT_VARIABLE_TYPE,
               numberType: NumberType.ANY,

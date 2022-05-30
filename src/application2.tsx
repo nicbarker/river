@@ -6,6 +6,7 @@ import { DismissMap, DismissProvider } from "./context/dismiss_context";
 import { Editor } from "./editor2";
 import { ApplicationState, FocusInputType, InsertInstructionType } from "./editor_handler2";
 import { examples } from "./examples/examples";
+import { standardMacros } from "./macros/macros2";
 import { Instruction, parse } from "./parse2";
 import { preprocess } from "./preprocess2";
 
@@ -35,6 +36,7 @@ export function Application() {
       insertInstructionType: InsertInstructionType.REPLACE,
       text: "",
     },
+    macros: standardMacros,
     visibleVariables: [],
     serializedInstructions: [],
     valid: false,
@@ -57,7 +59,7 @@ export function Application() {
     <div
       className="dropdownItem"
       onClick={() => {
-        const instructions = parse(e.file)[0];
+        const instructions = parse({ file: e.file })[0] as Instruction[];
         applicationState.instructions = instructions;
         openFiles.splice(selectedFileIndex + 1, 0, {
           name: e.name.toLocaleLowerCase().replaceAll(" ", "_") + ".rvr",

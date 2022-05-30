@@ -6,15 +6,29 @@ export enum RiverTypeCategory {
   STRUCT,
 }
 export enum NumberType {
-  ANY,
   UINT,
   INT,
   FLOAT,
+  //
+  ANY,
+  COPY,
+}
+export type SolidNumberType = NumberType.UINT | NumberType.INT | NumberType.FLOAT;
+
+export function numberWithSizeToString(numberType: NumberType, size: number) {
+  switch (numberType) {
+    case NumberType.UINT:
+      return "u" + size;
+    case NumberType.INT:
+      return "i" + size;
+    case NumberType.FLOAT:
+      return "f" + size;
+  }
 }
 export type RiverTypeBase = {
   category: RiverTypeCategory.BASE;
   name: string;
-  numberType: NumberType;
+  numberType: Exclude<NumberType, NumberType.ANY | NumberType.COPY>;
   size: 8 | 16 | 32 | 64;
 };
 export type RiverTypeDerived = {

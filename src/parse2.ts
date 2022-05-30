@@ -1,4 +1,4 @@
-import { baseTypes, NumberType } from "./types/river_types";
+import { baseTypes, NumberType, numberWithSizeToString, RiverTypeBase } from "./types/river_types";
 
 const DEBUG = true;
 
@@ -20,6 +20,7 @@ export enum InstructionType {
   COMPARE,
   JUMP,
   OS,
+  PLACEHOLDER,
 }
 
 export function InstructionTypeToString(instructionType: InstructionType) {
@@ -36,6 +37,8 @@ export function InstructionTypeToString(instructionType: InstructionType) {
       return "JUMP";
     case InstructionType.OS:
       return "OS";
+    case InstructionType.PLACEHOLDER:
+      return "MISSING";
   }
 }
 
@@ -49,6 +52,24 @@ export enum FragmentType {
   VAR,
   CONST,
   MISSING,
+  PLACEHOLDER,
+  VAR_PLACEHOLDER,
+  VAR_MISSING,
+}
+
+function fragmentValidityToString(fragmentType: FragmentType) {
+  switch (fragmentType) {
+    case FragmentType.MISSING:
+      return "missing";
+    case FragmentType.PLACEHOLDER:
+      return "placeholder";
+    case FragmentType.VAR_PLACEHOLDER:
+      return "placeholder";
+    case FragmentType.VAR_MISSING:
+      return "missing";
+    default:
+      return "valid";
+  }
 }
 
 export type FragmentMissing = {
@@ -56,18 +77,42 @@ export type FragmentMissing = {
   name: string;
 };
 
+export type FragmentPlaceholder = {
+  type: FragmentType.PLACEHOLDER;
+  name: string;
+};
+
+type FragmentVarPlaceholderMissing =
+  | {
+      numberType: NumberType.COPY;
+    }
+  | {
+      numberType: Exclude<NumberType, NumberType.COPY>;
+      size: number;
+    };
+
+export type FragmentVarPlaceholder = {
+  type: FragmentType.VAR_PLACEHOLDER;
+  name: string;
+} & FragmentVarPlaceholderMissing;
+
+export type FragmentVarMissing = {
+  type: FragmentType.VAR_MISSING;
+  name: string;
+} & FragmentVarPlaceholderMissing;
+
 export type FragmentVar = {
   type: FragmentType.VAR;
   value: number;
   size: number;
-  numberType: NumberType;
+  numberType: Exclude<NumberType, NumberType.COPY | NumberType.ANY>;
 };
 
 export type FragmentConst = {
   type: FragmentType.CONST;
   value: number;
   size: number;
-  numberType: NumberType;
+  numberType: Exclude<NumberType, NumberType.COPY | NumberType.ANY>;
 };
 
 type ScopeOpen = {
@@ -153,21 +198,28 @@ export function assignActionToString(assignAction: AssignAction) {
   }
 }
 
-export type AssignActionFragment = {
+export type FragmentAssignAction = {
   type: FragmentType.ASSIGN_ACTION;
   action: AssignAction;
 };
 
 export type InstructionAssign = {
   type: InstructionType.ASSIGN;
-  action: AssignActionFragment | FragmentMissing;
-  left: FragmentVar | FragmentMissing;
-  right: FragmentVar | FragmentConst | FragmentMissing;
+  action: FragmentAssignAction | FragmentMissing;
+  left: FragmentVar | FragmentVarMissing;
+  right: FragmentVar | FragmentConst | FragmentVarMissing;
+};
+
+export type InstructionAssignMacro = {
+  type: InstructionType.ASSIGN;
+  action: FragmentAssignAction | FragmentPlaceholder;
+  left: FragmentVar | FragmentVarPlaceholder;
+  right: FragmentVar | FragmentConst | FragmentVarPlaceholder;
 };
 
 export type InstructionAssignValid = {
   type: InstructionType.ASSIGN;
-  action: AssignActionFragment;
+  action: FragmentAssignAction;
   left: FragmentVar;
   right: FragmentVar | FragmentConst;
 };
@@ -207,21 +259,28 @@ export function compareActionToString(compareAction: CompareAction) {
   }
 }
 
-export type CompareActionFragment = {
+export type FragmentCompareAction = {
   type: FragmentType.COMPARE_ACTION;
   action: CompareAction;
 };
 
 export type InstructionCompare = {
   type: InstructionType.COMPARE;
-  action: CompareActionFragment | FragmentMissing;
-  left: FragmentVar | FragmentMissing;
-  right: FragmentVar | FragmentConst | FragmentMissing;
+  action: FragmentCompareAction | FragmentMissing;
+  left: FragmentVar | FragmentVarMissing;
+  right: FragmentVar | FragmentConst | FragmentVarMissing;
+};
+
+export type InstructionCompareMacro = {
+  type: InstructionType.COMPARE;
+  action: FragmentCompareAction | FragmentPlaceholder;
+  left: FragmentVar | FragmentVarPlaceholder;
+  right: FragmentVar | FragmentConst | FragmentVarPlaceholder;
 };
 
 export type InstructionCompareValid = {
   type: InstructionType.COMPARE;
-  action: CompareActionFragment;
+  action: FragmentCompareAction;
   left: FragmentVar;
   right: FragmentVar | FragmentConst;
 };
@@ -261,14 +320,18 @@ export enum OSAction {
 
 export type OSActionFragment = {
   type: FragmentType.OS_ACTION;
-} & {
   action: OSAction.STDOUT;
-  varType: FragmentVar | FragmentConst | FragmentMissing;
+  varType: FragmentVar | FragmentConst | FragmentVarMissing;
+};
+
+export type OSActionFragmentMacro = {
+  type: FragmentType.OS_ACTION;
+  action: OSAction.STDOUT;
+  varType: FragmentVar | FragmentConst | FragmentVarPlaceholder;
 };
 
 export type OSActionFragmentValid = {
   type: FragmentType.OS_ACTION;
-} & {
   action: OSAction.STDOUT;
   varType: FragmentVar | FragmentConst;
 };
@@ -285,9 +348,19 @@ export type InstructionOS = {
   action: OSActionFragment;
 };
 
+export type InstructionOSMacro = {
+  type: InstructionType.OS;
+  action: OSActionFragmentMacro;
+};
+
 export type InstructionOSValid = {
   type: InstructionType.OS;
   action: OSActionFragmentValid;
+};
+
+export type InstructionPlaceholder = {
+  type: InstructionType.PLACEHOLDER;
+  name: string;
 };
 
 export type Instruction =
@@ -296,7 +369,8 @@ export type Instruction =
   | InstructionAssign
   | InstructionCompare
   | InstructionJump
-  | InstructionOS;
+  | InstructionOS
+  | InstructionPlaceholder;
 
 export type InstructionValid =
   | InstructionScope
@@ -304,7 +378,17 @@ export type InstructionValid =
   | InstructionAssignValid
   | InstructionCompareValid
   | InstructionJumpValid
-  | InstructionOSValid;
+  | InstructionOSValid
+  | InstructionPlaceholder;
+
+export type InstructionMacro =
+  | InstructionScope
+  | InstructionDef
+  | InstructionAssignMacro
+  | InstructionCompareMacro
+  | InstructionJump
+  | InstructionOSMacro
+  | InstructionPlaceholder;
 
 export type Scope = {
   name: string;
@@ -315,10 +399,64 @@ export type Scope = {
   closeInstructionIndex: number;
 };
 
-export function parse(file: string) {
+export type Macro = {
+  name: string;
+  instructions: InstructionMacro[];
+  inline: boolean;
+};
+
+function parseVariable(
+  category: string,
+  baseType: string,
+  value: string,
+  defaultType?: RiverTypeBase,
+  allowConst: boolean = true
+): { var: FragmentVar | FragmentConst | FragmentVarPlaceholder | FragmentVarMissing; type?: RiverTypeBase } {
+  let parsedVar: FragmentVar | FragmentConst | FragmentVarPlaceholder | FragmentVarMissing;
+  const varType = baseTypes.find((t) => t.name === baseType);
+  if (category === "valid") {
+    if (allowConst && baseType === "const") {
+      parsedVar = {
+        type: FragmentType.CONST,
+        value: parseFloat(value),
+        size: varType!.size,
+        numberType: varType!.numberType,
+      };
+    } else {
+      parsedVar = {
+        type: FragmentType.VAR,
+        value: parseInt(value),
+        size: varType!.size,
+        numberType: varType!.numberType,
+      };
+    }
+  } else {
+    if (baseType === "copy") {
+      parsedVar = {
+        type: category === "placeholder" ? FragmentType.VAR_PLACEHOLDER : FragmentType.VAR_MISSING,
+        name: value,
+        numberType: NumberType.COPY,
+      };
+    } else {
+      if (defaultType) {
+        parsedVar = {
+          type: category === "placeholder" ? FragmentType.VAR_PLACEHOLDER : FragmentType.VAR_MISSING,
+          name: value,
+          size: defaultType.size,
+          numberType: defaultType.numberType,
+        };
+      } else {
+        throw Error("Error: parseVariable fell through to default type but defaultType was undefined");
+      }
+    }
+  }
+  return { var: parsedVar, type: varType };
+}
+
+export function parse({ file, macro }: { file: string; macro?: boolean }) {
   const lines = file.length === 0 ? [] : file.split(/\r\n|\r|\n/);
   const scopes: [number, ScopeOpen][] = [];
-  const instructions: Instruction[] = [];
+  const instructions: (Instruction | InstructionMacro)[] = [];
   let maxMemory = 0;
 
   function openScope(originalInstructionIndex: number, closeInstructionIndex?: number) {
@@ -383,65 +521,133 @@ export function parse(file: string) {
         });
         break;
       }
-      // 0      1   2  3 4     5
-      // assign u64 16 + const 32
+      // 0      1     2   3  4     5 6     7     8
+      // assign valid u64 16 valid + valid const 32
       case "assign": {
-        const leftType = baseTypes.find((t) => t.name === tokens[1]);
-        let action = AssignAction.EQUALS;
-        switch (tokens[3]) {
-          case "+":
-            action = AssignAction.ADD;
-            break;
-          case "-":
-            action = AssignAction.SUBTRACT;
-            break;
-          case "*":
-            action = AssignAction.MULTIPLY;
-            break;
-          case "/":
-            action = AssignAction.DIVIDE;
-            break;
-          case "%":
-            action = AssignAction.MOD;
-            break;
-          case "&":
-            action = AssignAction.AND;
-            break;
-          case "|":
-            action = AssignAction.OR;
-            break;
-        }
-        const instruction: InstructionAssign = {
-          type: InstructionType.ASSIGN,
-          action: {
-            type: FragmentType.ASSIGN_ACTION,
-            action,
-          },
-          left: {
-            type: FragmentType.VAR,
-            value: parseFloat(tokens[2]),
-            size: leftType ? leftType.size : 0,
-            numberType: leftType ? leftType.numberType : NumberType.UINT,
-          },
-          right: {
-            type: tokens[4] === "const" ? FragmentType.CONST : FragmentType.VAR,
-            value: parseFloat(tokens[5]),
-            size: 0,
-            numberType: leftType ? leftType.numberType : NumberType.UINT,
-          },
+        let action: FragmentAssignAction | FragmentPlaceholder | FragmentMissing = {
+          type: FragmentType.ASSIGN_ACTION,
+          action: AssignAction.EQUALS,
         };
-        if (instruction.left.type === FragmentType.VAR && instruction.right.type !== FragmentType.MISSING) {
-          const rightType = baseTypes.find((t) => t.name === tokens[4]);
-          instruction.right.size = rightType ? rightType.size : 0;
-          instruction.right.numberType = rightType ? rightType.numberType : NumberType.UINT;
+        if (tokens[4] === "valid") {
+          switch (tokens[3]) {
+            case "+":
+              action.action = AssignAction.ADD;
+              break;
+            case "-":
+              action.action = AssignAction.SUBTRACT;
+              break;
+            case "*":
+              action.action = AssignAction.MULTIPLY;
+              break;
+            case "/":
+              action.action = AssignAction.DIVIDE;
+              break;
+            case "%":
+              action.action = AssignAction.MOD;
+              break;
+            case "&":
+              action.action = AssignAction.AND;
+              break;
+            case "|":
+              action.action = AssignAction.OR;
+              break;
+          }
+        } else if (tokens[4] === "placeholder") {
+          action = {
+            type: FragmentType.PLACEHOLDER,
+            name: tokens[5],
+          };
+        } else if (tokens[4] === "missing") {
+          action = {
+            type: FragmentType.MISSING,
+            name: tokens[5],
+          };
         }
-        instructions.push(instruction);
+
+        const left = parseVariable(tokens[1], tokens[2], tokens[3], undefined, false);
+
+        const right = parseVariable(tokens[6], tokens[7], tokens[8], left.type);
+
+        const instruction = {
+          type: InstructionType.ASSIGN,
+          action,
+          left: left.var,
+          right: right.var,
+        };
+        instructions.push(instruction as Instruction);
         break;
       }
+      // 0       1     2   3  4     5 6     7     8
+      // compare valid u64 16 valid + valid const 32
+      case "compare": {
+        // const leftType = baseTypes.find((t) => t.name === tokens[1]);
+        // ACTION --------------------
+        let action: FragmentCompareAction | FragmentPlaceholder | FragmentMissing = {
+          type: FragmentType.COMPARE_ACTION,
+          action: CompareAction.EQUAL,
+        };
+        if (tokens[4] === "valid") {
+          switch (tokens[3]) {
+            case "!=":
+              action.action = CompareAction.NOT_EQUAL;
+              break;
+            case ">":
+              action.action = CompareAction.GREATER;
+              break;
+            case ">=":
+              action.action = CompareAction.GREATER_EQUAL;
+              break;
+            case "<":
+              action.action = CompareAction.LESS;
+              break;
+            case "<=":
+              action.action = CompareAction.LESS_EQUAL;
+              break;
+          }
+        } else if (tokens[4] === "placeholder") {
+          action = {
+            type: FragmentType.PLACEHOLDER,
+            name: tokens[5],
+          };
+        } else if (tokens[4] === "missing") {
+          action = {
+            type: FragmentType.MISSING,
+            name: tokens[5],
+          };
+        }
+
+        const left = parseVariable(tokens[1], tokens[2], tokens[3], undefined, false);
+
+        const right = parseVariable(tokens[6], tokens[7], tokens[8], left.type);
+
+        const instruction = {
+          type: InstructionType.ASSIGN,
+          action,
+          left: left.var,
+          right: right.var,
+        };
+        instructions.push(instruction as Instruction);
+        break;
+      }
+      // 0    1     2
+      // jump valid start
       case "jump": {
+        let action: FragmentJumpAction | FragmentMissing;
+        if (tokens[1] === "valid") {
+          action = {
+            type: FragmentType.JUMP_ACTION,
+            action: tokens[2] === "start" ? JumpAction.START : JumpAction.END,
+          };
+        } else {
+          // tokens[1] === 'missing'
+          action = {
+            type: FragmentType.MISSING,
+            name: tokens[2],
+          };
+        }
         let jump: InstructionJump = {
           type: InstructionType.JUMP,
-          action: { type: FragmentType.JUMP_ACTION, action: tokens[1] === "start" ? JumpAction.START : JumpAction.END },
+          action,
         };
         if (jump.action.type === FragmentType.JUMP_ACTION) {
           const scope = scopes[scopes.length - 1][1];
@@ -453,78 +659,25 @@ export function parse(file: string) {
         instructions.push(jump);
         break;
       }
-      // 0       1   2  3  4  5
-      // compare u64 16 == u8 32
-      case "compare": {
-        let action = CompareAction.EQUAL;
-        switch (tokens[3]) {
-          case "!=":
-            action = CompareAction.NOT_EQUAL;
-            break;
-          case ">":
-            action = CompareAction.GREATER;
-            break;
-          case ">=":
-            action = CompareAction.GREATER_EQUAL;
-            break;
-          case "<":
-            action = CompareAction.LESS;
-            break;
-          case "<=":
-            action = CompareAction.LESS_EQUAL;
-            break;
-        }
-        // TODO: fix const floats and signed ints
-        const leftType = baseTypes.find((t) => t.name === tokens[1]);
-        const rightType =
-          tokens[4] === "const"
-            ? { size: leftType!.size, numberType: leftType!.numberType }
-            : baseTypes.find((t) => t.name === tokens[4]);
-        const instruction: InstructionCompare = {
-          type: InstructionType.COMPARE,
-          action: {
-            type: FragmentType.COMPARE_ACTION,
-            action,
-          },
-          left: {
-            type: FragmentType.VAR,
-            value: parseInt(tokens[2], 10),
-            size: leftType ? leftType.size : 0,
-            numberType: leftType ? leftType.numberType : NumberType.UINT,
-          },
-          right: {
-            type: tokens[4] === "const" ? FragmentType.CONST : FragmentType.VAR,
-            value: parseInt(tokens[5], 10),
-            size: rightType ? rightType.size : 0,
-            numberType: rightType ? rightType.numberType : NumberType.UINT,
-          },
-        };
-        instructions.push(instruction);
-        break;
-      }
-      // 0  1      2  3
-      // os stdout u8 48
+      // 0  1     2      3     4  5
+      // os valid stdout valid u8 48
       case "os": {
-        switch (tokens[1]) {
+        if (tokens[1] !== "valid") {
+          break;
+        }
+        switch (tokens[2]) {
           case "stdout": {
-            const stdoutType =
-              tokens[2] === "const"
-                ? { size: 64, numberType: NumberType.UINT }
-                : baseTypes.find((t) => t.name === tokens[2])!;
-            const instruction: InstructionOS = {
+            const varType = parseVariable(tokens[3], tokens[4], tokens[5]);
+
+            const instruction = {
               type: InstructionType.OS,
               action: {
                 type: FragmentType.OS_ACTION,
                 action: OSAction.STDOUT,
-                varType: {
-                  type: tokens[2] === "const" ? FragmentType.CONST : FragmentType.VAR,
-                  value: parseInt(tokens[3], 10),
-                  size: stdoutType.size,
-                  numberType: stdoutType.numberType,
-                },
+                varType: varType.var,
               },
             };
-            instructions.push(instruction);
+            instructions.push(instruction as InstructionMacro);
             break;
           }
           default:
@@ -532,8 +685,13 @@ export function parse(file: string) {
         }
         break;
       }
-      default:
+      case "placeholder": {
+        instructions.push({
+          type: InstructionType.PLACEHOLDER,
+          name: tokens[1],
+        });
         break;
+      }
     }
   }
 
@@ -544,50 +702,89 @@ export function parse(file: string) {
 
   // We add 2 for the automatic outer scope open and scope close
   if (lines.length + 2 !== instructions.length) {
+    console.log(lines, instructions);
     throw new Error("Line count and instruction count don't match");
   }
 
   return [instructions, maxMemory] as const;
 }
 
-function variableToText(variable: FragmentVar | FragmentConst) {
-  const numberType =
-    variable.numberType === NumberType.FLOAT ? "f" : variable.numberType === NumberType.INT ? "i" : "u";
-  return (variable.type === FragmentType.CONST ? "const" : `${numberType}${variable.size}`) + ` ${variable.value}`;
-}
-
-export function instructionsToText(instructions: Instruction[]) {
+export function instructionsToText(instructions: (Instruction | InstructionMacro)[]) {
   // eslint-disable-next-line array-callback-return
   return instructions.map(function (instruction) {
     switch (instruction.type) {
+      // 0   1     2     3     4   5
+      // def valid local valid u64 64
       case InstructionType.DEF:
-        return `def ${
-          instruction.name.type === FragmentType.MISSING ? `_${instruction.name.name}` : `${instruction.name.name}`
-        } ${instruction.defType.type === FragmentType.MISSING ? `_${instruction.defType.name}` : `${instruction.defType.name} ${instruction.defType.size}`}`;
-      case InstructionType.ASSIGN:
-        return `assign ${
-          instruction.left.type === FragmentType.MISSING
-            ? `_${instruction.left.name}`
-            : variableToText(instruction.left)
-        } ${instruction.action.type === FragmentType.MISSING ? `_${instruction.action.name}` : assignActionToString(instruction.action.action)} ${instruction.right.type === FragmentType.MISSING ? `_${instruction.right.name}` : variableToText(instruction.right)}`;
-      case InstructionType.COMPARE:
-        return `assign ${
-          instruction.left.type === FragmentType.MISSING
-            ? `_${instruction.left.name}`
-            : variableToText(instruction.left)
-        } ${instruction.action.type === FragmentType.MISSING ? `_${instruction.action.name}` : compareActionToString(instruction.action.action)} ${instruction.right.type === FragmentType.MISSING ? `_${instruction.right.name}` : variableToText(instruction.right)}`;
+        return [
+          "def",
+          fragmentValidityToString(instruction.name.type),
+          instruction.name.name,
+          fragmentValidityToString(instruction.defType.type),
+          instruction.defType.name,
+          instruction.defType.type === FragmentType.DEF_TYPE ? instruction.defType.size : 0,
+        ].join(" ");
+      // 0      1     2   3  4     5 6     7     8
+      // assign valid u64 16 valid + valid const 32
+      case InstructionType.ASSIGN: {
+        const left = instruction.left;
+        const right = instruction.right;
+        return [
+          "assign",
+          fragmentValidityToString(left.type),
+          left.numberType === NumberType.COPY ? "copy" : numberWithSizeToString(left.numberType, left.size),
+          left.type === FragmentType.VAR ? left.value : left.name,
+          fragmentValidityToString(instruction.action.type),
+          instruction.action.type === FragmentType.MISSING || instruction.action.type === FragmentType.PLACEHOLDER
+            ? instruction.action.name
+            : assignActionToString(instruction.action.action),
+          fragmentValidityToString(right.type),
+          right.numberType === NumberType.COPY ? "copy" : numberWithSizeToString(right.numberType, right.size),
+          right.type === FragmentType.VAR || right.type === FragmentType.CONST ? right.value : right.name,
+        ].join(" ");
+      }
+      // 0       1     2   3  4     5  6     7     8
+      // compare valid u64 16 valid == valid const 32
+      case InstructionType.COMPARE: {
+        const left = instruction.left;
+        const right = instruction.right;
+        return [
+          "compare",
+          fragmentValidityToString(left.type),
+          left.numberType === NumberType.COPY ? "copy" : numberWithSizeToString(left.numberType, left.size),
+          left.type === FragmentType.VAR ? left.value : left.name,
+          fragmentValidityToString(instruction.action.type),
+          instruction.action.type === FragmentType.MISSING || instruction.action.type === FragmentType.PLACEHOLDER
+            ? instruction.action.name
+            : compareActionToString(instruction.action.action),
+          fragmentValidityToString(right.type),
+          right.numberType === NumberType.COPY ? "copy" : numberWithSizeToString(right.numberType, right.size),
+          right.type === FragmentType.VAR || right.type === FragmentType.CONST ? right.value : right.name,
+        ].join(" ");
+      }
+      // 0    1     2
+      // jump valid start
       case InstructionType.JUMP:
-        return `jump ${
-          instruction.action.type === FragmentType.MISSING
-            ? `_${instruction.action.name}`
-            : jumpActionToString(instruction.action.action)
-        }`;
-      case InstructionType.SCOPE:
-        return `scope ${instruction.action}`;
-      case InstructionType.OS:
-        return `os ${OSActionToString(
-          instruction.action.action
-        )} ${instruction.action.varType.type === FragmentType.MISSING ? `_${instruction.action.varType.name}` : variableToText(instruction.action.varType)}`;
+        return [
+          "jump",
+          fragmentValidityToString(instruction.action.type),
+          instruction.action.type === FragmentType.JUMP_ACTION
+            ? jumpActionToString(instruction.action.action)
+            : instruction.action.name,
+        ].join(" ");
+      // 0  1     2      3     4   5
+      // os valid stdout valid u64 16
+      case InstructionType.OS: {
+        const varType = instruction.action.varType;
+        return [
+          "os",
+          fragmentValidityToString(instruction.action.type),
+          "stdout", // todo: fix me
+          fragmentValidityToString(varType.type),
+          varType.numberType === NumberType.COPY ? "copy" : numberWithSizeToString(varType.numberType, varType.size),
+          fragmentValidityToString(instruction.action.type),
+        ].join(" ");
+      }
     }
   });
 }

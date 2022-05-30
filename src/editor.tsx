@@ -17,7 +17,8 @@ export type VisibleVariable = {
   name: string;
   offset: number;
   size: number;
-  numberType: NumberType;
+  // TODO figure out how to deal with COPY types
+  numberType: Exclude<NumberType, NumberType.ANY | NumberType.COPY>;
 };
 function renderFragments(
   instruction: CollapsedInstruction,
@@ -32,12 +33,12 @@ function renderFragments(
   const cursorPos = cursorPositions.length > 1 ? -1 : cursorPositions[0];
   return instruction.fragments.map((fragment, i) => {
     let fragmentContent: React.ReactNode;
-    if (
-      focusInputState &&
-      hasCursor &&
-      cursorPos === i
-    ) {
-      if ([FocusInputType.MACRO_SEARCH, FocusInputType.VARIABLE_SEARCH, FocusInputType.TYPE_SEARCH].includes(focusInputState.type)) {
+    if (focusInputState && hasCursor && cursorPos === i) {
+      if (
+        [FocusInputType.MACRO_SEARCH, FocusInputType.VARIABLE_SEARCH, FocusInputType.TYPE_SEARCH].includes(
+          focusInputState.type
+        )
+      ) {
         let items: (Macro | VisibleVariable | RiverType)[] = [];
         if (focusInputState.type === FocusInputType.MACRO_SEARCH) {
           items = focusInputState.matchedMacros;
@@ -50,9 +51,7 @@ function renderFragments(
           .sort((a, b) => a.name.length - b.name.length)
           .map((m) => (
             <>
-              <b className="bold-hint">
-                {m.name.slice(0, focusInputState.text.length)}
-              </b>
+              <b className="bold-hint">{m.name.slice(0, focusInputState.text.length)}</b>
               {m.name.slice(focusInputState.text.length)}
             </>
           ))
@@ -62,15 +61,13 @@ function renderFragments(
               {i < arr.length - 1 ? " | " : null}
             </React.Fragment>
           ));
-        fragmentContent = (
-          <div className={classnames("empty", "fragment")}>{found}</div>
-        );
-      } else if ([FocusInputType.UNSIGNED_CONST, FocusInputType.SIGNED_CONST, FocusInputType.FLOAT_CONST].includes(focusInputState.type)) {
-        fragmentContent = `const ${
-          focusInputState.text.length === 0
-            ? "0.. value"
-            : focusInputState.text
-        }`;
+        fragmentContent = <div className={classnames("empty", "fragment")}>{found}</div>;
+      } else if (
+        [FocusInputType.UNSIGNED_CONST, FocusInputType.SIGNED_CONST, FocusInputType.FLOAT_CONST].includes(
+          focusInputState.type
+        )
+      ) {
+        fragmentContent = `const ${focusInputState.text.length === 0 ? "0.. value" : focusInputState.text}`;
       }
     } else if (fragment?.type === "varType") {
       switch (fragment?.value) {
@@ -84,11 +81,7 @@ function renderFragments(
         }
         case "var":
           if (typeof fragment.offset !== "undefined") {
-            if (
-              instruction.inlineMacros.find(
-                (m) => m && m.stackOffset === fragment.offset
-              )
-            ) {
+            if (instruction.inlineMacros.find((m) => m && m.stackOffset === fragment.offset)) {
               fragmentContent = (
                 <div className="fragment">
                   {renderFragments(
@@ -109,11 +102,7 @@ function renderFragments(
           }
           break;
         case "const":
-          fragmentContent = `const ${
-            typeof fragment.constValue === "undefined"
-              ? "0.. value"
-              : fragment.constValue
-          }`;
+          fragmentContent = `const ${typeof fragment.constValue === "undefined" ? "0.. value" : fragment.constValue}`;
           break;
       }
     } else if (fragment?.type === "assignAction") {
@@ -177,18 +166,12 @@ function renderFragments(
         key={i}
         className={classnames("fragment", fragment?.type, {
           [fragment?.value || ""]: fragment?.type !== "defName",
-          highlight:
-            hasCursor &&
-            cursorPos === i &&
-            selectionRange[0] === -1 &&
-            hasFocus,
+          highlight: hasCursor && cursorPos === i && selectionRange[0] === -1 && hasFocus,
           placeholder: fragment?.value === "_",
         })}
       >
         {instruction.type === "macroInstruction" && !inlineMacro && i > 0 && (
-          <div className="macro-param-label">
-            {instruction.placeholders[i - 1] + ": "}
-          </div>
+          <div className="macro-param-label">{instruction.placeholders[i - 1] + ": "}</div>
         )}
         {fragmentContent}
       </div>,
@@ -197,14 +180,12 @@ function renderFragments(
           {instruction.fragments.length > 1 && !inlineMacro && " "}(
         </div>
       ),
-      instruction.type === "macroInstruction" &&
-        i === instruction.fragments.length - 1 && (
-          <div key={i + "-close"} className="macro-paren close">
-            )
-          </div>
-        ),
-      ((i > 0 && i < instruction.fragments.length - 1) ||
-        instruction.type !== "macroInstruction") && (
+      instruction.type === "macroInstruction" && i === instruction.fragments.length - 1 && (
+        <div key={i + "-close"} className="macro-paren close">
+          )
+        </div>
+      ),
+      ((i > 0 && i < instruction.fragments.length - 1) || instruction.type !== "macroInstruction") && (
         <div key={i + "-space"}> </div>
       ),
     ];
@@ -218,7 +199,7 @@ function renderInstructions(
   cursorPositions: number[],
   hasFocus: boolean,
   isMacro: boolean,
-  focusInputState?: FocusInputState,
+  focusInputState?: FocusInputState
 ) {
   let indent = 0;
   let instructionsRendered: React.ReactNode[] = [];
@@ -240,10 +221,8 @@ function renderInstructions(
     }
 
     if (
-      (instruction.type === "scopeInstruction" &&
-        instruction.fragments[1]?.value === "close") ||
-      (instruction.type === "blockInstruction" &&
-        instruction.fragments[0]?.value === "close")
+      (instruction.type === "scopeInstruction" && instruction.fragments[1]?.value === "close") ||
+      (instruction.type === "blockInstruction" && instruction.fragments[0]?.value === "close")
     ) {
       indent -= 1;
     }
@@ -265,10 +244,8 @@ function renderInstructions(
     }
 
     if (
-      (instruction.type === "scopeInstruction" &&
-        instruction.fragments[1]?.value === "open") ||
-      (instruction.type === "blockInstruction" &&
-        instruction.fragments[0]?.value === "open")
+      (instruction.type === "scopeInstruction" && instruction.fragments[1]?.value === "open") ||
+      (instruction.type === "blockInstruction" && instruction.fragments[0]?.value === "open")
     ) {
       indent += 1;
     }
@@ -283,9 +260,7 @@ function renderInstructions(
       const found = focusInputState.matchedMacros
         .map((m) => (
           <>
-            <b className="bold-hint">
-              {m.name.slice(0, focusInputState.text.length)}
-            </b>
+            <b className="bold-hint">{m.name.slice(0, focusInputState.text.length)}</b>
             {m.name.slice(focusInputState.text.length)}
           </>
         ))
@@ -320,11 +295,7 @@ function renderInstructions(
         })}
         key={li}
       >
-        <div className="lineNumber">
-          {instruction.type === "blockInstruction"
-            ? ""
-            : instruction.lineNumber + 1}
-        </div>
+        <div className="lineNumber">{instruction.type === "blockInstruction" ? "" : instruction.lineNumber + 1}</div>
         <div className="instruction">{contents}</div>
       </div>
     );
@@ -359,10 +330,7 @@ export function Editor({
 }) {
   const isMacro = !!sourceMacro;
   const [cursorPositions, setCursorPositions] = useState([0]);
-  const [selectionRange, setSelectionRange] = useState<[number, number]>([
-    -1,
-    -1,
-  ]);
+  const [selectionRange, setSelectionRange] = useState<[number, number]>([-1, -1]);
   const [instructionIndex, setInstructionIndex] = useState(0);
   const [focusInputState, setFocusInputState] = useState<FocusInputState | undefined>();
   const { collapsedInstructions, visibleVariables } = preProcess(
@@ -373,10 +341,7 @@ export function Editor({
     macrosExpanded
   );
 
-  const fixedInstructionIndex = Math.min(
-    instructionIndex,
-    collapsedInstructions.length - 1
-  );
+  const fixedInstructionIndex = Math.min(instructionIndex, collapsedInstructions.length - 1);
   let fixedCursorPositions = cursorPositions;
   const instruction = collapsedInstructions[fixedInstructionIndex];
   if (cursorPositions[0] > instruction.fragments.length - 1) {
@@ -445,7 +410,25 @@ export function Editor({
     };
     window.addEventListener("keydown", handle);
     return () => window.removeEventListener("keydown", handle);
-  }, [instructions, setInstructions, hasFocus, instructionIndex, instruction, selectionRange, macros, setMacros, setActiveRightTab, setFocusIndex, onCursorUnderflow, isMacro, collapsedInstructions, fixedInstructionIndex, visibleVariables, fixedCursorPositions, focusInputState]);
+  }, [
+    instructions,
+    setInstructions,
+    hasFocus,
+    instructionIndex,
+    instruction,
+    selectionRange,
+    macros,
+    setMacros,
+    setActiveRightTab,
+    setFocusIndex,
+    onCursorUnderflow,
+    isMacro,
+    collapsedInstructions,
+    fixedInstructionIndex,
+    visibleVariables,
+    fixedCursorPositions,
+    focusInputState,
+  ]);
 
   const instructionsRendered = renderInstructions(
     collapsedInstructions,
@@ -454,7 +437,7 @@ export function Editor({
     fixedCursorPositions,
     hasFocus,
     isMacro,
-    focusInputState,
+    focusInputState
   );
 
   return <code className={"code"}>{instructionsRendered}</code>;

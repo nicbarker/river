@@ -1,4 +1,4 @@
-def bool u8 8
-assign u8 0 = const 0
-compare _left 0 _comparator _right 0
-assign u8 0 = const 1
+def valid bool valid u8 8
+assign valid u8 0 valid = valid const 0
+compare placeholder copy left placeholder comparator placeholder copy right
+assign valid u8 0 = const 1

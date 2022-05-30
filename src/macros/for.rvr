@@ -1,10 +1,10 @@
 scope open
-def index u64 64
-assign u64 0 = _initial 0
+def valid index valid u64 64
+assign valid u64 0 valid = placeholder u64 initial
 scope open
-_block
-assign u64 0 + _increment 0
-compare u64 0 < _max 0
-jump start
+placeholder block
+assign valid u64 0 valid + placeholder u64 increment
+compare valid u64 0 valid < placeholder u64 max
+jump valid start
 scope close
 scope close

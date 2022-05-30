@@ -16,6 +16,7 @@ import {
   FragmentMissing,
   FragmentType,
   FragmentVar,
+  FragmentVarMissing,
   InstructionJump,
   InstructionScope,
   InstructionType,
@@ -48,6 +49,8 @@ export function getFragmentHints(instructionType: InstructionType | EditorInstru
       return ["jump", "start | end"];
     case InstructionType.OS:
       return ["os", "stdout", "var | const | macro"];
+    case InstructionType.PLACEHOLDER:
+      return [];
   }
 }
 
@@ -58,7 +61,7 @@ function VarTypeFragment({
   focusInputState,
 }: {
   cursorFocus: boolean;
-  fragment: FragmentVar | FragmentConst | FragmentMissing;
+  fragment: FragmentVar | FragmentConst | FragmentVarMissing;
   variable?: VisibleVariable;
   focusInputState?: FocusInputState;
 }) {
